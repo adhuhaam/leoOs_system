@@ -223,17 +223,25 @@ export async function isConnected(): Promise<boolean> {
 export async function listFolder(args: {
   subPath: string;
   top?: number;
-  skip?: number;
+  cursor?: string | null;
 }): Promise<{ items: FileItem[]; breadcrumbs: Breadcrumb[]; nextCursor: string | null }> {
-  const { subPath } = args;
-  const top = Math.min(Math.max(args.top ?? 50, 1), 200);
-  const skip = Math.max(args.skip ?? 0, 0);
+  const { subPath, cursor } = args;
+  const top = Math.min(Math.max(args.top ?? 200, 1), 999);
 
   const token = await getOneDriveAccessToken();
-  const prefix = graphRootPathPrefix(subPath);
-  const select = "id,name,size,lastModifiedDateTime,file,folder,webUrl";
-  const query = `?$select=${encodeURIComponent(select)}&$top=${top}&$skip=${skip}&$orderby=name`;
-  const res = await graph(token, `${prefix}:/children${query}`);
+  let url: string;
+  if (cursor) {
+    // The opaque @odata.nextLink supplied by Graph — already absolute.
+    url = cursor;
+  } else {
+    const prefix = graphRootPathPrefix(subPath);
+    const select = "id,name,size,lastModifiedDateTime,file,folder,webUrl";
+    url = `${GRAPH_BASE}${prefix}:/children?$select=${encodeURIComponent(select)}&$top=${top}&$orderby=name`;
+  }
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   if (res.status === 404) {
     throw new OneDriveNotFoundError();
@@ -243,17 +251,18 @@ export async function listFolder(args: {
     throw new Error(`Graph list error ${res.status}: ${text.slice(0, 200)}`);
   }
 
-  const body = (await res.json()) as { value: GraphDriveItem[] };
+  const body = (await res.json()) as {
+    value: GraphDriveItem[];
+    "@odata.nextLink"?: string;
+  };
   const items = body.value.map((n) => toFileItem(n, subPath));
-  // Folders first, then files (both already alphabetical from Graph).
   items.sort((a, b) => {
     if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
 
   const breadcrumbs = buildBreadcrumbs(subPath);
-  const nextCursor = body.value.length === top ? String(skip + top) : null;
-  return { items, breadcrumbs, nextCursor };
+  return { items, breadcrumbs, nextCursor: body["@odata.nextLink"] ?? null };
 }
 
 function buildBreadcrumbs(subPath: string): Breadcrumb[] {
