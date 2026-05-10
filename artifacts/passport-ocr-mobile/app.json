@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.replit.passportocr",
+      "bundleIdentifier": "com.leo.os",
       "infoPlist": {
         "NSCameraUsageDescription": "We use the camera to capture passport pages for OCR extraction.",
         "NSPhotoLibraryUsageDescription": "We access your photo library so you can choose passport photos to upload.",
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.replit.passportocr",
+      "package": "com.leo.os",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#fbf6ec"

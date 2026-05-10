@@ -62,21 +62,31 @@ The `passport-ocr-mobile` artifact is an Expo (React Native) client that reuses 
 - `pnpm --filter @workspace/passport-ocr-mobile run dev` — starts Metro/Expo. Open in Expo Go on a device on the same network, or scan the QR.
 - The app reads `EXPO_PUBLIC_DOMAIN` (set by the workflow) and points API calls at `https://${EXPO_PUBLIC_DOMAIN}` so it shares the proxied `/api` with the web app.
 
-### Build an Android APK (EAS)
-The repo already includes `artifacts/passport-ocr-mobile/eas.json` with a `preview` profile that emits an `.apk` (and a `production` profile for Play Store `.aab`).
+### Build an Android APK / AAB (EAS)
+The repo includes `artifacts/passport-ocr-mobile/eas.json` pre-configured with:
+- Android package: `com.leo.os` (set in `app.json` — never change after publishing to Play)
+- Backend domain: `EXPO_PUBLIC_DOMAIN=leomaldives.com` (used by the built app for all API/auth calls)
 
-1. Install the CLI once: `npm i -g eas-cli`
-2. `cd artifacts/passport-ocr-mobile && eas login` (free Expo account).
-3. First time only: `eas init` — links the project to your Expo account and writes the `projectId`.
-4. Set the domain the APK should call (replaces the placeholder in `eas.json`):
-   ```bash
-   eas secret:create --scope project --name EXPO_PUBLIC_DOMAIN --value <your-replit-domain>
-   ```
-   …then either remove the `env.EXPO_PUBLIC_DOMAIN` line from `eas.json` (so the secret wins) or edit it to your domain directly.
-5. `eas build -p android --profile preview` — EAS builds in the cloud and returns a downloadable `.apk` URL when finished (~10–15 min).
-6. Side-load the APK on any Android device. Sign-in uses the same shared password as the web dashboard.
+One-time setup:
+1. Install the CLI: `npm i -g eas-cli`
+2. `cd artifacts/passport-ocr-mobile && eas login` (free Expo account)
+3. `eas init` — links the project to your Expo account and writes `extra.eas.projectId` into `app.json`. Commit that change.
 
-For the Play Store, swap `--profile preview` → `--profile production` to get an `.aab`.
+Preview build (side-loadable APK):
+```bash
+cd artifacts/passport-ocr-mobile
+eas build -p android --profile preview
+```
+EAS returns a downloadable `.apk` URL (~10–15 min). Install on any Android device and sign in with the shared password.
+
+Production build (Play Store AAB):
+```bash
+cd artifacts/passport-ocr-mobile
+eas build -p android --profile production
+```
+Returns a `.aab` for upload to Google Play Console.
+
+If keystore generation prompts on first build, accept the EAS-managed keystore — re-use the same one for all future builds so updates install cleanly.
 
 ## User preferences
 
