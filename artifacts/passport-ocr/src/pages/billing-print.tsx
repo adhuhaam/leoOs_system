@@ -129,29 +129,36 @@ export default function BillingPrintPage() {
       <div className="print-shell max-w-[820px] mx-auto bg-white text-slate-900 shadow-lg">
         <div className="print-page p-12 text-[11.5px] leading-relaxed font-sans">
           {/* ===================== HEADER ===================== */}
-          <div className="grid grid-cols-2 gap-8 pb-6">
+          <div className="grid grid-cols-2 gap-8 pb-8">
             {/* Left: doc title + balance due */}
             <div className="min-w-0">
-              <h1 className="text-[26px] font-bold tracking-wide text-slate-900 uppercase leading-none">
+              <h1 className="text-[40px] font-light tracking-tight text-slate-900 uppercase leading-none">
                 {isInvoice ? "TAX INVOICE" : "QUOTE"}
               </h1>
               <p className="text-[12px] text-slate-700 mt-3">
                 {isInvoice ? "Invoice#" : "Quote#"}{" "}
-                <span className="font-semibold text-slate-900">{doc.number}</span>
+                <span className="font-bold text-slate-900">{doc.number}</span>
               </p>
 
               {isInvoice && (
-                <div className="mt-6">
-                  <p className="text-[11px] text-slate-600">Balance Due</p>
-                  <p className="text-[22px] font-bold text-slate-900 leading-tight">
+                <div className="mt-8">
+                  <p className="text-[11.5px] text-slate-700">Balance Due</p>
+                  <p className="text-[20px] font-bold text-slate-900 leading-tight mt-0.5">
                     {formatMVR(grand)}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Right: company text block (mirrors Zoho-style header) */}
+            {/* Right: organization logo + company text block */}
             <div className="text-right text-[11px] text-slate-700 leading-snug">
+              {company?.letterheadImage && (
+                <img
+                  src={company.letterheadImage}
+                  alt={doc.companyName}
+                  className="ml-auto max-h-20 object-contain mb-3"
+                />
+              )}
               <p className="font-bold text-[12.5px] text-slate-900 uppercase tracking-wide">
                 {doc.companyName}
               </p>
@@ -279,8 +286,7 @@ export default function BillingPrintPage() {
                 <TotalRow
                   label="Balance Due"
                   value={grand}
-                  bold
-                  className="pt-1"
+                  highlight
                 />
               )}
             </div>
@@ -345,6 +351,7 @@ function TotalRow({
   hint,
   bold,
   grand,
+  highlight,
   className = "",
 }: {
   label: string;
@@ -352,17 +359,22 @@ function TotalRow({
   hint?: string;
   bold?: boolean;
   grand?: boolean;
+  highlight?: boolean;
   className?: string;
 }) {
+  const base = "flex items-baseline justify-between gap-4";
+  const variant = grand
+    ? "border-t border-slate-300 pt-3 mt-1"
+    : highlight
+      ? "bg-slate-100 px-3 py-2.5 mt-1"
+      : "";
   return (
-    <div
-      className={`flex items-baseline justify-between gap-4 ${
-        grand ? "border-t border-b border-slate-300 py-2 my-1" : ""
-      } ${className}`}
-    >
+    <div className={`${base} ${variant} ${className}`}>
       <span
         className={`${
-          grand || bold ? "font-bold text-slate-900" : "text-slate-700"
+          grand || bold || highlight
+            ? "font-bold text-slate-900"
+            : "text-slate-700"
         } text-[11.5px]`}
       >
         {label}
@@ -374,14 +386,14 @@ function TotalRow({
       </span>
       <span
         className={`tabular-nums ${
-          grand
-            ? "text-[13px] font-bold text-slate-900"
+          grand || highlight
+            ? "text-[12.5px] font-bold text-slate-900"
             : bold
               ? "font-bold text-slate-900"
               : "font-medium text-slate-900"
         }`}
       >
-        {grand || bold ? formatMVR(value) : fmt(value)}
+        {grand || bold || highlight ? formatMVR(value) : fmt(value)}
       </span>
     </div>
   );
