@@ -124,12 +124,29 @@ export default function FilePreviewScreen() {
             <Text style={styles.fallbackText}>Couldn't load preview</Text>
           </View>
         ) : kind === "image" ? (
-          <Image
-            source={{ uri: url }}
+          // ScrollView with maximumZoomScale gives a free, native pinch-to-zoom
+          // and pan on both iOS and Android (Android via maximumZoomScale + the
+          // built-in pinch handling). For more advanced gesture handling we'd
+          // pull in react-native-gesture-handler, but this is sufficient for
+          // photo previews.
+          <ScrollView
             style={{ flex: 1, width: "100%" }}
-            contentFit="contain"
-            transition={150}
-          />
+            contentContainerStyle={{ flex: 1 }}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            bouncesZoom
+            pinchGestureEnabled
+            centerContent
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+          >
+            <Image
+              source={{ uri: url }}
+              style={{ flex: 1, width: "100%" }}
+              contentFit="contain"
+              transition={150}
+            />
+          </ScrollView>
         ) : kind === "pdf" ? (
           <View style={styles.fallback}>
             <Feather name="file-text" size={36} color="#fff" />

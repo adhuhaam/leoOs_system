@@ -13,6 +13,61 @@ import type { Response } from "express";
 export const ROOT_FOLDER_PATH = "data";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
+// ── Signed cursor helpers ────────────────────────────────────────────────
+// We never accept a raw URL from the client as a pagination cursor, because
+// a malicious caller could supply any Graph URL and escape the data-folder
+// jail. Instead, server-issued nextLink URLs are wrapped in an HMAC-signed
+// envelope. The signing key is derived from SESSION_SECRET.
+import crypto from "node:crypto";
+
+function cursorKey(): Buffer {
+  const secret = process.env["SESSION_SECRET"];
+  if (!secret) throw new Error("SESSION_SECRET is required for cursor signing");
+  return crypto.createHash("sha256").update(`onedrive-cursor:${secret}`).digest();
+}
+function b64u(buf: Buffer): string {
+  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64uDecode(s: string): Buffer {
+  const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
+  return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/") + pad, "base64");
+}
+function signCursor(nextLink: string): string {
+  const payload = b64u(Buffer.from(nextLink, "utf8"));
+  const sig = b64u(crypto.createHmac("sha256", cursorKey()).update(payload).digest());
+  return `${payload}.${sig}`;
+}
+function verifyCursor(token: string): string | null {
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts as [string, string];
+  let expected: Buffer;
+  try {
+    expected = crypto.createHmac("sha256", cursorKey()).update(payload).digest();
+  } catch {
+    return null;
+  }
+  let provided: Buffer;
+  try {
+    provided = b64uDecode(sig);
+  } catch {
+    return null;
+  }
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(b64uDecode(payload).toString("utf8"));
+  } catch {
+    return null;
+  }
+  // Defense in depth: even if the HMAC matched, refuse anything that
+  // isn't a Graph HTTPS URL.
+  if (url.protocol !== "https:" || url.hostname !== "graph.microsoft.com") return null;
+  return url.toString();
+}
+
 export class OneDriveNotConnectedError extends Error {
   constructor(message = "OneDrive is not connected") {
     super(message);
@@ -233,20 +288,16 @@ export async function listFolder(args: {
   const token = await getOneDriveAccessToken();
   let url: string;
   if (cursor) {
-    // The cursor is an opaque @odata.nextLink from Graph. Validate it
-    // strictly: it MUST be HTTPS and on graph.microsoft.com — otherwise
-    // a caller could supply an arbitrary URL and exfiltrate the bearer
-    // token (SSRF + token leak).
-    let parsed: URL;
-    try {
-      parsed = new URL(cursor);
-    } catch {
+    // The cursor is an HMAC-signed envelope around a Graph @odata.nextLink
+    // URL that we issued ourselves on a prior response. Anything else is
+    // rejected. Without this, a caller could pass any Graph URL (e.g. a
+    // sibling folder outside the data jail) and have us fetch it with the
+    // OneDrive bearer token.
+    const verified = verifyCursor(cursor);
+    if (!verified) {
       throw new OneDriveBadPathError("invalid cursor");
     }
-    if (parsed.protocol !== "https:" || parsed.hostname !== "graph.microsoft.com") {
-      throw new OneDriveBadPathError("invalid cursor");
-    }
-    url = parsed.toString();
+    url = verified;
   } else {
     const prefix = graphRootPathPrefix(subPath);
     const select = "id,name,size,lastModifiedDateTime,file,folder,webUrl";
@@ -276,7 +327,12 @@ export async function listFolder(args: {
   });
 
   const breadcrumbs = buildBreadcrumbs(subPath);
-  return { items, breadcrumbs, nextCursor: body["@odata.nextLink"] ?? null };
+  const nextLink = body["@odata.nextLink"] ?? null;
+  return {
+    items,
+    breadcrumbs,
+    nextCursor: nextLink ? signCursor(nextLink) : null,
+  };
 }
 
 function buildBreadcrumbs(subPath: string): Breadcrumb[] {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearch, useLocation } from "wouter";
 import {
   getListFilesQueryKey,
@@ -576,27 +576,29 @@ function TextPreview({ url }: { url: string }) {
   const [text, setText] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [truncated, setTruncated] = useState(false);
-  useMemo(() => {
-    let cancelled = false;
+  useEffect(() => {
+    const ac = new AbortController();
+    setText(null);
+    setErr(null);
+    setTruncated(false);
     (async () => {
       try {
-        const res = await fetch(url, { credentials: "include" });
+        const res = await fetch(url, { credentials: "include", signal: ac.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buf = await res.arrayBuffer();
         const cut = buf.byteLength > MAX_BYTES;
         const slice = cut ? buf.slice(0, MAX_BYTES) : buf;
         const body = new TextDecoder("utf-8", { fatal: false }).decode(slice);
-        if (!cancelled) {
+        if (!ac.signal.aborted) {
           setText(body);
           setTruncated(cut);
         }
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+        if (ac.signal.aborted) return;
+        setErr(e instanceof Error ? e.message : String(e));
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [url]);
   if (err) return <div className="p-8 text-sm text-destructive">Couldn't load text: {err}</div>;
   if (text == null)
@@ -640,7 +642,15 @@ function PreviewBody({
     return <img src={url} alt={item.name} className="max-h-[75vh] object-contain" />;
   }
   if (kind === "pdf") {
-    return <iframe title={item.name} src={url} className="w-full h-[75vh] border-0 bg-white" />;
+    return (
+      <iframe
+        title={item.name}
+        src={url}
+        sandbox="allow-scripts allow-same-origin allow-popups"
+        referrerPolicy="no-referrer"
+        className="w-full h-[75vh] border-0 bg-white"
+      />
+    );
   }
   if (kind === "video") {
     return <video src={url} controls className="max-h-[75vh] w-full bg-black" />;
