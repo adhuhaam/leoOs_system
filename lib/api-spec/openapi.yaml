@@ -24,6 +24,8 @@ tags:
     description: Client / placement management (where candidates are allocated)
   - name: billing
     description: Invoices and quotations
+  - name: files
+    description: OneDrive file browser (read-only)
 paths:
   /healthz:
     get:
@@ -780,6 +782,78 @@ paths:
           description: Deleted
         "404":
           description: Not found
+
+  /files/status:
+    get:
+      operationId: getFilesStatus
+      tags: [files]
+      summary: Whether OneDrive is connected
+      responses:
+        "200":
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileStatus"
+
+  /files/list:
+    get:
+      operationId: listFiles
+      tags: [files]
+      summary: List children of a folder inside the configured OneDrive root
+      parameters:
+        - name: path
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Folder contents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileListResponse"
+        "400":
+          description: Invalid path
+        "404":
+          description: Folder not found
+        "503":
+          description: OneDrive not connected
+
+  /files/item:
+    get:
+      operationId: getFileItem
+      tags: [files]
+      summary: Get metadata for a single file or folder
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDetail"
+        "400":
+          description: Invalid path
+        "404":
+          description: Not found
+        "503":
+          description: OneDrive not connected
 
   /loa-options:
     get:
@@ -1607,3 +1681,56 @@ components:
       required: [id]
       properties:
         id: { type: integer }
+
+    FileItem:
+      type: object
+      required: [id, name, path, isFolder, size, lastModifiedAt, mimeType, webUrl]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        path: { type: string }
+        isFolder: { type: boolean }
+        size: { type: ["integer", "null"] }
+        lastModifiedAt: { type: string }
+        mimeType: { type: ["string", "null"] }
+        webUrl: { type: string }
+
+    FileBreadcrumb:
+      type: object
+      required: [name, path]
+      properties:
+        name: { type: string }
+        path: { type: string }
+
+    FileListResponse:
+      type: object
+      required: [items, breadcrumbs, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileItem"
+        breadcrumbs:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileBreadcrumb"
+        nextCursor:
+          type: ["string", "null"]
+
+    FileDetail:
+      allOf:
+        - $ref: "#/components/schemas/FileItem"
+        - type: object
+          required: [previewKind, hasThumbnail]
+          properties:
+            previewKind:
+              type: string
+              enum: [image, pdf, text, office, video, audio, other]
+            hasThumbnail:
+              type: boolean
+
+    FileStatus:
+      type: object
+      required: [connected]
+      properties:
+        connected: { type: boolean }

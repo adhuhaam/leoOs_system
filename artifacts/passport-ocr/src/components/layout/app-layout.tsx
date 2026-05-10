@@ -8,6 +8,7 @@ import {
   Building,
   Wallet,
   Receipt,
+  FolderOpen,
   Menu,
   X,
   Settings,
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, group: "Operations" },
   { href: "/expenses", label: "Expenses", icon: Wallet, group: "Operations" },
   { href: "/billing", label: "Invoices & Quotes", icon: Receipt, group: "Operations" },
+  { href: "/files", label: "Files", icon: FolderOpen, group: "Operations" },
   { href: "/settings", label: "Settings", icon: Settings, group: "System" },
 ];
 

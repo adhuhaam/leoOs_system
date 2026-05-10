@@ -29,6 +29,7 @@ export default function MoreScreen() {
   const logoutMutation = useLogout();
 
   const items: Item[] = [
+    { icon: "folder", label: "Files", detail: "Browse OneDrive documents", route: "/files" },
     { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
     { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
   ];

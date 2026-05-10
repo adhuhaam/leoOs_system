@@ -27,6 +27,16 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
+## Files (OneDrive)
+
+A read-only Files browser is available on web (`/files`) and mobile (More → Files / `/files`). It lists the contents of the `data` folder under the connected OneDrive account (`admin@leoemployment.com`) and supports preview + download.
+
+- Connector: Replit OneDrive integration (`onedrive`). Tokens are fetched lazily via the connectors proxy (`REPLIT_CONNECTORS_HOSTNAME`); never cached across requests.
+- Server: `artifacts/api-server/src/lib/onedrive.ts` (token + Graph helpers, jailed to `ROOT_FOLDER_PATH = "data"`) and `artifacts/api-server/src/routes/files.ts` (`/api/files/{status,list,item,thumbnail,download,preview}`, all behind `requireAuth`).
+- All caller-supplied paths go through `validateSubPath` — `..`, `.`, backslashes, and control chars are rejected, so callers can never escape the root.
+- Web preview supports images, PDFs, video, audio, and text inline; office docs fall back to OneDrive web link + download.
+- Mobile preview uses `expo-image` for images and `react-native-webview` for PDF/text. Download uses `expo-file-system` (legacy) → `expo-sharing`.
+
 ## Where things live
 
 - `lib/api-spec/openapi.yaml` — API contract (source of truth)
@@ -36,6 +46,9 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - `artifacts/passport-ocr/src/` — React frontend (pages, components)
 - `artifacts/passport-ocr-mobile/app/` — Expo mobile app (file-based routes; tabs: Dashboard, Master, Capture, Billing, More)
 - `artifacts/passport-ocr-mobile/lib/auth.tsx` — shared-password auth provider (cookie session, native persistence)
+- `artifacts/passport-ocr-mobile/app/files/` — Files browser screens (list + preview)
+- `artifacts/passport-ocr/src/pages/files.tsx` — Web Files browser (grid/list + preview dialog)
+- `artifacts/api-server/src/lib/onedrive.ts` / `routes/files.ts` — OneDrive integration
 
 ## Architecture decisions
 

@@ -956,6 +956,79 @@ export const DeleteBillingDocumentParams = zod.object({
 });
 
 /**
+ * @summary Whether OneDrive is connected
+ */
+export const GetFilesStatusResponse = zod.object({
+  connected: zod.boolean(),
+});
+
+/**
+ * @summary List children of a folder inside the configured OneDrive root
+ */
+export const listFilesQueryLimitMax = 200;
+
+export const ListFilesQueryParams = zod.object({
+  path: zod.coerce.string().optional(),
+  cursor: zod.coerce.string().optional(),
+  limit: zod.coerce.number().min(1).max(listFilesQueryLimitMax).optional(),
+});
+
+export const ListFilesResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      path: zod.string(),
+      isFolder: zod.boolean(),
+      size: zod.number().nullable(),
+      lastModifiedAt: zod.string(),
+      mimeType: zod.string().nullable(),
+      webUrl: zod.string(),
+    }),
+  ),
+  breadcrumbs: zod.array(
+    zod.object({
+      name: zod.string(),
+      path: zod.string(),
+    }),
+  ),
+  nextCursor: zod.string().nullable(),
+});
+
+/**
+ * @summary Get metadata for a single file or folder
+ */
+export const GetFileItemQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
+
+export const GetFileItemResponse = zod
+  .object({
+    id: zod.string(),
+    name: zod.string(),
+    path: zod.string(),
+    isFolder: zod.boolean(),
+    size: zod.number().nullable(),
+    lastModifiedAt: zod.string(),
+    mimeType: zod.string().nullable(),
+    webUrl: zod.string(),
+  })
+  .and(
+    zod.object({
+      previewKind: zod.enum([
+        "image",
+        "pdf",
+        "text",
+        "office",
+        "video",
+        "audio",
+        "other",
+      ]),
+      hasThumbnail: zod.boolean(),
+    }),
+  );
+
+/**
  * @summary List LOA dropdown options
  */
 export const ListLoaOptionsQueryParams = zod.object({

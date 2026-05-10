@@ -35,12 +35,17 @@ import type {
   ExpenseCategoryUpdate,
   ExpenseInput,
   ExpenseUpdate,
+  FileDetail,
+  FileListResponse,
+  FileStatus,
   GetAuthStatus200,
+  GetFileItemParams,
   HealthStatus,
   ListBillingDocumentsParams,
   ListClientsParams,
   ListCompaniesParams,
   ListExpensesParams,
+  ListFilesParams,
   ListLoaOptionsParams,
   ListPassportsParams,
   Loa,
@@ -3373,6 +3378,269 @@ export const useDeleteBillingDocument = <
 > => {
   return useMutation(getDeleteBillingDocumentMutationOptions(options));
 };
+
+/**
+ * @summary Whether OneDrive is connected
+ */
+export const getGetFilesStatusUrl = () => {
+  return `/api/files/status`;
+};
+
+export const getFilesStatus = async (
+  options?: RequestInit,
+): Promise<FileStatus> => {
+  return customFetch<FileStatus>(getGetFilesStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFilesStatusQueryKey = () => {
+  return [`/api/files/status`] as const;
+};
+
+export const getGetFilesStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFilesStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFilesStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFilesStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFilesStatus>>> = ({
+    signal,
+  }) => getFilesStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFilesStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFilesStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFilesStatus>>
+>;
+export type GetFilesStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Whether OneDrive is connected
+ */
+
+export function useGetFilesStatus<
+  TData = Awaited<ReturnType<typeof getFilesStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFilesStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFilesStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List children of a folder inside the configured OneDrive root
+ */
+export const getListFilesUrl = (params?: ListFilesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/files/list?${stringifiedParams}`
+    : `/api/files/list`;
+};
+
+export const listFiles = async (
+  params?: ListFilesParams,
+  options?: RequestInit,
+): Promise<FileListResponse> => {
+  return customFetch<FileListResponse>(getListFilesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFilesQueryKey = (params?: ListFilesParams) => {
+  return [`/api/files/list`, ...(params ? [params] : [])] as const;
+};
+
+export const getListFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFiles>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFilesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFiles>>> = ({
+    signal,
+  }) => listFiles(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFiles>>
+>;
+export type ListFilesQueryError = ErrorType<void>;
+
+/**
+ * @summary List children of a folder inside the configured OneDrive root
+ */
+
+export function useListFiles<
+  TData = Awaited<ReturnType<typeof listFiles>>,
+  TError = ErrorType<void>,
+>(
+  params?: ListFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFilesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get metadata for a single file or folder
+ */
+export const getGetFileItemUrl = (params: GetFileItemParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/files/item?${stringifiedParams}`
+    : `/api/files/item`;
+};
+
+export const getFileItem = async (
+  params: GetFileItemParams,
+  options?: RequestInit,
+): Promise<FileDetail> => {
+  return customFetch<FileDetail>(getGetFileItemUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFileItemQueryKey = (params?: GetFileItemParams) => {
+  return [`/api/files/item`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetFileItemQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFileItem>>,
+  TError = ErrorType<void>,
+>(
+  params: GetFileItemParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFileItem>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFileItemQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFileItem>>> = ({
+    signal,
+  }) => getFileItem(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFileItem>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFileItemQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFileItem>>
+>;
+export type GetFileItemQueryError = ErrorType<void>;
+
+/**
+ * @summary Get metadata for a single file or folder
+ */
+
+export function useGetFileItem<
+  TData = Awaited<ReturnType<typeof getFileItem>>,
+  TError = ErrorType<void>,
+>(
+  params: GetFileItemParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFileItem>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFileItemQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List LOA dropdown options
