@@ -29,6 +29,7 @@ import type {
   Company,
   CompanyInput,
   CompanyUpdate,
+  DownloadFileParams,
   Expense,
   ExpenseCategory,
   ExpenseCategoryInput,
@@ -40,6 +41,7 @@ import type {
   FileStatus,
   GetAuthStatus200,
   GetFileItemParams,
+  GetFileThumbnailParams,
   HealthStatus,
   ListBillingDocumentsParams,
   ListClientsParams,
@@ -58,6 +60,7 @@ import type {
   PassportStats,
   PassportUpdate,
   PassportUpload,
+  PreviewFileParams,
   SystemSettings,
   SystemSettingsInput,
   UpdateLoaOptionInput,
@@ -3634,6 +3637,291 @@ export function useGetFileItem<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetFileItemQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Stream a thumbnail (image/jpeg) for a file
+ */
+export const getGetFileThumbnailUrl = (params: GetFileThumbnailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/files/thumbnail?${stringifiedParams}`
+    : `/api/files/thumbnail`;
+};
+
+export const getFileThumbnail = async (
+  params: GetFileThumbnailParams,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetFileThumbnailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFileThumbnailQueryKey = (
+  params?: GetFileThumbnailParams,
+) => {
+  return [`/api/files/thumbnail`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetFileThumbnailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFileThumbnail>>,
+  TError = ErrorType<void>,
+>(
+  params: GetFileThumbnailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFileThumbnail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFileThumbnailQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFileThumbnail>>
+  > = ({ signal }) => getFileThumbnail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFileThumbnail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFileThumbnailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFileThumbnail>>
+>;
+export type GetFileThumbnailQueryError = ErrorType<void>;
+
+/**
+ * @summary Stream a thumbnail (image/jpeg) for a file
+ */
+
+export function useGetFileThumbnail<
+  TData = Awaited<ReturnType<typeof getFileThumbnail>>,
+  TError = ErrorType<void>,
+>(
+  params: GetFileThumbnailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFileThumbnail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFileThumbnailQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Stream a file as an attachment download
+ */
+export const getDownloadFileUrl = (params: DownloadFileParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/files/download?${stringifiedParams}`
+    : `/api/files/download`;
+};
+
+export const downloadFile = async (
+  params: DownloadFileParams,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getDownloadFileUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadFileQueryKey = (params?: DownloadFileParams) => {
+  return [`/api/files/download`, ...(params ? [params] : [])] as const;
+};
+
+export const getDownloadFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<void>,
+>(
+  params: DownloadFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadFileQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadFile>>> = ({
+    signal,
+  }) => downloadFile(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadFile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DownloadFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadFile>>
+>;
+export type DownloadFileQueryError = ErrorType<void>;
+
+/**
+ * @summary Stream a file as an attachment download
+ */
+
+export function useDownloadFile<
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<void>,
+>(
+  params: DownloadFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDownloadFileQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Stream a file inline for in-browser preview
+ */
+export const getPreviewFileUrl = (params: PreviewFileParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/files/preview?${stringifiedParams}`
+    : `/api/files/preview`;
+};
+
+export const previewFile = async (
+  params: PreviewFileParams,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getPreviewFileUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getPreviewFileQueryKey = (params?: PreviewFileParams) => {
+  return [`/api/files/preview`, ...(params ? [params] : [])] as const;
+};
+
+export const getPreviewFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof previewFile>>,
+  TError = ErrorType<void>,
+>(
+  params: PreviewFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof previewFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getPreviewFileQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof previewFile>>> = ({
+    signal,
+  }) => previewFile(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof previewFile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type PreviewFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof previewFile>>
+>;
+export type PreviewFileQueryError = ErrorType<void>;
+
+/**
+ * @summary Stream a file inline for in-browser preview
+ */
+
+export function usePreviewFile<
+  TData = Awaited<ReturnType<typeof previewFile>>,
+  TError = ErrorType<void>,
+>(
+  params: PreviewFileParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof previewFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getPreviewFileQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

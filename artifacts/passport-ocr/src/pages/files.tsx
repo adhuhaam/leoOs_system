@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearch, useLocation } from "wouter";
 import {
   getListFilesQueryKey,
   getGetFileItemQueryKey,
@@ -97,12 +98,27 @@ function thumbUrl(path: string, size: "small" | "medium" | "large" = "medium"): 
 
 type ViewMode = "grid" | "list";
 type SortMode = "name" | "modified" | "size";
+type SortDir = "asc" | "desc";
 
 export default function FilesPage() {
-  const [path, setPath] = useState("");
+  // URL-driven path: ?path=Foo/Bar — survives refresh, back/forward, and sharing.
+  const searchStr = useSearch();
+  const [, setLocation] = useLocation();
+  const path = useMemo(() => {
+    const params = new URLSearchParams(searchStr);
+    return params.get("path") ?? "";
+  }, [searchStr]);
+  function setPath(next: string) {
+    const params = new URLSearchParams();
+    if (next) params.set("path", next);
+    const qs = params.toString();
+    setLocation("/files" + (qs ? `?${qs}` : ""));
+  }
+
   const [search, setSearch] = useState("");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortMode>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [previewItem, setPreviewItem] = useState<FileItem | null>(null);
 
   const { data: status, isLoading: statusLoading } = useGetFilesStatus();
@@ -131,15 +147,16 @@ export default function FilesPage() {
     }
     const folders = list.filter((i) => i.isFolder);
     const files = list.filter((i) => !i.isFolder);
+    const dir = sortDir === "asc" ? 1 : -1;
     const sortFn = (a: FileItem, b: FileItem) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
-      if (sort === "modified") return b.lastModifiedAt.localeCompare(a.lastModifiedAt);
-      return (b.size ?? 0) - (a.size ?? 0);
+      if (sort === "name") return a.name.localeCompare(b.name) * dir;
+      if (sort === "modified") return a.lastModifiedAt.localeCompare(b.lastModifiedAt) * dir;
+      return ((a.size ?? 0) - (b.size ?? 0)) * dir;
     };
     folders.sort(sortFn);
     files.sort(sortFn);
     return [...folders, ...files];
-  }, [items, search, sort]);
+  }, [items, search, sort, sortDir]);
 
   const folderCount = items.filter((i) => i.isFolder).length;
   const fileCount = items.length - folderCount;
@@ -216,9 +233,19 @@ export default function FilesPage() {
               setSort((s) => (s === "name" ? "modified" : s === "modified" ? "size" : "name"))
             }
             data-testid="button-files-sort"
+            title="Change sort field"
           >
             <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
             {sort === "name" ? "Name" : sort === "modified" ? "Modified" : "Size"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            data-testid="button-files-sort-dir"
+            title="Toggle ascending / descending"
+          >
+            {sortDir === "asc" ? "↑" : "↓"}
           </Button>
           <div className="hidden sm:flex rounded-md border border-border overflow-hidden">
             <Button
@@ -275,12 +302,15 @@ export default function FilesPage() {
             })}
           </BreadcrumbList>
         </Breadcrumb>
-        {!isLoading && (
-          <div className="text-xs text-muted-foreground">
-            {folderCount} folder{folderCount === 1 ? "" : "s"} · {fileCount} file
-            {fileCount === 1 ? "" : "s"} · {bytesToHuman(totalBytes)}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {!isLoading && (
+            <div className="text-xs text-muted-foreground">
+              {folderCount} folder{folderCount === 1 ? "" : "s"} · {fileCount} file
+              {fileCount === 1 ? "" : "s"} · {bytesToHuman(totalBytes)}
+            </div>
+          )}
+          <CurrentFolderOneDriveLink path={path} />
+        </div>
       </div>
 
       {/* Content */}
@@ -336,6 +366,27 @@ export default function FilesPage() {
         onClose={() => setPreviewItem(null)}
       />
     </div>
+  );
+}
+
+// ── Current-folder "Open in OneDrive" link ───────────────────────────────
+function CurrentFolderOneDriveLink({ path }: { path: string }) {
+  const { data: detail } = useGetFileItem(
+    { path },
+    {
+      query: {
+        enabled: !!path,
+        queryKey: getGetFileItemQueryKey({ path }),
+      },
+    },
+  );
+  if (!detail?.webUrl) return null;
+  return (
+    <a href={detail.webUrl} target="_blank" rel="noreferrer">
+      <Button variant="ghost" size="sm" data-testid="button-open-folder-onedrive">
+        <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Open in OneDrive
+      </Button>
+    </a>
   );
 }
 

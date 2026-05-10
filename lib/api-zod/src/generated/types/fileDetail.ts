@@ -11,4 +11,6 @@ import type { FileItem } from "./fileItem";
 export type FileDetail = FileItem & {
   previewKind: FileDetailPreviewKind;
   hasThumbnail: boolean;
+  isImage: boolean;
+  isPdf: boolean;
 };

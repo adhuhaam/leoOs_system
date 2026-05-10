@@ -1025,8 +1025,32 @@ export const GetFileItemResponse = zod
         "other",
       ]),
       hasThumbnail: zod.boolean(),
+      isImage: zod.boolean(),
+      isPdf: zod.boolean(),
     }),
   );
+
+/**
+ * @summary Stream a thumbnail (image/jpeg) for a file
+ */
+export const GetFileThumbnailQueryParams = zod.object({
+  path: zod.coerce.string(),
+  size: zod.enum(["small", "medium", "large"]).optional(),
+});
+
+/**
+ * @summary Stream a file as an attachment download
+ */
+export const DownloadFileQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
+
+/**
+ * @summary Stream a file inline for in-browser preview
+ */
+export const PreviewFileQueryParams = zod.object({
+  path: zod.coerce.string(),
+});
 
 /**
  * @summary List LOA dropdown options

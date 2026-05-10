@@ -5,11 +5,16 @@ import {
   useListFiles,
   type FileItem,
 } from "@workspace/api-client-react";
+import * as WebBrowser from "expo-web-browser";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
+  Alert,
+  Dimensions,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -19,6 +24,10 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+
+const BASE_URL = process.env["EXPO_PUBLIC_DOMAIN"]
+  ? `https://${process.env["EXPO_PUBLIC_DOMAIN"]}`
+  : "";
 
 function bytesToHuman(bytes: number | null): string {
   if (bytes == null) return "—";
@@ -53,11 +62,14 @@ function iconFor(item: FileItem): keyof typeof Feather.glyphMap {
   return "file";
 }
 
+type ViewMode = "list" | "grid";
+
 export default function FilesIndexScreen() {
   const colors = useColors();
   const { path } = useLocalSearchParams<{ path?: string }>();
   const subPath = typeof path === "string" ? path : "";
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<ViewMode>("list");
 
   const { data: status, isLoading: statusLoading } = useGetFilesStatus();
   const params = subPath ? { path: subPath } : undefined;
@@ -91,6 +103,45 @@ export default function FilesIndexScreen() {
       router.push({ pathname: "/files/preview", params: { path: item.path, name: item.name } });
     }
   }
+
+  function showItemActions(item: FileItem) {
+    if (item.isFolder) {
+      const options = ["Open folder", "Open in OneDrive", "Cancel"];
+      runActionSheet(options, 2, (idx) => {
+        if (idx === 0) openItem(item);
+        else if (idx === 1 && item.webUrl) WebBrowser.openBrowserAsync(item.webUrl);
+      });
+      return;
+    }
+    const options = ["Preview", "Download / Share", "Open in OneDrive", "Cancel"];
+    runActionSheet(options, 3, (idx) => {
+      if (idx === 0) openItem(item);
+      else if (idx === 1) router.push({ pathname: "/files/preview", params: { path: item.path, name: item.name, action: "share" } });
+      else if (idx === 2 && item.webUrl) WebBrowser.openBrowserAsync(item.webUrl);
+    });
+  }
+
+  function runActionSheet(options: string[], cancelIndex: number, cb: (idx: number) => void) {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, cancelButtonIndex: cancelIndex },
+        cb,
+      );
+    } else {
+      Alert.alert(
+        "Actions",
+        undefined,
+        options.map((label, idx) => ({
+          text: label,
+          onPress: () => cb(idx),
+          style: idx === cancelIndex ? "cancel" : "default",
+        })),
+      );
+    }
+  }
+
+  const numColumns = view === "grid" ? 3 : 1;
+  const tileSize = (Dimensions.get("window").width - 16 * 2 - 12 * 2) / 3;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -138,7 +189,7 @@ export default function FilesIndexScreen() {
         />
       </View>
 
-      {/* Search */}
+      {/* Search + view toggle */}
       <View style={styles.searchBar}>
         <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="search" size={15} color={colors.mutedForeground} />
@@ -149,6 +200,27 @@ export default function FilesIndexScreen() {
             placeholderTextColor={colors.mutedForeground}
             style={[styles.searchInput, { color: colors.foreground }]}
           />
+        </View>
+        <View style={[styles.segment, { borderColor: colors.border }]}>
+          {(["list", "grid"] as ViewMode[]).map((m) => {
+            const active = view === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => setView(m)}
+                style={[
+                  styles.segmentBtn,
+                  { backgroundColor: active ? colors.primary : "transparent" },
+                ]}
+              >
+                <Feather
+                  name={m === "list" ? "list" : "grid"}
+                  size={15}
+                  color={active ? colors.primaryForeground : colors.mutedForeground}
+                />
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -183,8 +255,77 @@ export default function FilesIndexScreen() {
             <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }}>Retry</Text>
           </Pressable>
         </Centered>
+      ) : view === "grid" ? (
+        <FlatList
+          key="grid"
+          data={visible}
+          numColumns={numColumns}
+          keyExtractor={(i) => i.id}
+          columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
+          contentContainerStyle={{ paddingVertical: 12, gap: 12 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching && !isLoading}
+              onRefresh={() => refetch()}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name="folder" size={28} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                {search ? "No matches" : "Empty folder"}
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => openItem(item)}
+              onLongPress={() => showItemActions(item)}
+              delayLongPress={300}
+              style={({ pressed }) => [
+                styles.tile,
+                {
+                  width: tileSize,
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.tileIcon,
+                  {
+                    backgroundColor: item.isFolder ? "#fef3c7" : colors.secondary,
+                  },
+                ]}
+              >
+                {!item.isFolder && (item.mimeType?.startsWith("image/") || /\.(jpe?g|png|gif|webp)$/i.test(item.name)) ? (
+                  <ThumbImage path={item.path} />
+                ) : (
+                  <Feather
+                    name={iconFor(item)}
+                    size={28}
+                    color={item.isFolder ? "#b45309" : colors.primary}
+                  />
+                )}
+              </View>
+              <Text
+                numberOfLines={2}
+                style={[styles.tileName, { color: colors.foreground }]}
+              >
+                {item.name}
+              </Text>
+              <Text style={[styles.tileSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {item.isFolder ? "Folder" : bytesToHuman(item.size)}
+              </Text>
+            </Pressable>
+          )}
+        />
       ) : (
         <FlatList
+          key="list"
           data={visible}
           keyExtractor={(i) => i.id}
           contentContainerStyle={styles.list}
@@ -206,6 +347,8 @@ export default function FilesIndexScreen() {
           renderItem={({ item }) => (
             <Pressable
               onPress={() => openItem(item)}
+              onLongPress={() => showItemActions(item)}
+              delayLongPress={300}
               style={({ pressed }) => [
                 styles.row,
                 {
@@ -249,6 +392,18 @@ export default function FilesIndexScreen() {
   );
 }
 
+function ThumbImage({ path }: { path: string }) {
+  const { Image } = require("expo-image");
+  return (
+    <Image
+      source={{ uri: `${BASE_URL}/api/files/thumbnail?path=${encodeURIComponent(path)}&size=medium` }}
+      style={{ width: "100%", height: "100%", borderRadius: 10 }}
+      contentFit="cover"
+      transition={120}
+    />
+  );
+}
+
 function Centered({
   children,
   colors,
@@ -265,8 +420,9 @@ const styles = StyleSheet.create({
   breadcrumbBar: { borderBottomWidth: 1, paddingVertical: 10 },
   breadcrumbList: { paddingHorizontal: 16, alignItems: "center" },
   breadcrumbItem: { flexDirection: "row", alignItems: "center" },
-  searchBar: { padding: 12 },
+  searchBar: { padding: 12, flexDirection: "row", gap: 10, alignItems: "center" },
   searchBox: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -276,6 +432,18 @@ const styles = StyleSheet.create({
     height: 40,
   },
   searchInput: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, padding: 0 },
+  segment: {
+    flexDirection: "row",
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: "hidden",
+    height: 40,
+  },
+  segmentBtn: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   list: { padding: 12, gap: 8 },
   row: {
     flexDirection: "row",
@@ -294,6 +462,21 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   rowSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  tile: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 10,
+    gap: 6,
+  },
+  tileIcon: {
+    aspectRatio: 1,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  tileName: { fontFamily: "Inter_600SemiBold", fontSize: 12, marginTop: 2 },
+  tileSub: { fontFamily: "Inter_400Regular", fontSize: 11 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 10 },
   empty: { alignItems: "center", padding: 48, gap: 10 },
   emptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15 },

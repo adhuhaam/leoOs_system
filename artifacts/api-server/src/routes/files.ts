@@ -47,6 +47,10 @@ router.get("/files/list", async (req, res) => {
     });
     res.json(result);
   } catch (err) {
+    if (err instanceof OneDriveBadPathError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     if (err instanceof OneDriveNotConnectedError) {
       res.status(503).json({ error: "OneDrive is not connected" });
       return;

@@ -156,6 +156,8 @@ export type Breadcrumb = { name: string; path: string };
 export type FileDetail = FileItem & {
   previewKind: "image" | "pdf" | "text" | "office" | "video" | "audio" | "other";
   hasThumbnail: boolean;
+  isImage: boolean;
+  isPdf: boolean;
 };
 
 type GraphDriveItem = {
@@ -231,8 +233,20 @@ export async function listFolder(args: {
   const token = await getOneDriveAccessToken();
   let url: string;
   if (cursor) {
-    // The opaque @odata.nextLink supplied by Graph — already absolute.
-    url = cursor;
+    // The cursor is an opaque @odata.nextLink from Graph. Validate it
+    // strictly: it MUST be HTTPS and on graph.microsoft.com — otherwise
+    // a caller could supply an arbitrary URL and exfiltrate the bearer
+    // token (SSRF + token leak).
+    let parsed: URL;
+    try {
+      parsed = new URL(cursor);
+    } catch {
+      throw new OneDriveBadPathError("invalid cursor");
+    }
+    if (parsed.protocol !== "https:" || parsed.hostname !== "graph.microsoft.com") {
+      throw new OneDriveBadPathError("invalid cursor");
+    }
+    url = parsed.toString();
   } else {
     const prefix = graphRootPathPrefix(subPath);
     const select = "id,name,size,lastModifiedDateTime,file,folder,webUrl";
@@ -291,6 +305,8 @@ export async function getItem(subPath: string): Promise<FileDetail> {
       webUrl: "",
       previewKind: "other",
       hasThumbnail: false,
+      isImage: false,
+      isPdf: false,
     };
   }
   const token = await getOneDriveAccessToken();
@@ -305,7 +321,13 @@ export async function getItem(subPath: string): Promise<FileDetail> {
   const parentSub = subPath.includes("/") ? subPath.slice(0, subPath.lastIndexOf("/")) : "";
   const base = toFileItem(node, parentSub);
   const previewKind = base.isFolder ? "other" : previewKindFor(base.name, base.mimeType);
-  return { ...base, previewKind, hasThumbnail: !base.isFolder && previewKind !== "other" && previewKind !== "text" };
+  return {
+    ...base,
+    previewKind,
+    hasThumbnail: !base.isFolder && previewKind !== "other" && previewKind !== "text",
+    isImage: previewKind === "image",
+    isPdf: previewKind === "pdf",
+  };
 }
 
 /** Stream the file bytes through to the Express response.

@@ -4,7 +4,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
-import React, { useState } from "react";
+import * as WebBrowser from "expo-web-browser";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -41,10 +42,11 @@ function downloadUrl(path: string): string {
 
 export default function FilePreviewScreen() {
   const colors = useColors();
-  const { path, name } = useLocalSearchParams<{ path: string; name?: string }>();
+  const { path, name, action } = useLocalSearchParams<{ path: string; name?: string; action?: string }>();
   const subPath = typeof path === "string" ? path : "";
   const filename = typeof name === "string" ? name : subPath.split("/").pop() || "file";
   const [busy, setBusy] = useState(false);
+  const autoShareDone = useRef(false);
 
   const { data: detail, isLoading, error } = useGetFileItem(
     { path: subPath },
@@ -61,7 +63,12 @@ export default function FilePreviewScreen() {
     setBusy(true);
     try {
       const url = downloadUrl(subPath);
-      const target = `${FileSystem.cacheDirectory}${encodeURIComponent(filename)}`;
+      // Save to the app's document directory so the file is preserved beyond
+      // the OS-managed cache. Pass the file URI to expo-sharing — on iOS this
+      // shows the OS share sheet (Quick Look opens PDFs in the OS PDF viewer);
+      // on Android the OS file picker / app chooser handles it.
+      const dir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? "";
+      const target = `${dir}${encodeURIComponent(filename)}`;
       const dl = await FileSystem.downloadAsync(url, target);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(dl.uri, {
@@ -78,8 +85,29 @@ export default function FilePreviewScreen() {
     }
   }
 
+  async function openInOneDrive() {
+    if (!detail?.webUrl) return;
+    await WebBrowser.openBrowserAsync(detail.webUrl);
+  }
+
+  // PDFs: prefer the OS viewer via download → share, rather than a WebView,
+  // because Graph requires our session cookie (which an in-app webview won't
+  // always carry) and OS viewers render PDFs natively.
+  async function openPdfInOs() {
+    await downloadAndShare();
+  }
+
   const url = previewUrl(subPath);
   const kind = detail?.previewKind;
+
+  // Honor `action=share` from the long-press menu in the list view.
+  useEffect(() => {
+    if (action === "share" && !autoShareDone.current && detail) {
+      autoShareDone.current = true;
+      void downloadAndShare();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action, detail]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -100,7 +128,25 @@ export default function FilePreviewScreen() {
             contentFit="contain"
             transition={150}
           />
-        ) : kind === "pdf" || kind === "text" ? (
+        ) : kind === "pdf" ? (
+          <View style={styles.fallback}>
+            <Feather name="file-text" size={36} color="#fff" />
+            <Text style={styles.fallbackText}>PDF document</Text>
+            <Text style={styles.fallbackHint}>Open in the system viewer or OneDrive</Text>
+            <Pressable
+              onPress={openPdfInOs}
+              style={({ pressed }) => [
+                styles.inlineBtn,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Feather name="external-link" size={14} color={colors.primaryForeground} />
+              <Text style={{ color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }}>
+                Open PDF
+              </Text>
+            </Pressable>
+          </View>
+        ) : kind === "text" ? (
           <WebView
             source={{ uri: url }}
             sharedCookiesEnabled
@@ -170,6 +216,21 @@ export default function FilePreviewScreen() {
             </>
           )}
         </Pressable>
+
+        {detail?.webUrl ? (
+          <Pressable
+            onPress={openInOneDrive}
+            style={({ pressed }) => [
+              styles.actionBtnSecondary,
+              { borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Feather name="external-link" size={15} color={colors.foreground} />
+            <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold" }}>
+              Open in OneDrive
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -197,5 +258,23 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 12,
     marginTop: 4,
+  },
+  actionBtnSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  inlineBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    marginTop: 12,
   },
 });

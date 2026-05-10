@@ -611,6 +611,8 @@ export const FileDetailPreviewKind = {
 export type FileDetail = FileItem & {
   previewKind: FileDetailPreviewKind;
   hasThumbnail: boolean;
+  isImage: boolean;
+  isPdf: boolean;
 };
 
 export interface FileStatus {
@@ -671,6 +673,28 @@ export type ListFilesParams = {
 };
 
 export type GetFileItemParams = {
+  path: string;
+};
+
+export type GetFileThumbnailParams = {
+  path: string;
+  size?: GetFileThumbnailSize;
+};
+
+export type GetFileThumbnailSize =
+  (typeof GetFileThumbnailSize)[keyof typeof GetFileThumbnailSize];
+
+export const GetFileThumbnailSize = {
+  small: "small",
+  medium: "medium",
+  large: "large",
+} as const;
+
+export type DownloadFileParams = {
+  path: string;
+};
+
+export type PreviewFileParams = {
   path: string;
 };
 
