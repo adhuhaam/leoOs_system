@@ -999,7 +999,10 @@ export const ListFilesResponse = zod.object({
  * @summary Get metadata for a single file or folder
  */
 export const GetFileItemQueryParams = zod.object({
-  path: zod.coerce.string(),
+  path: zod.coerce
+    .string()
+    .optional()
+    .describe("Relative subpath. Empty \/ omitted returns the root folder."),
 });
 
 export const GetFileItemResponse = zod

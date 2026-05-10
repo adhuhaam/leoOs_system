@@ -3554,7 +3554,7 @@ export function useListFiles<
 /**
  * @summary Get metadata for a single file or folder
  */
-export const getGetFileItemUrl = (params: GetFileItemParams) => {
+export const getGetFileItemUrl = (params?: GetFileItemParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -3571,7 +3571,7 @@ export const getGetFileItemUrl = (params: GetFileItemParams) => {
 };
 
 export const getFileItem = async (
-  params: GetFileItemParams,
+  params?: GetFileItemParams,
   options?: RequestInit,
 ): Promise<FileDetail> => {
   return customFetch<FileDetail>(getGetFileItemUrl(params), {
@@ -3588,7 +3588,7 @@ export const getGetFileItemQueryOptions = <
   TData = Awaited<ReturnType<typeof getFileItem>>,
   TError = ErrorType<void>,
 >(
-  params: GetFileItemParams,
+  params?: GetFileItemParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getFileItem>>,
@@ -3626,7 +3626,7 @@ export function useGetFileItem<
   TData = Awaited<ReturnType<typeof getFileItem>>,
   TError = ErrorType<void>,
 >(
-  params: GetFileItemParams,
+  params?: GetFileItemParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getFileItem>>,

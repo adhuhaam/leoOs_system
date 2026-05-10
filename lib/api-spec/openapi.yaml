@@ -838,7 +838,7 @@ paths:
       parameters:
         - name: path
           in: query
-          required: true
+          description: Relative subpath. Empty / omitted returns the root folder.
           schema:
             type: string
       responses:

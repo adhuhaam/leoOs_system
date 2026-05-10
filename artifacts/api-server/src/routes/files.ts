@@ -78,10 +78,9 @@ router.get("/files/item", async (req, res) => {
     }
     throw err;
   }
-  if (!subPath) {
-    res.status(400).json({ error: "path required" });
-    return;
-  }
+  // Empty path is allowed here: it returns synthesized metadata for the
+  // root "data" folder so the UI can render an "Open in OneDrive" link
+  // for the root level. Per-file streaming endpoints still require a path.
   try {
     const detail = await getItem(subPath);
     res.json(detail);

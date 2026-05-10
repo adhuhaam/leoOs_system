@@ -151,15 +151,17 @@ export function validateSubPath(input: unknown): string {
   if (input.length > 1024) {
     throw new OneDriveBadPathError("path too long");
   }
-  // Strip leading / trailing slashes; reject backslashes outright.
+  // Reject backslashes and leading/trailing slashes outright — the contract
+  // is that callers send a clean relative subpath like "Foo/Bar".
   if (input.includes("\\")) {
     throw new OneDriveBadPathError("backslash not allowed in path");
   }
-  const trimmed = input.replace(/^\/+|\/+$/g, "");
-  if (trimmed === "") return "";
-  const segments = trimmed.split("/");
+  if (input.startsWith("/") || input.endsWith("/")) {
+    throw new OneDriveBadPathError("leading or trailing slash not allowed");
+  }
+  const segments = input.split("/");
   for (const seg of segments) {
-    if (seg === "" || seg === "." || seg === "..") {
+    if (seg === "" || seg === "." || seg === ".." || /^\s+$/.test(seg)) {
       throw new OneDriveBadPathError("invalid path segment");
     }
     // eslint-disable-next-line no-control-regex
@@ -168,6 +170,11 @@ export function validateSubPath(input: unknown): string {
     }
   }
   return segments.join("/");
+}
+
+/** True if the caller passed an explicit empty path (root folder). */
+export function isRootPathRequest(input: unknown): boolean {
+  return input == null || input === "";
 }
 
 /** Build the Graph "by path" URL relative to the configured root folder.

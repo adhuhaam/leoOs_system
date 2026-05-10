@@ -673,7 +673,10 @@ export type ListFilesParams = {
 };
 
 export type GetFileItemParams = {
-  path: string;
+  /**
+   * Relative subpath. Empty / omitted returns the root folder.
+   */
+  path?: string;
 };
 
 export type GetFileThumbnailParams = {
