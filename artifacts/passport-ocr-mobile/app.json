@@ -19,7 +19,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "We use the camera to capture passport pages for OCR extraction.",
         "NSPhotoLibraryUsageDescription": "We access your photo library so you can choose passport photos to upload.",
-        "NSDocumentsFolderUsageDescription": "We access documents so you can upload passport PDFs."
+        "NSDocumentsFolderUsageDescription": "We access documents so you can upload passport PDFs.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -29,10 +30,6 @@
         "backgroundColor": "#fbf6ec"
       },
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
