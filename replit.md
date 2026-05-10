@@ -88,6 +88,52 @@ Returns a `.aab` for upload to Google Play Console.
 
 If keystore generation prompts on first build, accept the EAS-managed keystore — re-use the same one for all future builds so updates install cleanly.
 
+### Build an iOS .ipa (EAS)
+The same `eas.json` already includes an `ios` block on both profiles:
+- iOS bundle identifier: `com.leo.os` (set in `app.json`, matches the Android package)
+- `preview` uses `distribution: "internal"` so the build is signed with an
+  ad-hoc provisioning profile and installs on iPhones whose UDIDs are
+  registered with your Expo / Apple Developer account
+- `production` is for App Store submission via TestFlight / `eas submit`
+
+Requirements:
+- A paid Apple Developer Program membership ($99/year) — Apple will not let
+  you install a `.ipa` on a real iPhone without one
+- Your iPhone's UDID registered with EAS (see step 1 below)
+
+One-time iPhone registration:
+```bash
+cd artifacts/passport-ocr-mobile
+eas device:create
+```
+This prints a QR code / link. Open the link on your iPhone in **Safari** and
+approve the device profile that downloads. Then go to
+*Settings → General → VPN & Device Management* → tap the new profile →
+*Install*. Your phone is now registered for ad-hoc builds.
+
+Preview build (installable .ipa):
+```bash
+cd artifacts/passport-ocr-mobile
+eas build -p ios --profile preview
+```
+First run prompts for your Apple ID; EAS auto-creates the distribution
+certificate and provisioning profile (always pick the EAS-managed option
+so future builds reuse the same credentials). Build takes ~15–20 min.
+
+When the build finishes, EAS emails a link / QR. Open it on your registered
+iPhone in **Safari** → tap *Install*. After install, *Settings → General →
+VPN & Device Management* → tap the developer profile → *Trust*. The app then
+launches normally.
+
+Production build (App Store submission):
+```bash
+cd artifacts/passport-ocr-mobile
+eas build -p ios --profile production
+eas submit -p ios --latest
+```
+The first command produces a store-signed build; the second uploads it to
+App Store Connect for TestFlight / review.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
