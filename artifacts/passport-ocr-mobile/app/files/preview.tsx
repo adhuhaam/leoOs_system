@@ -54,6 +54,7 @@ export default function FilePreviewScreen() {
       query: {
         enabled: !!subPath,
         queryKey: getGetFileItemQueryKey({ path: subPath }),
+        staleTime: 5 * 60_000,
       },
     },
   );
@@ -90,11 +91,12 @@ export default function FilePreviewScreen() {
     await WebBrowser.openBrowserAsync(detail.webUrl);
   }
 
-  // PDFs: prefer the OS viewer via download → share, rather than a WebView,
-  // because Graph requires our session cookie (which an in-app webview won't
-  // always carry) and OS viewers render PDFs natively.
+  // PDFs: open the inline preview URL in the system browser
+  // (SFSafariViewController on iOS, Custom Tabs on Android). These share
+  // cookies with the system store, so the requireAuth session cookie set
+  // by our login fetch is carried through automatically.
   async function openPdfInOs() {
-    await downloadAndShare();
+    await WebBrowser.openBrowserAsync(`${BASE_URL}/api/files/preview?path=${encodeURIComponent(subPath)}`);
   }
 
   const url = previewUrl(subPath);

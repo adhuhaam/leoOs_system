@@ -83,6 +83,7 @@ export default function FilesIndexScreen() {
     query: {
       enabled: !!status?.connected,
       queryKey: getListFilesQueryKey(params),
+      staleTime: 60_000,
     },
   });
 

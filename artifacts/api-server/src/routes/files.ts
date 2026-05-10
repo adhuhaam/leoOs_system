@@ -36,13 +36,16 @@ router.get("/files/list", async (req, res) => {
     }
     throw err;
   }
-  const limitRaw = Number(req.query["limit"] ?? 200);
+  const limitRaw = Number(req.query["limit"] ?? 50);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.max(1, Math.min(200, Math.trunc(limitRaw)))
+    : 50;
   const cursor = typeof req.query["cursor"] === "string" ? req.query["cursor"] : null;
 
   try {
     const result = await listFolder({
       subPath,
-      top: Number.isFinite(limitRaw) ? limitRaw : 200,
+      top: limit,
       cursor,
     });
     res.json(result);
@@ -74,6 +77,10 @@ router.get("/files/item", async (req, res) => {
       return;
     }
     throw err;
+  }
+  if (!subPath) {
+    res.status(400).json({ error: "path required" });
+    return;
   }
   try {
     const detail = await getItem(subPath);

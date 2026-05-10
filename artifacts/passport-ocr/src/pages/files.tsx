@@ -133,6 +133,7 @@ export default function FilesPage() {
     query: {
       enabled: !!status?.connected,
       queryKey: getListFilesQueryKey(params),
+      staleTime: 60_000,
     },
   });
 
@@ -377,6 +378,7 @@ function CurrentFolderOneDriveLink({ path }: { path: string }) {
       query: {
         enabled: !!path,
         queryKey: getGetFileItemQueryKey({ path }),
+        staleTime: 5 * 60_000,
       },
     },
   );
@@ -569,6 +571,54 @@ function PreviewDialog({
   );
 }
 
+function TextPreview({ url }: { url: string }) {
+  const MAX_BYTES = 256 * 1024;
+  const [text, setText] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  useMemo(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const buf = await res.arrayBuffer();
+        const cut = buf.byteLength > MAX_BYTES;
+        const slice = cut ? buf.slice(0, MAX_BYTES) : buf;
+        const body = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+        if (!cancelled) {
+          setText(body);
+          setTruncated(cut);
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+  if (err) return <div className="p-8 text-sm text-destructive">Couldn't load text: {err}</div>;
+  if (text == null)
+    return (
+      <div className="py-24 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+      </div>
+    );
+  return (
+    <div className="w-full">
+      {truncated && (
+        <div className="text-xs text-muted-foreground px-3 py-2 border-b border-border">
+          Showing first 256 KB. Download to see the full file.
+        </div>
+      )}
+      <pre className="text-xs leading-relaxed font-mono whitespace-pre-wrap break-all p-4 max-h-[75vh] overflow-auto bg-white text-zinc-900">
+        {text}
+      </pre>
+    </div>
+  );
+}
+
 function PreviewBody({
   item,
   detail,
@@ -603,7 +653,7 @@ function PreviewBody({
     );
   }
   if (kind === "text") {
-    return <iframe title={item.name} src={url} className="w-full h-[75vh] border-0 bg-white" />;
+    return <TextPreview url={url} />;
   }
   // office / other — no inline preview from Graph; encourage open in OneDrive / download.
   return (
