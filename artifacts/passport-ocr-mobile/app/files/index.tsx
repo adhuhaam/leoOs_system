@@ -141,8 +141,11 @@ export default function FilesIndexScreen() {
     }
   }
 
-  const numColumns = view === "grid" ? 3 : 1;
-  const tileSize = (Dimensions.get("window").width - 16 * 2 - 12 * 2) / 3;
+  const screenWidth = Dimensions.get("window").width;
+  // Bump to 4 columns on tablet-class devices.
+  const gridCols = screenWidth >= 768 ? 4 : 3;
+  const numColumns = view === "grid" ? gridCols : 1;
+  const tileSize = (screenWidth - 16 * 2 - 12 * (gridCols - 1)) / gridCols;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

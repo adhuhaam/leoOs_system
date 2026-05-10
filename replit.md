@@ -69,7 +69,7 @@ The `passport-ocr-mobile` artifact is an Expo (React Native) client that reuses 
 - **Master** — passport list with status/nationality filters and the latest-LOA company per candidate
 - **Capture** — camera + document picker upload to `/api/passports/upload` (multipart; field `file`)
 - **Billing** — invoices and quotations (view-only); detail view shows line items + GST totals
-- **More** — Clients (view-only), Expenses (CRUD), and Sign-out
+- **More** — Clients (view-only), Expenses (CRUD), Files (read-only OneDrive browser), and Sign-out
 
 ### Run locally
 - `pnpm --filter @workspace/passport-ocr-mobile run dev` — starts Metro/Expo. Open in Expo Go on a device on the same network, or scan the QR.

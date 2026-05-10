@@ -40,6 +40,21 @@ function downloadUrl(path: string): string {
   return `${BASE_URL}/api/files/download?path=${encodeURIComponent(path)}`;
 }
 
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  // Use chunked encoding to avoid call stack overflow on big files.
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + CHUNK)),
+    );
+  }
+  // global.btoa exists in React Native's runtime.
+  return globalThis.btoa(bin);
+}
+
 export default function FilePreviewScreen() {
   const colors = useColors();
   const { path, name, action } = useLocalSearchParams<{ path: string; name?: string; action?: string }>();
@@ -64,20 +79,29 @@ export default function FilePreviewScreen() {
     setBusy(true);
     try {
       const url = downloadUrl(subPath);
-      // Save to the app's document directory so the file is preserved beyond
-      // the OS-managed cache. Pass the file URI to expo-sharing — on iOS this
-      // shows the OS share sheet (Quick Look opens PDFs in the OS PDF viewer);
-      // on Android the OS file picker / app chooser handles it.
+      // Use the standard authenticated fetch (credentials: "include") rather
+      // than FileSystem.downloadAsync, because the API requires our session
+      // cookie and downloadAsync doesn't carry the JS cookie jar reliably
+      // across iOS/Android. We then write the downloaded bytes to the app's
+      // document directory and hand the file URI to expo-sharing — on iOS
+      // this shows the OS share sheet (Quick Look opens PDFs in the OS
+      // viewer); on Android the OS app chooser handles it.
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+      const base64 = arrayBufferToBase64(buf);
       const dir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? "";
       const target = `${dir}${encodeURIComponent(filename)}`;
-      const dl = await FileSystem.downloadAsync(url, target);
+      await FileSystem.writeAsStringAsync(target, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(dl.uri, {
+        await Sharing.shareAsync(target, {
           mimeType: detail?.mimeType ?? undefined,
           dialogTitle: filename,
         });
       } else {
-        Alert.alert("Saved", `File saved to ${dl.uri}`);
+        Alert.alert("Saved", `File saved to ${target}`);
       }
     } catch (err) {
       Alert.alert("Download failed", err instanceof Error ? err.message : String(err));
