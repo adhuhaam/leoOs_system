@@ -23,22 +23,28 @@ function Router() {
   useApplySystemSettings();
   return (
     <AuthGate>
-      <AppLayout>
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/upload" component={UploadPage} />
-          {/* /passports kept as an alias so old bookmarks land on the merged page */}
-          <Route path="/passports" component={MasterListPage} />
-          <Route path="/master-list" component={MasterListPage} />
-          <Route path="/clients" component={ClientsPage} />
-          <Route path="/loa" component={LoaPage} />
-          <Route path="/expenses" component={ExpensesPage} />
-          <Route path="/billing" component={BillingPage} />
-          <Route path="/billing/:id/print" component={BillingPrintPage} />
-          <Route path="/settings" component={SettingsPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </AppLayout>
+      <Switch>
+        {/* Print view renders standalone — no app sidebar/header so the
+            printed PDF only contains the document itself. */}
+        <Route path="/billing/:id/print" component={BillingPrintPage} />
+        <Route>
+          <AppLayout>
+            <Switch>
+              <Route path="/" component={Dashboard} />
+              <Route path="/upload" component={UploadPage} />
+              {/* /passports kept as an alias so old bookmarks land on the merged page */}
+              <Route path="/passports" component={MasterListPage} />
+              <Route path="/master-list" component={MasterListPage} />
+              <Route path="/clients" component={ClientsPage} />
+              <Route path="/loa" component={LoaPage} />
+              <Route path="/expenses" component={ExpensesPage} />
+              <Route path="/billing" component={BillingPage} />
+              <Route path="/settings" component={SettingsPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </AppLayout>
+        </Route>
+      </Switch>
     </AuthGate>
   );
 }
