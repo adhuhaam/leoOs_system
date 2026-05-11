@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Passport OCR",
+    "name": "LEO OS",
     "slug": "leo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -50,8 +50,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Passport OCR to access your camera to capture passports.",
-          "photosPermission": "Allow Passport OCR to access your photos to upload passport scans."
+          "cameraPermission": "Allow LEO OS to access your camera to capture passports.",
+          "photosPermission": "Allow LEO OS to access your photos to upload passport scans."
         }
       ],
       [

@@ -1,4 +1,4 @@
-# Passport OCR Dashboard
+# LEO OS
 
 An AI-powered passport data extraction tool for Bangladesh and Indian passports. Upload passport images or PDFs and the system automatically extracts name, passport number, dates, address, and nationality using GPT vision OCR.
 

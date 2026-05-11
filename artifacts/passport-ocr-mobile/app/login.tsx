@@ -55,7 +55,7 @@ export default function LoginScreen() {
             <Feather name="shield" size={28} color={colors.primaryForeground} />
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>
-            Passport OCR
+            LEO OS
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Enter the shared workspace password to continue.
