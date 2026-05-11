@@ -43,6 +43,31 @@ const EMPTY_FORM: FormState = {
   password: "",
 };
 
+const AVATAR_PALETTE = [
+  { bg: "#FEE2E2", fg: "#B91C1C" },
+  { bg: "#FEF3C7", fg: "#B45309" },
+  { bg: "#DCFCE7", fg: "#15803D" },
+  { bg: "#E0F2FE", fg: "#0369A1" },
+  { bg: "#EDE9FE", fg: "#6D28D9" },
+  { bg: "#FCE7F3", fg: "#BE185D" },
+  { bg: "#CCFBF1", fg: "#0F766E" },
+  { bg: "#FFEDD5", fg: "#C2410C" },
+];
+
+function colorFor(label: string) {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) | 0;
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+
+function initialsFor(label: string) {
+  const trimmed = label.trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function PasswordsScreen() {
   const colors = useColors();
   const qc = useQueryClient();
@@ -79,6 +104,15 @@ export default function PasswordsScreen() {
       .map((g) => ({ title: g.label, data: g.data }));
   }, [entries]);
 
+  const websiteCount = useMemo(
+    () => new Set(entries.map((e) => e.website.toLowerCase())).size,
+    [entries],
+  );
+  const ownerCount = useMemo(
+    () => new Set(entries.map((e) => e.owner.toLowerCase())).size,
+    [entries],
+  );
+
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: getListPasswordsQueryKey() });
 
@@ -109,29 +143,14 @@ export default function PasswordsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>
-            Vault
-          </Text>
-          <Text style={[styles.totalValue, { color: colors.foreground }]}>
-            {entries.length} {entries.length === 1 ? "entry" : "entries"}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => setAddOpen(true)}
-          style={({ pressed }) => [
-            styles.addBtn,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Feather name="plus" size={16} color={colors.primaryForeground} />
-          <Text style={[styles.addBtnText, { color: colors.primaryForeground }]}>
-            Add
-          </Text>
-        </Pressable>
+      {/* Stats header */}
+      <View style={styles.statsRow}>
+        <StatCard label="Entries" value={entries.length} colors={colors} />
+        <StatCard label="Websites" value={websiteCount} colors={colors} />
+        <StatCard label="Owners" value={ownerCount} colors={colors} />
       </View>
 
+      {/* Search */}
       <View
         style={[
           styles.searchWrap,
@@ -191,30 +210,60 @@ export default function PasswordsScreen() {
             />
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Feather name="key" size={36} color={colors.mutedForeground} />
+            <View style={styles.emptyBox}>
+              <View
+                style={[
+                  styles.emptyIcon,
+                  { backgroundColor: colors.primary + "22" },
+                ]}
+              >
+                <Feather name="key" size={28} color={colors.primary} />
+              </View>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                No passwords saved
+                {search ? "No matches" : "Your vault is empty"}
               </Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Tap Add to save your first credential.
+                {search
+                  ? "Try a different search — websites, owners, and usernames are all searchable."
+                  : "Tap the + button below to save your first credential."}
               </Text>
             </View>
           }
-          renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeader}>
-              <Feather name="globe" size={14} color={colors.mutedForeground} />
-              <Text
-                style={[styles.sectionTitle, { color: colors.foreground }]}
-                numberOfLines={1}
-              >
-                {section.title}
-              </Text>
-              <Text style={[styles.sectionCount, { color: colors.mutedForeground }]}>
-                ({section.data.length})
-              </Text>
-            </View>
-          )}
+          renderSectionHeader={({ section }) => {
+            const palette = colorFor(section.title.toLowerCase());
+            return (
+              <View style={styles.sectionHeader}>
+                <View
+                  style={[
+                    styles.sectionAvatar,
+                    { backgroundColor: palette.bg },
+                  ]}
+                >
+                  <Text style={[styles.sectionAvatarText, { color: palette.fg }]}>
+                    {initialsFor(section.title)}
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.sectionTitle, { color: colors.foreground }]}
+                  numberOfLines={1}
+                >
+                  {section.title}
+                </Text>
+                <View
+                  style={[
+                    styles.sectionBadge,
+                    { backgroundColor: colors.secondary },
+                  ]}
+                >
+                  <Text
+                    style={[styles.sectionBadgeText, { color: colors.foreground }]}
+                  >
+                    {section.data.length}
+                  </Text>
+                </View>
+              </View>
+            );
+          }}
           renderItem={({ item }) => (
             <PasswordRow
               entry={item}
@@ -224,6 +273,22 @@ export default function PasswordsScreen() {
           )}
         />
       )}
+
+      {/* Floating Add button */}
+      <Pressable
+        onPress={() => setAddOpen(true)}
+        style={({ pressed }) => [
+          styles.fab,
+          {
+            backgroundColor: colors.primary,
+            opacity: pressed ? 0.85 : 1,
+            shadowColor: colors.primary,
+          },
+        ]}
+        accessibilityLabel="Add password"
+      >
+        <Feather name="plus" size={26} color={colors.primaryForeground} />
+      </Pressable>
 
       <PasswordFormModal
         mode="create"
@@ -242,6 +307,32 @@ export default function PasswordsScreen() {
   );
 }
 
+function StatCard({
+  label,
+  value,
+  colors,
+}: {
+  label: string;
+  value: number;
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <View
+      style={[
+        styles.statCard,
+        { backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+    >
+      <Text style={[styles.statValue, { color: colors.foreground }]}>
+        {value}
+      </Text>
+      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function PasswordRow({
   entry,
   onEdit,
@@ -253,6 +344,7 @@ function PasswordRow({
 }) {
   const colors = useColors();
   const [revealed, setRevealed] = useState(false);
+  const palette = colorFor(entry.owner.toLowerCase());
 
   const copy = async (value: string, label: string) => {
     await Clipboard.setStringAsync(value);
@@ -263,16 +355,44 @@ function PasswordRow({
     <View
       style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}
     >
-      <Text style={[styles.rowOwner, { color: colors.mutedForeground }]}>
-        {entry.owner}
-      </Text>
+      <View style={styles.rowHeader}>
+        <View style={[styles.ownerAvatar, { backgroundColor: palette.bg }]}>
+          <Text style={[styles.ownerAvatarText, { color: palette.fg }]}>
+            {initialsFor(entry.owner)}
+          </Text>
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.ownerLabel, { color: colors.mutedForeground }]}>
+            Owner
+          </Text>
+          <Text
+            style={[styles.ownerName, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
+            {entry.owner}
+          </Text>
+        </View>
+        <View style={styles.rowActions}>
+          <Pressable onPress={onEdit} hitSlop={8} style={styles.iconBtn}>
+            <Feather name="edit-2" size={16} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable onPress={onDelete} hitSlop={8} style={styles.iconBtn}>
+            <Feather name="trash-2" size={16} color={colors.destructive} />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.fieldBlock}>
         <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
           Username
         </Text>
         <View style={styles.fieldValueRow}>
-          <Text style={[styles.fieldValue, { color: colors.foreground }]} numberOfLines={1}>
+          <Text
+            style={[styles.fieldValue, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
             {entry.username}
           </Text>
           <Pressable
@@ -290,10 +410,20 @@ function PasswordRow({
           Password
         </Text>
         <View style={styles.fieldValueRow}>
-          <Text style={[styles.fieldValue, { color: colors.foreground }]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.fieldValue,
+              {
+                color: colors.foreground,
+                fontFamily: revealed ? "Inter_500Medium" : "Inter_700Bold",
+                letterSpacing: revealed ? 0 : 2,
+              },
+            ]}
+            numberOfLines={1}
+          >
             {revealed
               ? entry.password
-              : "•".repeat(Math.min(entry.password.length, 12))}
+              : "•".repeat(Math.min(Math.max(entry.password.length, 6), 14))}
           </Text>
           <Pressable
             onPress={() => setRevealed((r) => !r)}
@@ -314,41 +444,6 @@ function PasswordRow({
             <Feather name="copy" size={16} color={colors.primary} />
           </Pressable>
         </View>
-      </View>
-
-      <View style={styles.actionsRow}>
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            {
-              backgroundColor: colors.secondary,
-              borderColor: colors.border,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Feather name="edit-2" size={14} color={colors.foreground} />
-          <Text style={[styles.actionText, { color: colors.foreground }]}>
-            Edit
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onDelete}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.destructive,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Feather name="trash-2" size={14} color={colors.destructive} />
-          <Text style={[styles.actionText, { color: colors.destructive }]}>
-            Delete
-          </Text>
-        </Pressable>
       </View>
     </View>
   );
@@ -430,9 +525,7 @@ function PasswordFormModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1, backgroundColor: colors.background }}
       >
-        <View
-          style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-        >
+        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
           <Pressable onPress={onClose} hitSlop={10}>
             <Text style={[styles.modalCancel, { color: colors.primary }]}>
               Cancel
@@ -453,7 +546,10 @@ function PasswordFormModal({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.modalBody}
+          keyboardShouldPersistTaps="handled"
+        >
           <FormField
             label="Website / application"
             value={form.website}
@@ -465,7 +561,7 @@ function PasswordFormModal({
             label="Owner"
             value={form.owner}
             onChangeText={(v) => setForm((s) => ({ ...s, owner: v }))}
-            placeholder="Who this account belongs to"
+            placeholder="Whose account this is"
             autoCapitalize="words"
           />
           <FormField
@@ -539,24 +635,28 @@ function FormField({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: {
+  statsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  totalLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
-  totalValue: { fontSize: 22, fontFamily: "Inter_700Bold", marginTop: 2 },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
+  statCard: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "flex-start",
   },
-  addBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  statValue: { fontSize: 22, fontFamily: "Inter_700Bold", lineHeight: 26 },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -574,30 +674,70 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     padding: 0,
   },
-  listContent: { padding: 16, gap: 12 },
+  listContent: { padding: 16, paddingBottom: 110, gap: 12 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
+  emptyBox: { alignItems: "center", gap: 12, paddingVertical: 24 },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingTop: 8,
-    paddingBottom: 6,
+    paddingBottom: 8,
   },
-  sectionTitle: { fontSize: 14, fontFamily: "Inter_700Bold", flexShrink: 1 },
-  sectionCount: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  sectionAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionAvatarText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  sectionTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    flexShrink: 1,
+  },
+  sectionBadge: {
+    paddingHorizontal: 8,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   row: {
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 10,
     gap: 10,
   },
-  rowOwner: {
-    fontSize: 11,
+  rowHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  ownerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ownerAvatarText: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  ownerLabel: {
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
   },
+  ownerName: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 1 },
+  rowActions: { flexDirection: "row", gap: 4 },
+  divider: { height: 1, opacity: 0.7, marginVertical: 2 },
   fieldBlock: { gap: 4 },
   fieldLabel: {
     fontSize: 10,
@@ -605,35 +745,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  fieldValueRow: {
-    flexDirection: "row",
+  fieldValueRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  fieldValue: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  iconBtn: { padding: 6, borderRadius: 6 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  fieldValue: {
+  center: {
     flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  iconBtn: { padding: 4 },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-  },
-  actionBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
   },
-  actionText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    maxWidth: 280,
+    lineHeight: 20,
+  },
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },

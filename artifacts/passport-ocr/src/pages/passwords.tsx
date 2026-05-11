@@ -10,10 +10,11 @@ import {
 import type { Password } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,9 @@ import {
   Check,
   Loader2,
   Globe,
+  Users,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 
 interface PasswordFormState {
@@ -59,6 +63,31 @@ const EMPTY_FORM: PasswordFormState = {
   username: "",
   password: "",
 };
+
+const AVATAR_PALETTE = [
+  { bg: "bg-rose-100 dark:bg-rose-950/40", fg: "text-rose-700 dark:text-rose-300", ring: "ring-rose-200/60 dark:ring-rose-900/40" },
+  { bg: "bg-amber-100 dark:bg-amber-950/40", fg: "text-amber-700 dark:text-amber-300", ring: "ring-amber-200/60 dark:ring-amber-900/40" },
+  { bg: "bg-emerald-100 dark:bg-emerald-950/40", fg: "text-emerald-700 dark:text-emerald-300", ring: "ring-emerald-200/60 dark:ring-emerald-900/40" },
+  { bg: "bg-sky-100 dark:bg-sky-950/40", fg: "text-sky-700 dark:text-sky-300", ring: "ring-sky-200/60 dark:ring-sky-900/40" },
+  { bg: "bg-violet-100 dark:bg-violet-950/40", fg: "text-violet-700 dark:text-violet-300", ring: "ring-violet-200/60 dark:ring-violet-900/40" },
+  { bg: "bg-fuchsia-100 dark:bg-fuchsia-950/40", fg: "text-fuchsia-700 dark:text-fuchsia-300", ring: "ring-fuchsia-200/60 dark:ring-fuchsia-900/40" },
+  { bg: "bg-teal-100 dark:bg-teal-950/40", fg: "text-teal-700 dark:text-teal-300", ring: "ring-teal-200/60 dark:ring-teal-900/40" },
+  { bg: "bg-orange-100 dark:bg-orange-950/40", fg: "text-orange-700 dark:text-orange-300", ring: "ring-orange-200/60 dark:ring-orange-900/40" },
+];
+
+function colorFor(label: string) {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) | 0;
+  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+}
+
+function initialsFor(label: string) {
+  const trimmed = label.trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function pwdToForm(p: Password): PasswordFormState {
   return {
@@ -88,8 +117,6 @@ export default function PasswordsPage() {
     );
   }, [entries, search]);
 
-  // Group by website (case-insensitive); preserve original casing of first
-  // occurrence as the group label.
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; items: Password[] }>();
     for (const e of filtered) {
@@ -104,82 +131,121 @@ export default function PasswordsPage() {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [filtered]);
 
+  const websiteCount = useMemo(
+    () => new Set(entries.map((e) => e.website.toLowerCase())).size,
+    [entries],
+  );
+  const ownerCount = useMemo(
+    () => new Set(entries.map((e) => e.owner.toLowerCase())).size,
+    [entries],
+  );
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <KeyRound className="h-6 w-6 text-primary" />
-            Passwords
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Shared password vault for the team — websites, apps, and login credentials.
-          </p>
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background p-6 md:p-8">
+        <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="hidden sm:flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+              <KeyRound className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                Password Vault
+              </h1>
+              <p className="text-muted-foreground mt-1 text-sm md:text-base max-w-xl">
+                A shared, searchable cabinet for every account your team uses — websites, dashboards, mailboxes, anything with a login.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="lg"
+            onClick={() => setAddOpen(true)}
+            data-testid="button-add-password"
+            className="self-start md:self-center shadow-md shadow-primary/20"
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Add password
+          </Button>
         </div>
-        <Button onClick={() => setAddOpen(true)} data-testid="button-add-password">
-          <Plus className="h-4 w-4 mr-1" /> Add password
-        </Button>
+
+        <div className="relative mt-6 grid grid-cols-3 gap-3">
+          <StatTile icon={ShieldCheck} label="Entries" value={entries.length} tint="text-primary" />
+          <StatTile icon={Globe} label="Websites" value={websiteCount} tint="text-sky-600 dark:text-sky-400" />
+          <StatTile icon={Users} label="Owners" value={ownerCount} tint="text-violet-600 dark:text-violet-400" />
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="py-4 border-b">
-          <div className="flex items-center justify-between gap-3">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by website, owner, or username..."
-                className="pl-8"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                data-testid="input-search-passwords"
-              />
-            </div>
-            <span className="text-sm text-muted-foreground">
-              <strong className="text-foreground">{filtered.length}</strong> of{" "}
-              <strong className="text-foreground">{entries.length}</strong>
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-16 bg-muted animate-pulse rounded" />
-              ))}
-            </div>
-          ) : grouped.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              {entries.length === 0
-                ? "No passwords saved yet — click Add password to create your first entry."
-                : "No entries match your search."}
-            </div>
-          ) : (
-            <div className="divide-y">
-              {grouped.map((group) => (
-                <div key={group.label} className="p-4 md:p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="font-semibold text-sm tracking-tight">{group.label}</h3>
-                    <span className="text-xs text-muted-foreground">
-                      ({group.items.length})
-                    </span>
-                  </div>
-                  <div className="grid gap-2">
-                    {group.items.map((e) => (
-                      <PasswordRow
-                        key={e.id}
-                        entry={e}
-                        onEdit={() => setEditEntry(e)}
-                        onDelete={() => setDeleteEntry(e)}
-                      />
-                    ))}
-                  </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Search by website, owner, or username…"
+          className="pl-10 pr-10 h-12 text-base shadow-sm"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          data-testid="input-search-passwords"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {search && (
+        <p className="text-xs text-muted-foreground -mt-3">
+          Showing <strong className="text-foreground">{filtered.length}</strong> of{" "}
+          <strong className="text-foreground">{entries.length}</strong> entries.
+        </p>
+      )}
+
+      {/* List */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 bg-muted animate-pulse rounded-xl" />
+          ))}
+        </div>
+      ) : grouped.length === 0 ? (
+        <EmptyState hasEntries={entries.length > 0} onAdd={() => setAddOpen(true)} />
+      ) : (
+        <div className="space-y-5">
+          {grouped.map((group) => {
+            const palette = colorFor(group.label.toLowerCase());
+            return (
+              <div key={group.label}>
+                <div className="flex items-center gap-2.5 mb-2.5 px-1">
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold ${palette.bg} ${palette.fg}`}
+                  >
+                    {initialsFor(group.label)}
+                  </span>
+                  <h3 className="font-semibold text-sm tracking-tight">{group.label}</h3>
+                  <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px]">
+                    {group.items.length}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="grid gap-2">
+                  {group.items.map((e) => (
+                    <PasswordRow
+                      key={e.id}
+                      entry={e}
+                      onEdit={() => setEditEntry(e)}
+                      onDelete={() => setDeleteEntry(e)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <PasswordFormDialog mode="create" open={addOpen} onOpenChange={setAddOpen} />
       {editEntry && (
@@ -201,6 +267,55 @@ export default function PasswordsPage() {
   );
 }
 
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  tint,
+}: {
+  icon: typeof KeyRound;
+  label: string;
+  value: number;
+  tint: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-card/60 backdrop-blur px-3 py-3 md:px-4">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className={`h-3.5 w-3.5 ${tint}`} />
+        <span className="font-medium">{label}</span>
+      </div>
+      <div className="mt-1.5 text-2xl md:text-3xl font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+function EmptyState({ hasEntries, onAdd }: { hasEntries: boolean; onAdd: () => void }) {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="py-14 text-center flex flex-col items-center gap-3">
+        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <KeyRound className="h-7 w-7 text-primary" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-semibold text-base">
+            {hasEntries ? "No matches" : "Your vault is empty"}
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            {hasEntries
+              ? "Try a different search term — websites, owners, and usernames are all searchable."
+              : "Save the first credential to share with the team. Everyone signed in here will see it."}
+          </p>
+        </div>
+        {!hasEntries && (
+          <Button onClick={onAdd} className="mt-2">
+            <Plus className="h-4 w-4 mr-1.5" /> Add your first password
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function PasswordRow({
   entry,
   onEdit,
@@ -213,6 +328,7 @@ function PasswordRow({
   const { toast } = useToast();
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState<"username" | "password" | null>(null);
+  const palette = colorFor(entry.owner.toLowerCase());
 
   const copy = async (value: string, kind: "username" | "password") => {
     try {
@@ -226,99 +342,127 @@ function PasswordRow({
 
   return (
     <div
-      className="border rounded-lg p-3 md:p-4 bg-card hover:bg-muted/30 transition"
+      className="group relative rounded-xl border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
       data-testid={`row-password-${entry.id}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground font-mono">
-            {entry.owner}
-          </div>
-          <div className="grid sm:grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Username
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm break-all">{entry.username}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0"
-                  onClick={() => copy(entry.username, "username")}
-                  data-testid={`button-copy-username-${entry.id}`}
-                  title="Copy username"
-                >
-                  {copied === "username" ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
+      <div className="flex items-stretch gap-3 p-3 md:p-4">
+        <div
+          className={`flex h-10 w-10 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-xl text-sm font-bold ring-1 ${palette.bg} ${palette.fg} ${palette.ring}`}
+        >
+          {initialsFor(entry.owner)}
+        </div>
+
+        <div className="flex-1 min-w-0 grid sm:grid-cols-[1fr_1fr_auto] items-center gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+              Owner
             </div>
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Password
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm break-all">
-                  {revealed ? entry.password : "•".repeat(Math.min(entry.password.length, 12))}
-                </span>
+            <div className="text-sm font-semibold truncate">{entry.owner}</div>
+          </div>
+
+          <div className="min-w-0 grid sm:grid-cols-2 gap-3">
+            <FieldDisplay
+              label="Username"
+              value={entry.username}
+              onCopy={() => copy(entry.username, "username")}
+              copied={copied === "username"}
+              testId={`button-copy-username-${entry.id}`}
+            />
+            <FieldDisplay
+              label="Password"
+              value={revealed ? entry.password : "•".repeat(Math.min(Math.max(entry.password.length, 6), 14))}
+              mono
+              onCopy={() => copy(entry.password, "password")}
+              copied={copied === "password"}
+              testId={`button-copy-password-${entry.id}`}
+              extra={
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 flex-shrink-0"
+                  className="h-7 w-7 flex-shrink-0"
                   onClick={() => setRevealed((r) => !r)}
                   data-testid={`button-toggle-password-${entry.id}`}
                   title={revealed ? "Hide" : "Show"}
+                  aria-label={revealed ? "Hide password" : "Show password"}
                 >
-                  {revealed ? (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
+                  {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0"
-                  onClick={() => copy(entry.password, "password")}
-                  data-testid={`button-copy-password-${entry.id}`}
-                  title="Copy password"
-                >
-                  {copied === "password" ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
-            </div>
+              }
+            />
+          </div>
+
+          <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity self-start sm:self-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onEdit}
+              data-testid={`button-edit-password-${entry.id}`}
+              title="Edit"
+              aria-label="Edit"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={onDelete}
+              data-testid={`button-delete-password-${entry.id}`}
+              title="Delete"
+              aria-label="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onEdit}
-            data-testid={`button-edit-password-${entry.id}`}
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={onDelete}
-            data-testid={`button-delete-password-${entry.id}`}
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldDisplay({
+  label,
+  value,
+  mono,
+  onCopy,
+  copied,
+  testId,
+  extra,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  onCopy: () => void;
+  copied: boolean;
+  testId?: string;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+        {label}
+      </div>
+      <div className="flex items-center gap-1.5 mt-0.5">
+        <span className={`text-sm truncate ${mono ? "font-mono tracking-tight" : ""}`}>
+          {value}
+        </span>
+        {extra}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 flex-shrink-0"
+          onClick={onCopy}
+          data-testid={testId}
+          title={`Copy ${label.toLowerCase()}`}
+          aria-label={`Copy ${label.toLowerCase()}`}
+        >
+          {copied ? (
+            <Check className="h-3.5 w-3.5 text-emerald-600" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
+        </Button>
       </div>
     </div>
   );
@@ -384,18 +528,28 @@ function PasswordFormDialog(
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Add password" : "Edit password"}</DialogTitle>
-          <DialogDescription>
-            All four fields are required.
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base">
+                {mode === "create" ? "Add a new password" : "Edit password"}
+              </DialogTitle>
+              <DialogDescription className="text-xs mt-0.5">
+                Saved entries are visible to everyone signed in to LEO OS.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Website / application *</Label>
+            <Label htmlFor="pwd-website">Website / application</Label>
             <Input
+              id="pwd-website"
               value={form.website}
               onChange={(e) => setForm((s) => ({ ...s, website: e.target.value }))}
               placeholder="e.g. Gmail, Office 365, leomaldives.com"
@@ -403,32 +557,39 @@ function PasswordFormDialog(
               data-testid="input-password-website"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Owner *</Label>
-            <Input
-              value={form.owner}
-              onChange={(e) => setForm((s) => ({ ...s, owner: e.target.value }))}
-              placeholder="Who this account belongs to"
-              data-testid="input-password-owner"
-            />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-owner">Owner</Label>
+              <Input
+                id="pwd-owner"
+                value={form.owner}
+                onChange={(e) => setForm((s) => ({ ...s, owner: e.target.value }))}
+                placeholder="Whose account"
+                data-testid="input-password-owner"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pwd-username">Username</Label>
+              <Input
+                id="pwd-username"
+                value={form.username}
+                onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
+                placeholder="Username or email"
+                autoComplete="off"
+                data-testid="input-password-username"
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Username *</Label>
-            <Input
-              value={form.username}
-              onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
-              autoComplete="off"
-              data-testid="input-password-username"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Password *</Label>
+            <Label htmlFor="pwd-value">Password</Label>
             <div className="flex gap-2">
               <Input
+                id="pwd-value"
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))}
                 autoComplete="new-password"
+                className="font-mono"
                 data-testid="input-password-value"
               />
               <Button
@@ -437,19 +598,20 @@ function PasswordFormDialog(
                 size="icon"
                 onClick={() => setShowPassword((v) => !v)}
                 title={showPassword ? "Hide" : "Show"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending} data-testid="button-save-password">
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "create" ? "Add password" : "Save changes"}
+              {mode === "create" ? "Save password" : "Save changes"}
             </Button>
           </DialogFooter>
         </form>
