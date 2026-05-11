@@ -15,6 +15,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +58,8 @@ import {
   Users,
   ShieldCheck,
   X,
+  ChevronsUpDown,
+  Plus as PlusIcon,
 } from "lucide-react";
 
 interface PasswordFormState {
@@ -139,6 +151,15 @@ export default function PasswordsPage() {
     () => new Set(entries.map((e) => e.owner.toLowerCase())).size,
     [entries],
   );
+
+  const websiteOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of entries) {
+      const key = e.website.trim().toLowerCase();
+      if (key && !seen.has(key)) seen.set(key, e.website.trim());
+    }
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  }, [entries]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -247,13 +268,19 @@ export default function PasswordsPage() {
         </div>
       )}
 
-      <PasswordFormDialog mode="create" open={addOpen} onOpenChange={setAddOpen} />
+      <PasswordFormDialog
+        mode="create"
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        websiteOptions={websiteOptions}
+      />
       {editEntry && (
         <PasswordFormDialog
           mode="edit"
           entry={editEntry}
           open={!!editEntry}
           onOpenChange={(o) => !o && setEditEntry(null)}
+          websiteOptions={websiteOptions}
         />
       )}
       {deleteEntry && (
@@ -468,12 +495,135 @@ function FieldDisplay({
   );
 }
 
+function WebsiteCombobox({
+  id,
+  value,
+  onChange,
+  options,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const trimmed = query.trim();
+  const exactMatch = options.some(
+    (o) => o.toLowerCase() === trimmed.toLowerCase(),
+  );
+  const showAddNew = trimmed.length > 0 && !exactMatch;
+  const palette = value ? colorFor(value.toLowerCase()) : null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal h-10"
+          data-testid="combobox-password-website"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            {value && palette ? (
+              <span
+                className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[9px] font-bold ${palette.bg} ${palette.fg}`}
+              >
+                {initialsFor(value)}
+              </span>
+            ) : (
+              <Globe className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className={`truncate ${value ? "" : "text-muted-foreground"}`}>
+              {value || "Pick or add a website / app…"}
+            </span>
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]"
+        align="start"
+      >
+        <Command shouldFilter>
+          <CommandInput
+            placeholder="Search or type a new one…"
+            value={query}
+            onValueChange={setQuery}
+            data-testid="combobox-input-website"
+          />
+          <CommandList>
+            {options.length === 0 && !trimmed && (
+              <CommandEmpty>
+                No saved websites yet — type one to add it.
+              </CommandEmpty>
+            )}
+            {options.length > 0 && (
+              <CommandGroup heading="Existing">
+                {options.map((opt) => {
+                  const p = colorFor(opt.toLowerCase());
+                  return (
+                    <CommandItem
+                      key={opt}
+                      value={opt}
+                      onSelect={() => {
+                        onChange(opt);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded text-[9px] font-bold ${p.bg} ${p.fg}`}
+                      >
+                        {initialsFor(opt)}
+                      </span>
+                      <span className="truncate">{opt}</span>
+                      {value.toLowerCase() === opt.toLowerCase() && (
+                        <Check className="ml-auto h-4 w-4 text-primary" />
+                      )}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+            {showAddNew && (
+              <>
+                {options.length > 0 && <CommandSeparator />}
+                <CommandGroup heading="Add new">
+                  <CommandItem
+                    value={`__add__${trimmed}`}
+                    onSelect={() => {
+                      onChange(trimmed);
+                      setQuery("");
+                      setOpen(false);
+                    }}
+                    data-testid="combobox-add-new-website"
+                  >
+                    <PlusIcon className="h-4 w-4 text-primary" />
+                    <span>
+                      Use &ldquo;<strong>{trimmed}</strong>&rdquo; as new
+                    </span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function PasswordFormDialog(
   props:
-    | { mode: "create"; open: boolean; onOpenChange: (o: boolean) => void }
-    | { mode: "edit"; entry: Password; open: boolean; onOpenChange: (o: boolean) => void },
+    | { mode: "create"; open: boolean; onOpenChange: (o: boolean) => void; websiteOptions: string[] }
+    | { mode: "edit"; entry: Password; open: boolean; onOpenChange: (o: boolean) => void; websiteOptions: string[] },
 ) {
-  const { mode, open, onOpenChange } = props;
+  const { mode, open, onOpenChange, websiteOptions } = props;
   const entryId = mode === "edit" ? props.entry.id : null;
   const [form, setForm] = useState<PasswordFormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
@@ -548,14 +698,15 @@ function PasswordFormDialog(
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="pwd-website">Website / application</Label>
-            <Input
+            <WebsiteCombobox
               id="pwd-website"
               value={form.website}
-              onChange={(e) => setForm((s) => ({ ...s, website: e.target.value }))}
-              placeholder="e.g. Gmail, Office 365, leomaldives.com"
-              autoFocus
-              data-testid="input-password-website"
+              onChange={(v) => setForm((s) => ({ ...s, website: v }))}
+              options={websiteOptions}
             />
+            <p className="text-[11px] text-muted-foreground">
+              Pick from your existing websites or type a new one to add it.
+            </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">

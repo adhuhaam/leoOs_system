@@ -14,6 +14,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -86,7 +87,15 @@ export default function PasswordsScreen() {
     { query: { queryKey: getListPasswordsQueryKey(params) } },
   );
 
+  // Always-fresh, unfiltered list used to derive the website picker options
+  // so they stay complete even while the user is searching the main list.
+  const { data: allData } = useListPasswords(
+    {},
+    { query: { queryKey: getListPasswordsQueryKey() } },
+  );
+
   const entries = (data ?? []) as Password[];
+  const allEntries = (allData ?? []) as Password[];
 
   const sections = useMemo(() => {
     const map = new Map<string, { label: string; data: Password[] }>();
@@ -112,6 +121,17 @@ export default function PasswordsScreen() {
     () => new Set(entries.map((e) => e.owner.toLowerCase())).size,
     [entries],
   );
+
+  // Distinct existing websites (preserve original casing of first occurrence).
+  // Sourced from the unfiltered list so the picker stays complete during search.
+  const websiteOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of allEntries) {
+      const key = e.website.trim().toLowerCase();
+      if (key && !seen.has(key)) seen.set(key, e.website.trim());
+    }
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  }, [allEntries]);
 
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: getListPasswordsQueryKey() });
@@ -143,14 +163,12 @@ export default function PasswordsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Stats header */}
       <View style={styles.statsRow}>
         <StatCard label="Entries" value={entries.length} colors={colors} />
         <StatCard label="Websites" value={websiteCount} colors={colors} />
         <StatCard label="Owners" value={ownerCount} colors={colors} />
       </View>
 
-      {/* Search */}
       <View
         style={[
           styles.searchWrap,
@@ -234,10 +252,7 @@ export default function PasswordsScreen() {
             return (
               <View style={styles.sectionHeader}>
                 <View
-                  style={[
-                    styles.sectionAvatar,
-                    { backgroundColor: palette.bg },
-                  ]}
+                  style={[styles.sectionAvatar, { backgroundColor: palette.bg }]}
                 >
                   <Text style={[styles.sectionAvatarText, { color: palette.fg }]}>
                     {initialsFor(section.title)}
@@ -274,7 +289,6 @@ export default function PasswordsScreen() {
         />
       )}
 
-      {/* Floating Add button */}
       <Pressable
         onPress={() => setAddOpen(true)}
         style={({ pressed }) => [
@@ -295,6 +309,7 @@ export default function PasswordsScreen() {
         visible={addOpen}
         onClose={() => setAddOpen(false)}
         onSaved={invalidate}
+        websiteOptions={websiteOptions}
       />
       <PasswordFormModal
         mode="edit"
@@ -302,6 +317,7 @@ export default function PasswordsScreen() {
         visible={editing != null}
         onClose={() => setEditing(null)}
         onSaved={invalidate}
+        websiteOptions={websiteOptions}
       />
     </View>
   );
@@ -455,12 +471,14 @@ function PasswordFormModal({
   visible,
   onClose,
   onSaved,
+  websiteOptions,
 }: {
   mode: "create" | "edit";
   entry?: Password | null;
   visible: boolean;
   onClose: () => void;
   onSaved: () => void;
+  websiteOptions: string[];
 }) {
   const colors = useColors();
   const createMutation = useCreatePassword();
@@ -469,6 +487,7 @@ function PasswordFormModal({
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
+  const [websitePickerOpen, setWebsitePickerOpen] = useState(false);
   const entryId = mode === "edit" && entry ? entry.id : null;
 
   useEffect(() => {
@@ -514,6 +533,10 @@ function PasswordFormModal({
     }
   };
 
+  const websitePalette = form.website
+    ? colorFor(form.website.toLowerCase())
+    : null;
+
   return (
     <Modal
       visible={visible}
@@ -550,13 +573,71 @@ function PasswordFormModal({
           contentContainerStyle={styles.modalBody}
           keyboardShouldPersistTaps="handled"
         >
-          <FormField
-            label="Website / application"
-            value={form.website}
-            onChangeText={(v) => setForm((s) => ({ ...s, website: v }))}
-            placeholder="e.g. Gmail, Office 365"
-            autoCapitalize="words"
-          />
+          <View style={styles.formField}>
+            <Text style={[styles.formLabel, { color: colors.mutedForeground }]}>
+              Website / application
+            </Text>
+            <Pressable
+              onPress={() => setWebsitePickerOpen(true)}
+              style={({ pressed }) => [
+                styles.pickerBtn,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              {form.website && websitePalette ? (
+                <View
+                  style={[
+                    styles.pickerAvatar,
+                    { backgroundColor: websitePalette.bg },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pickerAvatarText,
+                      { color: websitePalette.fg },
+                    ]}
+                  >
+                    {initialsFor(form.website)}
+                  </Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.pickerAvatar,
+                    { backgroundColor: colors.secondary },
+                  ]}
+                >
+                  <Feather name="globe" size={14} color={colors.mutedForeground} />
+                </View>
+              )}
+              <Text
+                style={[
+                  styles.pickerValue,
+                  {
+                    color: form.website
+                      ? colors.foreground
+                      : colors.mutedForeground,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {form.website || "Pick or add a website / app"}
+              </Text>
+              <Feather
+                name="chevron-down"
+                size={18}
+                color={colors.mutedForeground}
+              />
+            </Pressable>
+            <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
+              Pick from your existing websites or type a new one to add it.
+            </Text>
+          </View>
+
           <FormField
             label="Owner"
             value={form.owner}
@@ -602,6 +683,215 @@ function PasswordFormModal({
             </View>
           </View>
         </ScrollView>
+
+        <WebsitePickerModal
+          visible={websitePickerOpen}
+          options={websiteOptions}
+          currentValue={form.website}
+          onClose={() => setWebsitePickerOpen(false)}
+          onPick={(v) => {
+            setForm((s) => ({ ...s, website: v }));
+            setWebsitePickerOpen(false);
+          }}
+        />
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function WebsitePickerModal({
+  visible,
+  options,
+  currentValue,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  options: string[];
+  currentValue: string;
+  onClose: () => void;
+  onPick: (value: string) => void;
+}) {
+  const colors = useColors();
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (visible) setQuery("");
+  }, [visible]);
+
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+  const filtered = useMemo(
+    () =>
+      lower
+        ? options.filter((o) => o.toLowerCase().includes(lower))
+        : options,
+    [options, lower],
+  );
+  const exactMatch = options.some((o) => o.toLowerCase() === lower);
+  const showAddNew = trimmed.length > 0 && !exactMatch;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1, backgroundColor: colors.background }}
+      >
+        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+          <Pressable onPress={onClose} hitSlop={10}>
+            <Text style={[styles.modalCancel, { color: colors.primary }]}>
+              Cancel
+            </Text>
+          </Pressable>
+          <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+            Pick a website / app
+          </Text>
+          <View style={{ width: 56 }} />
+        </View>
+
+        <View
+          style={[
+            styles.searchWrap,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              marginTop: 16,
+            },
+          ]}
+        >
+          <Feather name="search" size={18} color={colors.mutedForeground} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search or type a new one…"
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.searchInput, { color: colors.foreground }]}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => setQuery("")} hitSlop={8}>
+              <Feather name="x" size={18} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
+
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.pickerList}
+          ListHeaderComponent={
+            showAddNew ? (
+              <Pressable
+                onPress={() => onPick(trimmed)}
+                style={({ pressed }) => [
+                  styles.pickerOption,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.primary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.pickerOptionAvatar,
+                    { backgroundColor: colors.primary + "22" },
+                  ]}
+                >
+                  <Feather name="plus" size={16} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.pickerOptionLabel,
+                      { color: colors.foreground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    Use “{trimmed}” as new
+                  </Text>
+                  <Text
+                    style={[
+                      styles.pickerOptionMeta,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    Adds it to your list
+                  </Text>
+                </View>
+              </Pressable>
+            ) : null
+          }
+          renderItem={({ item }) => {
+            const palette = colorFor(item.toLowerCase());
+            const isSelected = currentValue.toLowerCase() === item.toLowerCase();
+            return (
+              <Pressable
+                onPress={() => onPick(item)}
+                style={({ pressed }) => [
+                  styles.pickerOption,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.pickerOptionAvatar,
+                    { backgroundColor: palette.bg },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionAvatarText,
+                      { color: palette.fg },
+                    ]}
+                  >
+                    {initialsFor(item)}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.pickerOptionLabel,
+                    { color: colors.foreground, flex: 1 },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item}
+                </Text>
+                {isSelected && (
+                  <Feather name="check" size={18} color={colors.primary} />
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            !showAddNew ? (
+              <View style={styles.pickerEmpty}>
+                <Text
+                  style={[
+                    styles.pickerEmptyText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {options.length === 0
+                    ? "No saved websites yet — type one above to add it."
+                    : "No matches. Type something new to add it."}
+                </Text>
+              </View>
+            ) : null
+          }
+        />
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -799,6 +1089,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
+  helperText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
   input: {
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -819,5 +1114,57 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
+  },
+  pickerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  pickerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerAvatarText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  pickerValue: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  pickerList: { padding: 16, gap: 8 },
+  pickerOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  pickerOptionAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerOptionAvatarText: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  pickerOptionLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  pickerOptionMeta: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  pickerEmpty: { padding: 24, alignItems: "center" },
+  pickerEmptyText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
   },
 });
