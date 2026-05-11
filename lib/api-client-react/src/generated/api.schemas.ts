@@ -570,55 +570,6 @@ export interface BillingDocumentCreated {
   id: number;
 }
 
-export interface FileItem {
-  id: string;
-  name: string;
-  path: string;
-  isFolder: boolean;
-  /** @nullable */
-  size: number | null;
-  lastModifiedAt: string;
-  /** @nullable */
-  mimeType: string | null;
-  webUrl: string;
-}
-
-export interface FileBreadcrumb {
-  name: string;
-  path: string;
-}
-
-export interface FileListResponse {
-  items: FileItem[];
-  breadcrumbs: FileBreadcrumb[];
-  /** @nullable */
-  nextCursor: string | null;
-}
-
-export type FileDetailPreviewKind =
-  (typeof FileDetailPreviewKind)[keyof typeof FileDetailPreviewKind];
-
-export const FileDetailPreviewKind = {
-  image: "image",
-  pdf: "pdf",
-  text: "text",
-  office: "office",
-  video: "video",
-  audio: "audio",
-  other: "other",
-} as const;
-
-export type FileDetail = FileItem & {
-  previewKind: FileDetailPreviewKind;
-  hasThumbnail: boolean;
-  isImage: boolean;
-  isPdf: boolean;
-};
-
-export interface FileStatus {
-  connected: boolean;
-}
-
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };
@@ -661,45 +612,6 @@ export const ListBillingDocumentsKind = {
   invoice: "invoice",
   quotation: "quotation",
 } as const;
-
-export type ListFilesParams = {
-  path?: string;
-  cursor?: string;
-  /**
-   * @minimum 1
-   * @maximum 200
-   */
-  limit?: number;
-};
-
-export type GetFileItemParams = {
-  /**
-   * Relative subpath. Empty / omitted returns the root folder.
-   */
-  path?: string;
-};
-
-export type GetFileThumbnailParams = {
-  path: string;
-  size?: GetFileThumbnailSize;
-};
-
-export type GetFileThumbnailSize =
-  (typeof GetFileThumbnailSize)[keyof typeof GetFileThumbnailSize];
-
-export const GetFileThumbnailSize = {
-  small: "small",
-  medium: "medium",
-  large: "large",
-} as const;
-
-export type DownloadFileParams = {
-  path: string;
-};
-
-export type PreviewFileParams = {
-  path: string;
-};
 
 export type ListLoaOptionsParams = {
   /**

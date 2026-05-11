@@ -14,7 +14,6 @@ import LoaPage from "@/pages/loa";
 import ExpensesPage from "@/pages/expenses";
 import BillingPage from "@/pages/billing";
 import BillingPrintPage from "@/pages/billing-print";
-import FilesPage from "@/pages/files";
 import SettingsPage from "@/pages/settings";
 
 const queryClient = new QueryClient();
@@ -40,7 +39,6 @@ function Router() {
               <Route path="/loa" component={LoaPage} />
               <Route path="/expenses" component={ExpensesPage} />
               <Route path="/billing" component={BillingPage} />
-              <Route path="/files" component={FilesPage} />
               <Route path="/settings" component={SettingsPage} />
               <Route component={NotFound} />
             </Switch>
