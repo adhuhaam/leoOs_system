@@ -418,9 +418,9 @@ function PasswordRow({
             />
           </div>
 
-          <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity self-start sm:self-center">
+          <div className="flex items-center gap-1 self-start sm:self-center">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               className="h-8 w-8"
               onClick={onEdit}
@@ -431,9 +431,9 @@ function PasswordRow({
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/40"
               onClick={onDelete}
               data-testid={`button-delete-password-${entry.id}`}
               title="Delete"

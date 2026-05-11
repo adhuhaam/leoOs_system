@@ -389,11 +389,30 @@ function PasswordRow({
           </Text>
         </View>
         <View style={styles.rowActions}>
-          <Pressable onPress={onEdit} hitSlop={8} style={styles.iconBtn}>
-            <Feather name="edit-2" size={16} color={colors.mutedForeground} />
+          <Pressable
+            onPress={onEdit}
+            hitSlop={8}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.muted, borderColor: colors.border },
+            ]}
+            accessibilityLabel="Edit password"
+          >
+            <Feather name="edit-2" size={15} color={colors.foreground} />
           </Pressable>
-          <Pressable onPress={onDelete} hitSlop={8} style={styles.iconBtn}>
-            <Feather name="trash-2" size={16} color={colors.destructive} />
+          <Pressable
+            onPress={onDelete}
+            hitSlop={8}
+            style={[
+              styles.actionBtn,
+              {
+                backgroundColor: colors.destructive + "15",
+                borderColor: colors.destructive + "40",
+              },
+            ]}
+            accessibilityLabel="Delete password"
+          >
+            <Feather name="trash-2" size={15} color={colors.destructive} />
           </Pressable>
         </View>
       </View>
@@ -1026,7 +1045,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   ownerName: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 1 },
-  rowActions: { flexDirection: "row", gap: 4 },
+  rowActions: { flexDirection: "row", gap: 6 },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   divider: { height: 1, opacity: 0.7, marginVertical: 2 },
   fieldBlock: { gap: 4 },
   fieldLabel: {
