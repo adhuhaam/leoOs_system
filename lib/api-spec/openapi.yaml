@@ -26,6 +26,8 @@ tags:
     description: Invoices and quotations
   - name: passwords
     description: Shared password vault (website / app credentials)
+  - name: tasks
+    description: Daily task manager with subtasks and notes
 paths:
   /healthz:
     get:
@@ -757,6 +759,82 @@ paths:
           required: true
           schema:
             type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List all tasks (top-level and subtasks)
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task or subtask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid input
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Invalid input
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task (cascades to subtasks)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
       responses:
         "204":
           description: Deleted
@@ -1721,4 +1799,54 @@ components:
         owner: { type: string, minLength: 1 }
         username: { type: string, minLength: 1 }
         password: { type: string, minLength: 1 }
+
+    Task:
+      type: object
+      required: [id, title, status, priority, position, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        notes: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate: { type: string, nullable: true, description: "ISO date (YYYY-MM-DD)" }
+        parentId: { type: integer, nullable: true }
+        position: { type: integer }
+        completedAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    TaskInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1 }
+        notes: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate: { type: string, nullable: true }
+        parentId: { type: integer, nullable: true }
+
+    TaskUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        notes: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate: { type: string, nullable: true }
+        parentId: { type: integer, nullable: true }
+        position: { type: integer }
 

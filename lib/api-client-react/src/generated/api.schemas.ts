@@ -602,6 +602,94 @@ export interface PasswordUpdate {
   password?: string;
 }
 
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
+
+export const TaskStatus = {
+  todo: "todo",
+  in_progress: "in_progress",
+  done: "done",
+} as const;
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
+
+export const TaskPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface Task {
+  id: number;
+  title: string;
+  notes?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  /** ISO date (YYYY-MM-DD) */
+  dueDate?: string | null;
+  parentId?: number | null;
+  position: number;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TaskInputStatus =
+  (typeof TaskInputStatus)[keyof typeof TaskInputStatus];
+
+export const TaskInputStatus = {
+  todo: "todo",
+  in_progress: "in_progress",
+  done: "done",
+} as const;
+
+export type TaskInputPriority =
+  (typeof TaskInputPriority)[keyof typeof TaskInputPriority];
+
+export const TaskInputPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface TaskInput {
+  /** @minLength 1 */
+  title: string;
+  notes?: string | null;
+  status?: TaskInputStatus;
+  priority?: TaskInputPriority;
+  dueDate?: string | null;
+  parentId?: number | null;
+}
+
+export type TaskUpdateStatus =
+  (typeof TaskUpdateStatus)[keyof typeof TaskUpdateStatus];
+
+export const TaskUpdateStatus = {
+  todo: "todo",
+  in_progress: "in_progress",
+  done: "done",
+} as const;
+
+export type TaskUpdatePriority =
+  (typeof TaskUpdatePriority)[keyof typeof TaskUpdatePriority];
+
+export const TaskUpdatePriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface TaskUpdate {
+  /** @minLength 1 */
+  title?: string;
+  notes?: string | null;
+  status?: TaskUpdateStatus;
+  priority?: TaskUpdatePriority;
+  dueDate?: string | null;
+  parentId?: number | null;
+  position?: number;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };

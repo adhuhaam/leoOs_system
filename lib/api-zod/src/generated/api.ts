@@ -871,6 +871,75 @@ export const DeletePasswordParams = zod.object({
 });
 
 /**
+ * @summary List all tasks (top-level and subtasks)
+ */
+export const ListTasksResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  notes: zod.string().nullish(),
+  status: zod.enum(["todo", "in_progress", "done"]),
+  priority: zod.enum(["low", "medium", "high"]),
+  dueDate: zod.string().nullish().describe("ISO date (YYYY-MM-DD)"),
+  parentId: zod.number().nullish(),
+  position: zod.number(),
+  completedAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListTasksResponse = zod.array(ListTasksResponseItem);
+
+/**
+ * @summary Create a task or subtask
+ */
+
+export const CreateTaskBody = zod.object({
+  title: zod.string().min(1),
+  notes: zod.string().nullish(),
+  status: zod.enum(["todo", "in_progress", "done"]).optional(),
+  priority: zod.enum(["low", "medium", "high"]).optional(),
+  dueDate: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+});
+
+/**
+ * @summary Update a task
+ */
+export const UpdateTaskParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateTaskBody = zod.object({
+  title: zod.string().min(1).optional(),
+  notes: zod.string().nullish(),
+  status: zod.enum(["todo", "in_progress", "done"]).optional(),
+  priority: zod.enum(["low", "medium", "high"]).optional(),
+  dueDate: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+  position: zod.number().optional(),
+});
+
+export const UpdateTaskResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  notes: zod.string().nullish(),
+  status: zod.enum(["todo", "in_progress", "done"]),
+  priority: zod.enum(["low", "medium", "high"]),
+  dueDate: zod.string().nullish().describe("ISO date (YYYY-MM-DD)"),
+  parentId: zod.number().nullish(),
+  position: zod.number(),
+  completedAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a task (cascades to subtasks)
+ */
+export const DeleteTaskParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List invoices and quotations
  */
 export const ListBillingDocumentsQueryParams = zod.object({
