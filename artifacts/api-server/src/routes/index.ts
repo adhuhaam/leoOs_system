@@ -11,6 +11,7 @@ import loaOptionsRouter from "./loa-options";
 import billingRouter from "./billing";
 import passwordsRouter from "./passwords";
 import tasksRouter from "./tasks";
+import pushTokensRouter from "./push-tokens";
 import systemRouter from "./system";
 
 const router: IRouter = Router();
@@ -34,5 +35,6 @@ router.use(loaOptionsRouter);
 router.use(billingRouter);
 router.use(passwordsRouter);
 router.use(tasksRouter);
+router.use(pushTokensRouter);
 
 export default router;

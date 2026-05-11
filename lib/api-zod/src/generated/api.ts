@@ -940,6 +940,22 @@ export const DeleteTaskParams = zod.object({
 });
 
 /**
+ * @summary Register or refresh a device push notification token
+ */
+
+export const RegisterPushTokenBody = zod.object({
+  token: zod.string().min(1),
+  platform: zod.enum(["ios", "android", "web"]),
+});
+
+/**
+ * @summary Remove a device push notification token
+ */
+export const UnregisterPushTokenParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+/**
  * @summary List invoices and quotations
  */
 export const ListBillingDocumentsQueryParams = zod.object({

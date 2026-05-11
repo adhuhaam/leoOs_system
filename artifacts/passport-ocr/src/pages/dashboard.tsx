@@ -638,25 +638,38 @@ function TaskRow({
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions — always visible so they work on touch devices too */}
+      <div className="flex items-center gap-0.5">
         {onAddSubtask && (
           <Button
             type="button"
             size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs gap-1"
+            variant="outline"
+            className="h-8 px-2.5 text-xs gap-1 hidden md:inline-flex"
             onClick={onAddSubtask}
             data-testid={`button-add-subtask-${task.id}`}
           >
-            <Plus className="h-3 w-3" /> Subtask
+            <Plus className="h-3.5 w-3.5" /> Subtask
+          </Button>
+        )}
+        {onAddSubtask && (
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="h-8 w-8 md:hidden"
+            onClick={onAddSubtask}
+            aria-label="Add subtask"
+            data-testid={`button-add-subtask-mobile-${task.id}`}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         )}
         <Button
           type="button"
           size="icon"
-          variant="ghost"
-          className="h-7 w-7"
+          variant="outline"
+          className="h-8 w-8"
           onClick={onEdit}
           aria-label="Edit task"
           data-testid={`button-edit-task-${task.id}`}
@@ -666,8 +679,8 @@ function TaskRow({
         <Button
           type="button"
           size="icon"
-          variant="ghost"
-          className="h-7 w-7 text-rose-600 hover:text-rose-700"
+          variant="outline"
+          className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 hover:border-rose-300"
           onClick={onDelete}
           aria-label="Delete task"
           data-testid={`button-delete-task-${task.id}`}

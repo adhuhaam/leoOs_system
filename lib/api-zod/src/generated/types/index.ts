@@ -55,6 +55,8 @@ export * from "./passportUpload";
 export * from "./password";
 export * from "./passwordInput";
 export * from "./passwordUpdate";
+export * from "./pushTokenInput";
+export * from "./pushTokenInputPlatform";
 export * from "./systemSettings";
 export * from "./systemSettingsInput";
 export * from "./task";

@@ -28,6 +28,8 @@ tags:
     description: Shared password vault (website / app credentials)
   - name: tasks
     description: Daily task manager with subtasks and notes
+  - name: push
+    description: Mobile push notification device tokens
 paths:
   /healthz:
     get:
@@ -840,6 +842,37 @@ paths:
           description: Deleted
         "404":
           description: Not found
+
+  /push-tokens:
+    post:
+      operationId: registerPushToken
+      tags: [push]
+      summary: Register or refresh a device push notification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "204":
+          description: Registered
+        "400":
+          description: Invalid input
+
+  /push-tokens/{token}:
+    delete:
+      operationId: unregisterPushToken
+      tags: [push]
+      summary: Remove a device push notification token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Removed
 
   /billing/documents:
     get:
@@ -1849,4 +1882,13 @@ components:
         dueDate: { type: string, nullable: true }
         parentId: { type: integer, nullable: true }
         position: { type: integer }
+
+    PushTokenInput:
+      type: object
+      required: [token, platform]
+      properties:
+        token: { type: string, minLength: 1 }
+        platform:
+          type: string
+          enum: [ios, android, web]
 

@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { usePushRegistration } from "@/lib/push";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,6 +37,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthed } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Register this device for push notifications once the user is signed in.
+  usePushRegistration(isAuthed);
 
   useEffect(() => {
     if (isLoading) return;

@@ -690,6 +690,21 @@ export interface TaskUpdate {
   position?: number;
 }
 
+export type PushTokenInputPlatform =
+  (typeof PushTokenInputPlatform)[keyof typeof PushTokenInputPlatform];
+
+export const PushTokenInputPlatform = {
+  ios: "ios",
+  android: "android",
+  web: "web",
+} as const;
+
+export interface PushTokenInput {
+  /** @minLength 1 */
+  token: string;
+  platform: PushTokenInputPlatform;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };
