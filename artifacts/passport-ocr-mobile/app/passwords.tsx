@@ -10,7 +10,7 @@ import {
   useUpdatePassword,
 } from "@workspace/api-client-react";
 import * as Clipboard from "expo-clipboard";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -70,6 +70,9 @@ export default function PasswordsScreen() {
       const existing = map.get(key);
       if (existing) existing.data.push(e);
       else map.set(key, { label: e.website, data: [e] });
+    }
+    for (const g of map.values()) {
+      g.data.sort((a, b) => a.owner.localeCompare(b.owner));
     }
     return Array.from(map.values())
       .sort((a, b) => a.label.localeCompare(b.label))
@@ -371,14 +374,10 @@ function PasswordFormModal({
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
-  const [snapshotKey, setSnapshotKey] = useState<string | null>(null);
-  const wantedKey = visible
-    ? mode === "edit" && entry
-      ? `edit-${entry.id}`
-      : "create"
-    : null;
-  if (snapshotKey !== wantedKey) {
-    setSnapshotKey(wantedKey);
+  const entryId = mode === "edit" && entry ? entry.id : null;
+
+  useEffect(() => {
+    if (!visible) return;
     if (mode === "edit" && entry) {
       setForm({
         website: entry.website,
@@ -390,7 +389,8 @@ function PasswordFormModal({
       setForm(EMPTY_FORM);
     }
     setShowPassword(false);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, mode, entryId]);
 
   const handleSave = () => {
     const website = form.website.trim();

@@ -26,7 +26,10 @@ router.get("/passwords", async (req, res): Promise<void> => {
     return;
   }
   const { search } = parsed.data;
-  const rows = await db.select().from(passwordsTable).orderBy(asc(passwordsTable.website));
+  const rows = await db
+    .select()
+    .from(passwordsTable)
+    .orderBy(asc(passwordsTable.website), asc(passwordsTable.owner));
   const filtered = search
     ? rows.filter((p) => {
         const q = search.toLowerCase();

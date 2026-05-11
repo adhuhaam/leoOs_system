@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListPasswords,
@@ -97,6 +97,9 @@ export default function PasswordsPage() {
       const existing = map.get(key);
       if (existing) existing.items.push(e);
       else map.set(key, { label: e.website, items: [e] });
+    }
+    for (const g of map.values()) {
+      g.items.sort((a, b) => a.owner.localeCompare(b.owner));
     }
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
   }, [filtered]);
@@ -327,16 +330,16 @@ function PasswordFormDialog(
     | { mode: "edit"; entry: Password; open: boolean; onOpenChange: (o: boolean) => void },
 ) {
   const { mode, open, onOpenChange } = props;
-  const initialKey = mode === "edit" ? `edit-${props.entry.id}` : "create";
-  const [snapshotKey, setSnapshotKey] = useState<string | null>(null);
+  const entryId = mode === "edit" ? props.entry.id : null;
   const [form, setForm] = useState<PasswordFormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
-  const wantedKey = open ? initialKey : null;
-  if (snapshotKey !== wantedKey) {
-    setSnapshotKey(wantedKey);
+
+  useEffect(() => {
+    if (!open) return;
     setForm(mode === "edit" ? pwdToForm(props.entry) : EMPTY_FORM);
     setShowPassword(false);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, entryId]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
