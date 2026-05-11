@@ -811,6 +811,66 @@ export const DeleteExpenseParams = zod.object({
 });
 
 /**
+ * @summary List password entries
+ */
+export const ListPasswordsQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+});
+
+export const ListPasswordsResponseItem = zod.object({
+  id: zod.number(),
+  website: zod.string(),
+  owner: zod.string(),
+  username: zod.string(),
+  password: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListPasswordsResponse = zod.array(ListPasswordsResponseItem);
+
+/**
+ * @summary Create a password entry
+ */
+
+export const CreatePasswordBody = zod.object({
+  website: zod.string().min(1),
+  owner: zod.string().min(1),
+  username: zod.string().min(1),
+  password: zod.string().min(1),
+});
+
+/**
+ * @summary Update a password entry
+ */
+export const UpdatePasswordParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdatePasswordBody = zod.object({
+  website: zod.string().min(1).optional(),
+  owner: zod.string().min(1).optional(),
+  username: zod.string().min(1).optional(),
+  password: zod.string().min(1).optional(),
+});
+
+export const UpdatePasswordResponse = zod.object({
+  id: zod.number(),
+  website: zod.string(),
+  owner: zod.string(),
+  username: zod.string(),
+  password: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a password entry
+ */
+export const DeletePasswordParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary List invoices and quotations
  */
 export const ListBillingDocumentsQueryParams = zod.object({

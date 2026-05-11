@@ -24,6 +24,8 @@ tags:
     description: Client / placement management (where candidates are allocated)
   - name: billing
     description: Invoices and quotations
+  - name: passwords
+    description: Shared password vault (website / app credentials)
 paths:
   /healthz:
     get:
@@ -666,6 +668,89 @@ paths:
       operationId: deleteExpense
       tags: [expenses]
       summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /passwords:
+    get:
+      operationId: listPasswords
+      tags: [passwords]
+      summary: List password entries
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of passwords
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Password"
+    post:
+      operationId: createPassword
+      tags: [passwords]
+      summary: Create a password entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Password"
+        "400":
+          description: Invalid input
+
+  /passwords/{id}:
+    patch:
+      operationId: updatePassword
+      tags: [passwords]
+      summary: Update a password entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Password"
+        "400":
+          description: Invalid input
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePassword
+      tags: [passwords]
+      summary: Delete a password entry
       parameters:
         - name: id
           in: path
@@ -1607,4 +1692,33 @@ components:
       required: [id]
       properties:
         id: { type: integer }
+
+    Password:
+      type: object
+      required: [id, website, owner, username, password, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        website: { type: string }
+        owner: { type: string }
+        username: { type: string }
+        password: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    PasswordInput:
+      type: object
+      required: [website, owner, username, password]
+      properties:
+        website: { type: string, minLength: 1 }
+        owner: { type: string, minLength: 1 }
+        username: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1 }
+
+    PasswordUpdate:
+      type: object
+      properties:
+        website: { type: string, minLength: 1 }
+        owner: { type: string, minLength: 1 }
+        username: { type: string, minLength: 1 }
+        password: { type: string, minLength: 1 }
 

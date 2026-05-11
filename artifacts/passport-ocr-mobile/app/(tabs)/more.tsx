@@ -31,6 +31,7 @@ export default function MoreScreen() {
   const items: Item[] = [
     { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
     { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
+    { icon: "key", label: "Passwords", detail: "Shared password vault", route: "/passwords" },
   ];
 
   function handleLogout() {

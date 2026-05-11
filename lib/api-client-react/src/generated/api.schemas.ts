@@ -570,6 +570,38 @@ export interface BillingDocumentCreated {
   id: number;
 }
 
+export interface Password {
+  id: number;
+  website: string;
+  owner: string;
+  username: string;
+  password: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PasswordInput {
+  /** @minLength 1 */
+  website: string;
+  /** @minLength 1 */
+  owner: string;
+  /** @minLength 1 */
+  username: string;
+  /** @minLength 1 */
+  password: string;
+}
+
+export interface PasswordUpdate {
+  /** @minLength 1 */
+  website?: string;
+  /** @minLength 1 */
+  owner?: string;
+  /** @minLength 1 */
+  username?: string;
+  /** @minLength 1 */
+  password?: string;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };
@@ -597,6 +629,10 @@ export type ListClientsParams = {
 
 export type ListExpensesParams = {
   categoryId?: number;
+  search?: string;
+};
+
+export type ListPasswordsParams = {
   search?: string;
 };
 

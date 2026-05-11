@@ -43,6 +43,7 @@ import type {
   ListExpensesParams,
   ListLoaOptionsParams,
   ListPassportsParams,
+  ListPasswordsParams,
   Loa,
   LoaInput,
   LoaOption,
@@ -53,6 +54,9 @@ import type {
   PassportStats,
   PassportUpdate,
   PassportUpload,
+  Password,
+  PasswordInput,
+  PasswordUpdate,
   SystemSettings,
   SystemSettingsInput,
   UpdateLoaOptionInput,
@@ -2925,6 +2929,357 @@ export const useDeleteExpense = <
   TContext
 > => {
   return useMutation(getDeleteExpenseMutationOptions(options));
+};
+
+/**
+ * @summary List password entries
+ */
+export const getListPasswordsUrl = (params?: ListPasswordsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/passwords?${stringifiedParams}`
+    : `/api/passwords`;
+};
+
+export const listPasswords = async (
+  params?: ListPasswordsParams,
+  options?: RequestInit,
+): Promise<Password[]> => {
+  return customFetch<Password[]>(getListPasswordsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPasswordsQueryKey = (params?: ListPasswordsParams) => {
+  return [`/api/passwords`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPasswordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPasswords>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListPasswordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPasswords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPasswordsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPasswords>>> = ({
+    signal,
+  }) => listPasswords(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPasswords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPasswordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPasswords>>
+>;
+export type ListPasswordsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List password entries
+ */
+
+export function useListPasswords<
+  TData = Awaited<ReturnType<typeof listPasswords>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListPasswordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPasswords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPasswordsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a password entry
+ */
+export const getCreatePasswordUrl = () => {
+  return `/api/passwords`;
+};
+
+export const createPassword = async (
+  passwordInput: PasswordInput,
+  options?: RequestInit,
+): Promise<Password> => {
+  return customFetch<Password>(getCreatePasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(passwordInput),
+  });
+};
+
+export const getCreatePasswordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPassword>>,
+    TError,
+    { data: BodyType<PasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPassword>>,
+  TError,
+  { data: BodyType<PasswordInput> },
+  TContext
+> => {
+  const mutationKey = ["createPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPassword>>,
+    { data: BodyType<PasswordInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPassword>>
+>;
+export type CreatePasswordMutationBody = BodyType<PasswordInput>;
+export type CreatePasswordMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a password entry
+ */
+export const useCreatePassword = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPassword>>,
+    TError,
+    { data: BodyType<PasswordInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPassword>>,
+  TError,
+  { data: BodyType<PasswordInput> },
+  TContext
+> => {
+  return useMutation(getCreatePasswordMutationOptions(options));
+};
+
+/**
+ * @summary Update a password entry
+ */
+export const getUpdatePasswordUrl = (id: number) => {
+  return `/api/passwords/${id}`;
+};
+
+export const updatePassword = async (
+  id: number,
+  passwordUpdate: PasswordUpdate,
+  options?: RequestInit,
+): Promise<Password> => {
+  return customFetch<Password>(getUpdatePasswordUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(passwordUpdate),
+  });
+};
+
+export const getUpdatePasswordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePassword>>,
+    TError,
+    { id: number; data: BodyType<PasswordUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePassword>>,
+  TError,
+  { id: number; data: BodyType<PasswordUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updatePassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePassword>>,
+    { id: number; data: BodyType<PasswordUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updatePassword(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePassword>>
+>;
+export type UpdatePasswordMutationBody = BodyType<PasswordUpdate>;
+export type UpdatePasswordMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a password entry
+ */
+export const useUpdatePassword = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePassword>>,
+    TError,
+    { id: number; data: BodyType<PasswordUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePassword>>,
+  TError,
+  { id: number; data: BodyType<PasswordUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdatePasswordMutationOptions(options));
+};
+
+/**
+ * @summary Delete a password entry
+ */
+export const getDeletePasswordUrl = (id: number) => {
+  return `/api/passwords/${id}`;
+};
+
+export const deletePassword = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeletePasswordUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeletePasswordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePassword>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePassword>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deletePassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePassword>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePassword(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePassword>>
+>;
+
+export type DeletePasswordMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a password entry
+ */
+export const useDeletePassword = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePassword>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deletePassword>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeletePasswordMutationOptions(options));
 };
 
 /**

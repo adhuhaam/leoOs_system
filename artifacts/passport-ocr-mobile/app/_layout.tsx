@@ -83,6 +83,10 @@ function RootLayoutNav() {
         name="expense/[id]"
         options={{ title: "Expense", headerBackTitle: "Back" }}
       />
+      <Stack.Screen
+        name="passwords"
+        options={{ title: "Passwords", headerBackTitle: "Back" }}
+      />
     </Stack>
   );
 }
