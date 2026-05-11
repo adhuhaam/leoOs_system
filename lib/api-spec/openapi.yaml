@@ -24,8 +24,6 @@ tags:
     description: Client / placement management (where candidates are allocated)
   - name: billing
     description: Invoices and quotations
-  - name: files
-    description: OneDrive file browser (read-only)
 paths:
   /healthz:
     get:
