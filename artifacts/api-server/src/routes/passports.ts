@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
+import { requireAuth, requireAuthOrToken } from "./auth";
 import { fromPath } from "pdf2pic";
 import sharp from "sharp";
 import path from "path";
@@ -76,8 +77,8 @@ async function bufferToBase64Image(
   return { base64: processed.toString("base64"), mime: "image/jpeg" };
 }
 
-// GET /passports — list all
-router.get("/passports", async (req, res): Promise<void> => {
+// GET /passports — list all (session OR extension token)
+router.get("/passports", requireAuthOrToken, async (req, res): Promise<void> => {
   const parsed = ListPassportsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -142,8 +143,8 @@ router.get("/passports", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-// POST /passports/upload — upload and extract
-router.post("/passports/upload", upload.single("file"), async (req, res): Promise<void> => {
+// POST /passports/upload — upload and extract (session only)
+router.post("/passports/upload", requireAuth, upload.single("file"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -190,8 +191,8 @@ router.post("/passports/upload", upload.single("file"), async (req, res): Promis
   res.status(201).json(passport);
 });
 
-// GET /passports/stats — dashboard stats
-router.get("/passports/stats", async (_req, res): Promise<void> => {
+// GET /passports/stats — dashboard stats (session OR extension token)
+router.get("/passports/stats", requireAuthOrToken, async (_req, res): Promise<void> => {
   const all = await db.select().from(passportsTable).orderBy(desc(passportsTable.createdAt));
 
   const stats = {
@@ -207,8 +208,8 @@ router.get("/passports/stats", async (_req, res): Promise<void> => {
   res.json(stats);
 });
 
-// GET /passports/:id — get single
-router.get("/passports/:id", async (req, res): Promise<void> => {
+// GET /passports/:id — get single (session OR extension token)
+router.get("/passports/:id", requireAuthOrToken, async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -228,8 +229,8 @@ router.get("/passports/:id", async (req, res): Promise<void> => {
   res.json(passport);
 });
 
-// PATCH /passports/:id — update
-router.patch("/passports/:id", async (req, res): Promise<void> => {
+// PATCH /passports/:id — update (session only)
+router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   const params = UpdatePassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -268,8 +269,8 @@ router.patch("/passports/:id", async (req, res): Promise<void> => {
   res.json(passport);
 });
 
-// DELETE /passports/:id — delete
-router.delete("/passports/:id", async (req, res): Promise<void> => {
+// DELETE /passports/:id — delete (session only)
+router.delete("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

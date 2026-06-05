@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import authRouter, { requireAuth, requireAuthOrToken } from "./auth";
+import authRouter, { requireAuth } from "./auth";
 import passportsRouter from "./passports";
 import companiesRouter from "./companies";
 import clientsRouter from "./clients";
@@ -23,9 +23,9 @@ router.use(authRouter);
 // name & logo. The PATCH inside this router self-checks for auth.
 router.use(systemRouter);
 
-// Passport routes accept either a session or a Bearer extension token so
-// the Chrome extension can call them without a browser session.
-router.use(requireAuthOrToken, passportsRouter);
+// Passport routes handle their own per-route auth (reads: session or token,
+// writes: session only) — see routes/passports.ts for details.
+router.use(passportsRouter);
 
 // Everything below requires a valid session
 router.use(requireAuth);

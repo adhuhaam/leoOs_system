@@ -31,11 +31,22 @@ app.use(
 app.use(
   cors({
     credentials: true,
-    // Reflect the request origin so chrome-extension://* origins (and any
-    // other trusted callers) receive the Access-Control-Allow-Origin header
-    // value they need. This is safe for a single-tenant app where auth is
-    // enforced separately on every protected route.
-    origin: true,
+    origin: (origin, callback) => {
+      // Server-to-server / curl / mobile apps send no Origin header.
+      if (!origin) return callback(null, true);
+      // Allow all Chrome extension origins.
+      if (origin.startsWith("chrome-extension://")) return callback(null, true);
+      // Allow the app's configured domains (comma-separated Replit dev + prod).
+      const configured = (process.env["REPLIT_DOMAINS"] ?? "")
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .flatMap((d) => [`https://${d}`, `http://${d}`]);
+      if (configured.includes(origin)) return callback(null, true);
+      // In development, allow any origin (Replit preview domains are dynamic).
+      if (process.env["NODE_ENV"] !== "production") return callback(null, true);
+      callback(new Error("Not allowed by CORS"));
+    },
   }),
 );
 app.use(express.json({ limit: "50mb" }));
