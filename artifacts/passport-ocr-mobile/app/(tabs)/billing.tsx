@@ -5,12 +5,15 @@ import {
   type ListBillingDocumentsParams,
   ListBillingDocumentsKind,
   useListBillingDocuments,
+  useUpdateBillingDocument,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -63,8 +66,13 @@ function formatMVR(s: string | number): string {
 
 export default function BillingScreen() {
   const colors = useColors();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
+  const [statusDoc, setStatusDoc] = useState<BillingDocumentSummary | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const updateMutation = useUpdateBillingDocument();
 
   const params = useMemo<ListBillingDocumentsParams>(() => {
     const p: ListBillingDocumentsParams = {};
@@ -79,6 +87,27 @@ export default function BillingScreen() {
     });
 
   const docs = (data ?? []) as BillingDocumentSummary[];
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!statusDoc) return;
+    setUpdatingStatus(true);
+    updateMutation.mutate(
+      {
+        id: statusDoc.id,
+        data: { status: newStatus } as Parameters<typeof updateMutation.mutate>[0]["data"],
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
+          setStatusDoc(null);
+          setUpdatingStatus(false);
+        },
+        onError: () => {
+          setUpdatingStatus(false);
+        },
+      },
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -186,10 +215,98 @@ export default function BillingScreen() {
             <DocCard
               doc={item}
               onPress={() => router.push(`/billing/${item.id}`)}
+              onLongPress={() => setStatusDoc(item)}
             />
           )}
         />
       )}
+
+      {/* Status picker modal — triggered by long-press on a card */}
+      <Modal
+        visible={statusDoc !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !updatingStatus && setStatusDoc(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => !updatingStatus && setStatusDoc(null)}
+        >
+          <Pressable
+            style={[
+              styles.modalSheet,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              Change Status
+            </Text>
+            {statusDoc && (
+              <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>
+                {statusDoc.number} · Current: {statusLabel(statusDoc.status)}
+              </Text>
+            )}
+            <View style={styles.modalOptions}>
+              {STATUS_OPTIONS.map((opt) => {
+                const sc2 = statusColors(opt.value);
+                const isCurrent = opt.value === (statusDoc?.status ?? "");
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => !isCurrent && handleStatusChange(opt.value)}
+                    disabled={isCurrent || updatingStatus}
+                    style={({ pressed }) => [
+                      styles.optionRow,
+                      {
+                        backgroundColor: isCurrent
+                          ? sc2.bg
+                          : pressed
+                            ? colors.secondary
+                            : "transparent",
+                        borderColor: isCurrent ? sc2.border : colors.border,
+                        opacity: updatingStatus && !isCurrent ? 0.5 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[styles.optionDot, { backgroundColor: sc2.text }]}
+                    />
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        {
+                          color: isCurrent ? sc2.text : colors.foreground,
+                          fontFamily: isCurrent
+                            ? "Inter_700Bold"
+                            : "Inter_500Medium",
+                        },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isCurrent && (
+                      <Feather name="check" size={16} color={sc2.text} />
+                    )}
+                    {updatingStatus && !isCurrent && (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              onPress={() => !updatingStatus && setStatusDoc(null)}
+              disabled={updatingStatus}
+              style={[styles.cancelBtn, { borderColor: colors.border }]}
+            >
+              <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>
+                Cancel
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -197,9 +314,11 @@ export default function BillingScreen() {
 function DocCard({
   doc,
   onPress,
+  onLongPress,
 }: {
   doc: BillingDocumentSummary;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
   const colors = useColors();
   const isInvoice = doc.kind === "invoice";
@@ -210,6 +329,8 @@ function DocCard({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       style={({ pressed }) => [
         styles.card,
         {
@@ -261,6 +382,9 @@ function DocCard({
           {formatMVR(sub)}
         </Text>
       </View>
+      <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>
+        Hold to change status
+      </Text>
     </Pressable>
   );
 }
@@ -333,9 +457,45 @@ const styles = StyleSheet.create({
   },
   dateText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   amount: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  longPressHint: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: 4, textAlign: "right" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  // modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 4,
+  },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 2 },
+  modalSubtitle: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 8 },
+  modalOptions: { gap: 6 },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  optionDot: { width: 8, height: 8, borderRadius: 4 },
+  optionLabel: { flex: 1, fontSize: 15 },
+  cancelBtn: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
