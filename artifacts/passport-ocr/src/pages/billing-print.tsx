@@ -161,7 +161,7 @@ export default function BillingPrintPage() {
                 <img
                   src={headerLogo}
                   alt={doc.companyName}
-                  className="ml-auto max-h-20 object-contain mb-3"
+                  className="ml-auto max-h-12 object-contain mb-2"
                 />
               )}
               <p className="font-bold text-[12.5px] text-slate-900 uppercase tracking-wide">
