@@ -9,6 +9,8 @@ import type { BillingItemInput } from "./billingItemInput";
 
 export interface BillingDocumentUpdate {
   companyId?: number;
+  /** @nullable */
+  clientId?: number | null;
   /** @minLength 1 */
   customerName?: string;
   /** @nullable */

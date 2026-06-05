@@ -486,6 +486,8 @@ export interface BillingDocumentSummary {
   number: string;
   companyId: number;
   companyName: string;
+  /** @nullable */
+  clientId?: number | null;
   customerName: string;
   /** @nullable */
   customerAddress?: string | null;
@@ -541,6 +543,8 @@ export const BillingDocumentInputKind = {
 export interface BillingDocumentInput {
   kind: BillingDocumentInputKind;
   companyId: number;
+  /** @nullable */
+  clientId?: number | null;
   /** @minLength 1 */
   customerName: string;
   customerAddress?: string;
@@ -558,6 +562,8 @@ export interface BillingDocumentInput {
 
 export interface BillingDocumentUpdate {
   companyId?: number;
+  /** @nullable */
+  clientId?: number | null;
   /** @minLength 1 */
   customerName?: string;
   /** @nullable */
@@ -754,6 +760,10 @@ export type ListPasswordsParams = {
 export type ListBillingDocumentsParams = {
   kind?: ListBillingDocumentsKind;
   search?: string;
+  /**
+   * Filter by client ID
+   */
+  clientId?: number;
 };
 
 export type ListBillingDocumentsKind =

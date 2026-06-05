@@ -965,6 +965,7 @@ export const UnregisterPushTokenParams = zod.object({
 export const ListBillingDocumentsQueryParams = zod.object({
   kind: zod.enum(["invoice", "quotation"]).optional(),
   search: zod.coerce.string().optional(),
+  clientId: zod.coerce.number().optional().describe("Filter by client ID"),
 });
 
 export const ListBillingDocumentsResponseItem = zod.object({
@@ -973,6 +974,7 @@ export const ListBillingDocumentsResponseItem = zod.object({
   number: zod.string(),
   companyId: zod.number(),
   companyName: zod.string(),
+  clientId: zod.number().nullish(),
   customerName: zod.string(),
   customerAddress: zod.string().nullish(),
   customerTin: zod.string().nullish(),
@@ -998,6 +1000,7 @@ export const ListBillingDocumentsResponse = zod.array(
 export const CreateBillingDocumentBody = zod.object({
   kind: zod.enum(["invoice", "quotation"]),
   companyId: zod.number(),
+  clientId: zod.number().nullish(),
   customerName: zod.string().min(1),
   customerAddress: zod.string().optional(),
   customerTin: zod.string().optional(),
@@ -1034,6 +1037,7 @@ export const GetBillingDocumentResponse = zod
     number: zod.string(),
     companyId: zod.number(),
     companyName: zod.string(),
+    clientId: zod.number().nullish(),
     customerName: zod.string(),
     customerAddress: zod.string().nullish(),
     customerTin: zod.string().nullish(),
@@ -1074,6 +1078,7 @@ export const UpdateBillingDocumentParams = zod.object({
 
 export const UpdateBillingDocumentBody = zod.object({
   companyId: zod.number().optional(),
+  clientId: zod.number().nullish(),
   customerName: zod.string().min(1).optional(),
   customerAddress: zod.string().nullish(),
   customerTin: zod.string().nullish(),

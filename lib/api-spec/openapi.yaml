@@ -889,6 +889,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: clientId
+          in: query
+          description: Filter by client ID
+          schema:
+            type: integer
       responses:
         "200":
           description: List of billing documents
@@ -1718,6 +1723,7 @@ components:
         number: { type: string }
         companyId: { type: integer }
         companyName: { type: string }
+        clientId: { type: ["integer", "null"] }
         customerName: { type: string }
         customerAddress: { type: ["string", "null"] }
         customerTin: { type: ["string", "null"] }
@@ -1771,6 +1777,7 @@ components:
       properties:
         kind: { type: string, enum: [invoice, quotation] }
         companyId: { type: integer }
+        clientId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerAddress: { type: string }
         customerTin: { type: string }
@@ -1791,6 +1798,7 @@ components:
       type: object
       properties:
         companyId: { type: integer }
+        clientId: { type: ["integer", "null"] }
         customerName: { type: string, minLength: 1 }
         customerAddress: { type: ["string", "null"] }
         customerTin: { type: ["string", "null"] }

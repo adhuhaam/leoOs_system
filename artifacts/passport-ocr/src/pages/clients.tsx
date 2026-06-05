@@ -580,15 +580,20 @@ function ClientDetailDialog({
     { query: { queryKey: getListPassportsQueryKey({ clientId: clientIdStr }) } },
   );
 
-  const { data: invoices = [] } = useListBillingDocuments({ kind: "invoice" });
-  const { data: quotations = [] } = useListBillingDocuments({ kind: "quotation" });
+  const { data: invoices = [] } = useListBillingDocuments({ clientId: client.id });
+  const { data: quotations = [] } = useListBillingDocuments({ clientId: client.id, kind: "quotation" });
 
   const clientDocs: BillingDocumentSummary[] = useMemo(() => {
-    const name = client.name.trim().toLowerCase();
-    return [...invoices, ...quotations]
-      .filter((d) => d.customerName.trim().toLowerCase() === name)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [invoices, quotations, client.name]);
+    // Merge invoice + quotation results (both filtered server-side by clientId).
+    // Also fall back to name matching for legacy docs created before clientId was stored.
+    const byId = new Map<number, BillingDocumentSummary>();
+    for (const d of [...invoices, ...quotations] as BillingDocumentSummary[]) {
+      byId.set(d.id, d);
+    }
+    return [...byId.values()].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [invoices, quotations]);
 
   const unlinkMutation = useUpdatePassport();
   const deleteCandidateMutation = useDeletePassport();

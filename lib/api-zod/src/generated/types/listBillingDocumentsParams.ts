@@ -10,4 +10,8 @@ import type { ListBillingDocumentsKind } from "./listBillingDocumentsKind";
 export type ListBillingDocumentsParams = {
   kind?: ListBillingDocumentsKind;
   search?: string;
+  /**
+   * Filter by client ID
+   */
+  clientId?: number;
 };

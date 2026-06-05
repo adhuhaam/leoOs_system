@@ -639,6 +639,7 @@ function DocumentFormDialog({
             kind,
             // Server resolves & overrides — value here is ignored.
             companyId: issuerId ?? 0,
+            clientId: form.clientId ? Number(form.clientId) : null,
             customerName: form.customerName.trim(),
             customerAddress: form.customerAddress.trim() || undefined,
             customerTin: form.customerTin.trim() || undefined,
@@ -670,6 +671,7 @@ function DocumentFormDialog({
         {
           id: documentId,
           data: {
+            clientId: form.clientId ? Number(form.clientId) : null,
             customerName: form.customerName.trim(),
             customerAddress: form.customerAddress.trim() || null,
             customerTin: form.customerTin.trim() || null,

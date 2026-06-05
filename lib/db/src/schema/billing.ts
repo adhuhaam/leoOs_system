@@ -13,6 +13,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { companiesTable } from "./companies";
+import { clientsTable } from "./clients";
 
 // Single table for both invoices and quotations. We discriminate on `kind` so
 // we can share numbering, render, and listing logic. Customer details are
@@ -27,6 +28,9 @@ export const billingDocumentsTable = pgTable("billing_documents", {
   companyId: integer("company_id")
     .notNull()
     .references((): AnyPgColumn => companiesTable.id, { onDelete: "restrict" }),
+  // Optional FK back to the clients table — set when created via the client
+  // picker so the client-detail view can filter reliably by ID.
+  clientId: integer("client_id").references((): AnyPgColumn => clientsTable.id, { onDelete: "set null" }),
   // Bill-to (snapshotted on create/update, not joined)
   customerName: text("customer_name").notNull(),
   customerAddress: text("customer_address"),

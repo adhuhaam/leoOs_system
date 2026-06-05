@@ -13,6 +13,8 @@ export interface BillingDocumentSummary {
   number: string;
   companyId: number;
   companyName: string;
+  /** @nullable */
+  clientId?: number | null;
   customerName: string;
   /** @nullable */
   customerAddress?: string | null;

@@ -5,6 +5,7 @@ import {
   billingDocumentsTable,
   billingItemsTable,
   companiesTable,
+  clientsTable,
 } from "@workspace/db";
 import {
   CreateBillingDocumentBody,
@@ -106,9 +107,10 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { kind, search } = parsed.data;
+  const { kind, search, clientId } = parsed.data;
   const conds: SQL[] = [];
   if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
+  if (clientId != null) conds.push(eq(billingDocumentsTable.clientId, clientId));
   const where = conds.length ? and(...conds) : undefined;
 
   const rows = await db
@@ -118,6 +120,7 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
       number: billingDocumentsTable.number,
       companyId: billingDocumentsTable.companyId,
       companyName: companiesTable.name,
+      clientId: billingDocumentsTable.clientId,
       customerName: billingDocumentsTable.customerName,
       customerAddress: billingDocumentsTable.customerAddress,
       customerTin: billingDocumentsTable.customerTin,
@@ -284,6 +287,7 @@ router.post("/billing/documents", async (req, res): Promise<void> => {
             kind: data.kind,
             number,
             companyId: issuerId,
+            clientId: data.clientId ?? null,
             customerName: data.customerName.trim(),
             customerAddress: data.customerAddress?.trim() || null,
             customerTin: data.customerTin?.trim() || null,
@@ -368,6 +372,7 @@ router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
   if (data.gstInclusive !== undefined) patch.gstInclusive = data.gstInclusive;
   if (data.notes !== undefined) patch.notes = data.notes?.trim() || null;
   if (data.status !== undefined) patch.status = data.status;
+  if ("clientId" in data) patch.clientId = data.clientId ?? null;
 
   // Validate replacement items if provided
   let normalizedItems: { position: number; description: string; detail: string | null; qty: string; rate: string; amount: string }[] | null = null;
