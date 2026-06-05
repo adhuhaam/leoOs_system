@@ -1216,6 +1216,9 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        tin:
+          type: ["string", "null"]
+          description: Tax Identification Number
         notes:
           type: ["string", "null"]
         createdAt:
@@ -1238,6 +1241,9 @@ components:
           type: string
         address:
           type: string
+        tin:
+          type: string
+          description: Tax Identification Number
         notes:
           type: string
 
@@ -1255,6 +1261,9 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
+        tin:
+          type: ["string", "null"]
+          description: Tax Identification Number
         notes:
           type: ["string", "null"]
 

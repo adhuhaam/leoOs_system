@@ -116,6 +116,11 @@ export interface Client {
   email?: string | null;
   /** @nullable */
   address?: string | null;
+  /**
+   * Tax Identification Number
+   * @nullable
+   */
+  tin?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
@@ -129,6 +134,8 @@ export interface ClientInput {
   phone?: string;
   email?: string;
   address?: string;
+  /** Tax Identification Number */
+  tin?: string;
   notes?: string;
 }
 
@@ -143,6 +150,11 @@ export interface ClientUpdate {
   email?: string | null;
   /** @nullable */
   address?: string | null;
+  /**
+   * Tax Identification Number
+   * @nullable
+   */
+  tin?: string | null;
   /** @nullable */
   notes?: string | null;
 }

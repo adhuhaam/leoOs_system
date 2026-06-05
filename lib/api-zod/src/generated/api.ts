@@ -643,6 +643,7 @@ export const ListClientsResponseItem = zod.object({
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  tin: zod.string().nullish().describe("Tax Identification Number"),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -659,6 +660,7 @@ export const CreateClientBody = zod.object({
   phone: zod.string().optional(),
   email: zod.string().optional(),
   address: zod.string().optional(),
+  tin: zod.string().optional().describe("Tax Identification Number"),
   notes: zod.string().optional(),
 });
 
@@ -675,6 +677,7 @@ export const UpdateClientBody = zod.object({
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  tin: zod.string().nullish().describe("Tax Identification Number"),
   notes: zod.string().nullish(),
 });
 
@@ -685,6 +688,7 @@ export const UpdateClientResponse = zod.object({
   phone: zod.string().nullish(),
   email: zod.string().nullish(),
   address: zod.string().nullish(),
+  tin: zod.string().nullish().describe("Tax Identification Number"),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),

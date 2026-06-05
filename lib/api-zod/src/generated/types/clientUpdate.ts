@@ -17,6 +17,11 @@ export interface ClientUpdate {
   email?: string | null;
   /** @nullable */
   address?: string | null;
+  /**
+   * Tax Identification Number
+   * @nullable
+   */
+  tin?: string | null;
   /** @nullable */
   notes?: string | null;
 }

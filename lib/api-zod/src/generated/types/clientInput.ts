@@ -13,5 +13,7 @@ export interface ClientInput {
   phone?: string;
   email?: string;
   address?: string;
+  /** Tax Identification Number */
+  tin?: string;
   notes?: string;
 }

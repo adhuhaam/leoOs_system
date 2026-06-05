@@ -50,6 +50,7 @@ interface ClientFormState {
   phone: string;
   email: string;
   address: string;
+  tin: string;
   notes: string;
 }
 
@@ -59,6 +60,7 @@ const EMPTY_FORM: ClientFormState = {
   phone: "",
   email: "",
   address: "",
+  tin: "",
   notes: "",
 };
 
@@ -69,6 +71,7 @@ function clientToForm(c: Client): ClientFormState {
     phone: c.phone ?? "",
     email: c.email ?? "",
     address: c.address ?? "",
+    tin: c.tin ?? "",
     notes: c.notes ?? "",
   };
 }
@@ -139,6 +142,7 @@ export default function ClientsPage() {
                   <TableHead className="hidden md:table-cell">Contact Person</TableHead>
                   <TableHead className="hidden lg:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                  <TableHead className="hidden xl:table-cell">TIN</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
