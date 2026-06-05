@@ -10,7 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
-import { requireAuth, requireAuthOrToken } from "./auth";
+import { requireAuth } from "./auth";
 import { fromPath } from "pdf2pic";
 import sharp from "sharp";
 import path from "path";
@@ -78,7 +78,7 @@ async function bufferToBase64Image(
 }
 
 // GET /passports — list all (session OR extension token)
-router.get("/passports", requireAuthOrToken, async (req, res): Promise<void> => {
+router.get("/passports", async (req, res): Promise<void> => {
   const parsed = ListPassportsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -192,7 +192,7 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 });
 
 // GET /passports/stats — dashboard stats (session OR extension token)
-router.get("/passports/stats", requireAuthOrToken, async (_req, res): Promise<void> => {
+router.get("/passports/stats", async (_req, res): Promise<void> => {
   const all = await db.select().from(passportsTable).orderBy(desc(passportsTable.createdAt));
 
   const stats = {
@@ -209,7 +209,7 @@ router.get("/passports/stats", requireAuthOrToken, async (_req, res): Promise<vo
 });
 
 // GET /passports/:id — get single (session OR extension token)
-router.get("/passports/:id", requireAuthOrToken, async (req, res): Promise<void> => {
+router.get("/passports/:id", async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -10,24 +10,7 @@ Everything a developer needs to build a Chrome extension that reads employee dat
 https://leomaldives.com/api
 ```
 
----
-
-## Authentication
-
-All extension API calls must include the API token as a Bearer header:
-
-```
-Authorization: Bearer <token>
-```
-
-**How to get the token:**
-1. Log in to [https://leomaldives.com](https://leomaldives.com)
-2. Go to **Settings → System** tab
-3. Scroll to the **Extension access** section
-4. Copy the **API token** (or generate one on first use)
-5. Paste it into your extension's config/storage
-
-The token only grants **read access** — it cannot upload, edit, or delete any records. If the token is ever compromised, it can be regenerated instantly from the same settings page (the old token stops working immediately).
+No authentication required — the read endpoints are open.
 
 ---
 
@@ -37,7 +20,6 @@ The token only grants **read access** — it cannot upload, edit, or delete any 
 
 ```
 GET https://leomaldives.com/api/passports
-Authorization: Bearer <token>
 ```
 
 Returns all employee (passport) records. Supports optional query parameters to filter results.
@@ -56,15 +38,12 @@ Returns all employee (passport) records. Supports optional query parameters to f
 ```
 # All completed Bangladeshi employees
 GET https://leomaldives.com/api/passports?nationality=bangladesh&status=completed
-Authorization: Bearer <token>
 
 # Search by name
 GET https://leomaldives.com/api/passports?search=Ahmed
-Authorization: Bearer <token>
 
 # Employees at a specific client (employer)
 GET https://leomaldives.com/api/passports?clientId=5
-Authorization: Bearer <token>
 ```
 
 **Response — array of employee objects:**
@@ -99,14 +78,12 @@ Authorization: Bearer <token>
 
 ```
 GET https://leomaldives.com/api/passports/:id
-Authorization: Bearer <token>
 ```
 
 **Example:**
 
 ```
 GET https://leomaldives.com/api/passports/42
-Authorization: Bearer <token>
 ```
 
 **Response — single employee object** (same shape as above).
@@ -139,38 +116,21 @@ Returns `404` if the record does not exist.
 
 ## Extension implementation guide
 
-### 1. Store the token securely
-
-```js
-// Save token in Chrome's sync storage
-chrome.storage.sync.set({ apiToken: 'your-token-here', baseUrl: 'https://leomaldives.com/api' });
-
-// Retrieve it later
-chrome.storage.sync.get(['apiToken', 'baseUrl'], ({ apiToken, baseUrl }) => {
-  // use token
-});
-```
-
-### 2. Fetch employees
+### 1. Fetch employees
 
 ```js
 async function fetchEmployees(search = '') {
-  const { apiToken, baseUrl } = await chrome.storage.sync.get(['apiToken', 'baseUrl']);
-
-  const url = new URL(`${baseUrl}/passports`);
+  const url = new URL('https://leomaldives.com/api/passports');
   if (search) url.searchParams.set('search', search);
   url.searchParams.set('status', 'completed');
 
-  const response = await fetch(url.toString(), {
-    headers: { 'Authorization': `Bearer ${apiToken}` }
-  });
-
+  const response = await fetch(url.toString());
   if (!response.ok) throw new Error(`API error: ${response.status}`);
   return response.json();
 }
 ```
 
-### 3. Fill form fields
+### 2. Fill form fields
 
 ```js
 function fillForm(employee) {
@@ -190,6 +150,16 @@ function fillForm(employee) {
 }
 ```
 
+### 3. Search-as-you-type example
+
+```js
+const input = document.getElementById('search');
+input.addEventListener('input', async () => {
+  const employees = await fetchEmployees(input.value);
+  renderResults(employees);
+});
+```
+
 ---
 
 ## Error responses
@@ -198,27 +168,11 @@ function fillForm(employee) {
 |-------------|---------|
 | `200` | Success |
 | `400` | Invalid query parameter |
-| `401` | Missing or invalid token |
 | `404` | Record not found |
 | `500` | Server error |
-
-A `401` response body looks like:
-```json
-{ "error": "Authentication required" }
-```
 
 ---
 
 ## CORS
 
-The API allows requests from `chrome-extension://` origins, so standard `fetch()` calls from extension scripts work without any proxy.
-
----
-
-## Token rotation
-
-If you need to rotate the token (e.g. after a security incident):
-1. Go to **Settings → System → Extension access** on [leomaldives.com](https://leomaldives.com)
-2. Click **Regenerate token**
-3. Confirm — the old token stops working immediately
-4. Update the new token in your extension's storage
+The API allows requests from `chrome-extension://` origins, so standard `fetch()` calls from extension content scripts and background service workers work without any proxy or workaround.
