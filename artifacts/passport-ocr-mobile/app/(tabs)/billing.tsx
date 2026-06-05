@@ -29,6 +29,30 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "quotation", label: "Quotes" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "payment_received", label: "Payment Received" },
+  { value: "completed", label: "Completed" },
+];
+
+function statusLabel(s: string): string {
+  return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? (s || "Draft");
+}
+
+function statusColors(s: string): { bg: string; text: string; border: string } {
+  switch (s) {
+    case "sent":
+      return { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" };
+    case "payment_received":
+      return { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0" };
+    case "completed":
+      return { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" };
+    default:
+      return { bg: "#F8FAFC", text: "#64748B", border: "#E2E8F0" };
+  }
+}
+
 function formatMVR(s: string | number): string {
   const n = typeof s === "string" ? Number(s) : s;
   return `MVR ${(isFinite(n) ? n : 0).toLocaleString("en-US", {
@@ -180,6 +204,8 @@ function DocCard({
   const colors = useColors();
   const isInvoice = doc.kind === "invoice";
   const tint = isInvoice ? colors.primary : colors.mutedForeground;
+  const sc = statusColors(doc.status);
+  const sub = Number(doc.subtotal || 0);
 
   return (
     <Pressable
@@ -204,10 +230,20 @@ function DocCard({
             {isInvoice ? "INVOICE" : "QUOTE"}
           </Text>
         </View>
-        <Text style={[styles.docNumber, { color: colors.foreground }]}>
-          {doc.number}
-        </Text>
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: sc.bg, borderColor: sc.border },
+          ]}
+        >
+          <Text style={[styles.statusText, { color: sc.text }]}>
+            {statusLabel(doc.status)}
+          </Text>
+        </View>
       </View>
+      <Text style={[styles.docNumber, { color: colors.foreground }]}>
+        {doc.number}
+      </Text>
       <Text
         style={[styles.customer, { color: colors.foreground }]}
         numberOfLines={1}
@@ -222,7 +258,7 @@ function DocCard({
           {doc.issueDate}
         </Text>
         <Text style={[styles.amount, { color: colors.foreground }]}>
-          {formatMVR(doc.subtotal)}
+          {formatMVR(sub)}
         </Text>
       </View>
     </Pressable>
@@ -280,6 +316,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   kindText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.6 },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  statusText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   docNumber: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   customer: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   companyName: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 6 },

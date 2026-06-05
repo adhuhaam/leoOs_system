@@ -3,18 +3,22 @@ import {
   type BillingDocument,
   type BillingItem,
   getGetBillingDocumentQueryKey,
+  getListBillingDocumentsQueryKey,
   useGetBillingDocument,
+  useUpdateBillingDocument,
 } from "@workspace/api-client-react";
 import { Stack, useLocalSearchParams } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -26,10 +30,38 @@ function fmtMVR(s: string | number): string {
   })}`;
 }
 
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "payment_received", label: "Payment Received" },
+  { value: "completed", label: "Completed" },
+];
+
+function statusLabel(s: string): string {
+  return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? (s || "Draft");
+}
+
+function statusColors(s: string): { bg: string; text: string; border: string } {
+  switch (s) {
+    case "sent":
+      return { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" };
+    case "payment_received":
+      return { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0" };
+    case "completed":
+      return { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" };
+    default:
+      return { bg: "#F8FAFC", text: "#64748B", border: "#E2E8F0" };
+  }
+}
+
 export default function BillingDetailScreen() {
   const colors = useColors();
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = Number(rawId);
+  const queryClient = useQueryClient();
+
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useGetBillingDocument(
     id,
@@ -40,6 +72,8 @@ export default function BillingDetailScreen() {
       },
     },
   );
+
+  const updateMutation = useUpdateBillingDocument();
 
   const totals = useMemo(() => {
     const doc = data as BillingDocument | undefined;
@@ -57,6 +91,27 @@ export default function BillingDetailScreen() {
     const gst = sub * rate;
     return { sub, gst, total: sub + gst };
   }, [data]);
+
+  const handleStatusChange = (newStatus: string) => {
+    setUpdatingStatus(true);
+    updateMutation.mutate(
+      {
+        id,
+        data: { status: newStatus } as Parameters<typeof updateMutation.mutate>[0]["data"],
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetBillingDocumentQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
+          setStatusModalVisible(false);
+          setUpdatingStatus(false);
+        },
+        onError: () => {
+          setUpdatingStatus(false);
+        },
+      },
+    );
+  };
 
   if (isLoading) {
     return (
@@ -87,106 +142,213 @@ export default function BillingDetailScreen() {
 
   const doc = data as BillingDocument;
   const isInvoice = doc.kind === "invoice";
+  const sc = statusColors(doc.status);
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
-    >
-      <Stack.Screen
-        options={{ title: `${isInvoice ? "Invoice" : "Quote"} ${doc.number}` }}
-      />
-
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={styles.container}
       >
-        <View style={[styles.kindBadge, { backgroundColor: colors.secondary }]}>
-          <Text style={[styles.kindText, { color: colors.primary }]}>
-            {isInvoice ? "INVOICE" : "QUOTE"}
-          </Text>
-        </View>
-        <Text style={[styles.docNumber, { color: colors.foreground }]}>
-          {doc.number}
-        </Text>
-        <Text style={[styles.muted, { color: colors.mutedForeground }]}>
-          From {doc.companyName}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
-        <FieldRow label="Customer" value={doc.customerName} />
-        {doc.customerAddress ? (
-          <FieldRow label="Address" value={doc.customerAddress} />
-        ) : null}
-        {doc.customerTin ? (
-          <FieldRow label="TIN" value={doc.customerTin} />
-        ) : null}
-        <FieldRow label="Issue date" value={doc.issueDate} />
-        {doc.dueDate ? <FieldRow label="Due date" value={doc.dueDate} /> : null}
-        <FieldRow label="Status" value={doc.status.toUpperCase()} />
-        {doc.terms ? <FieldRow label="Terms" value={doc.terms} /> : null}
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Items
-      </Text>
-      <View style={{ gap: 8 }}>
-        {doc.items.map((item) => (
-          <ItemRow key={item.id} item={item} />
-        ))}
-      </View>
-
-      <View
-        style={[
-          styles.totals,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
-        <TotalRow label="Subtotal" value={fmtMVR(totals.sub)} />
-        <TotalRow
-          label={`GST (${doc.gstRate}%${doc.gstInclusive ? ", incl." : ""})`}
-          value={fmtMVR(totals.gst)}
+        <Stack.Screen
+          options={{ title: `${isInvoice ? "Invoice" : "Quote"} ${doc.number}` }}
         />
-        <View style={[styles.totalDivider, { backgroundColor: colors.border }]} />
-        <TotalRow label="Total" value={fmtMVR(totals.total)} bold />
-      </View>
 
-      {doc.notes ? (
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <View style={[styles.kindBadge, { backgroundColor: colors.secondary }]}>
+            <Text style={[styles.kindText, { color: colors.primary }]}>
+              {isInvoice ? "INVOICE" : "QUOTE"}
+            </Text>
+          </View>
+          <Text style={[styles.docNumber, { color: colors.foreground }]}>
+            {doc.number}
+          </Text>
+          <Text style={[styles.muted, { color: colors.mutedForeground }]}>
+            From {doc.companyName}
+          </Text>
+
+          {/* Status badge + change button */}
+          <View style={styles.statusRow}>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: sc.bg, borderColor: sc.border },
+              ]}
+            >
+              <Text style={[styles.statusText, { color: sc.text }]}>
+                {statusLabel(doc.status)}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setStatusModalVisible(true)}
+              style={({ pressed }) => [
+                styles.changeStatusBtn,
+                {
+                  backgroundColor: pressed ? colors.secondary : colors.secondary,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Feather name="edit-2" size={12} color={colors.mutedForeground} />
+              <Text style={[styles.changeStatusText, { color: colors.mutedForeground }]}>
+                Change
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         <View
           style={[
             styles.card,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
-            NOTES
-          </Text>
-          <Text style={[styles.fieldValue, { color: colors.foreground }]}>
-            {doc.notes}
-          </Text>
+          <FieldRow label="Customer" value={doc.customerName} />
+          {doc.customerAddress ? (
+            <FieldRow label="Address" value={doc.customerAddress} />
+          ) : null}
+          {doc.customerTin ? (
+            <FieldRow label="TIN" value={doc.customerTin} />
+          ) : null}
+          <FieldRow label="Issue date" value={doc.issueDate} />
+          {doc.dueDate ? <FieldRow label="Due date" value={doc.dueDate} /> : null}
+          {doc.terms ? <FieldRow label="Terms" value={doc.terms} /> : null}
         </View>
-      ) : null}
 
-      <View
-        style={[
-          styles.viewOnlyHint,
-          { backgroundColor: colors.secondary, borderColor: colors.border },
-        ]}
-      >
-        <Feather name="eye" size={14} color={colors.mutedForeground} />
-        <Text style={[styles.viewOnlyText, { color: colors.mutedForeground }]}>
-          View only — manage on the web dashboard.
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+          Items
         </Text>
-      </View>
-    </ScrollView>
+        <View style={{ gap: 8 }}>
+          {doc.items.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </View>
+
+        <View
+          style={[
+            styles.totals,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <TotalRow label="Subtotal" value={fmtMVR(totals.sub)} />
+          <TotalRow
+            label={`GST (${doc.gstRate}%${doc.gstInclusive ? ", incl." : ""})`}
+            value={fmtMVR(totals.gst)}
+          />
+          <View style={[styles.totalDivider, { backgroundColor: colors.border }]} />
+          <TotalRow label="Total" value={fmtMVR(totals.total)} bold />
+        </View>
+
+        {doc.notes ? (
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+              NOTES
+            </Text>
+            <Text style={[styles.fieldValue, { color: colors.foreground }]}>
+              {doc.notes}
+            </Text>
+          </View>
+        ) : null}
+      </ScrollView>
+
+      {/* Status picker modal */}
+      <Modal
+        visible={statusModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setStatusModalVisible(false)}
+        >
+          <Pressable
+            style={[
+              styles.modalSheet,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              Change Status
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>
+              Current: {statusLabel(doc.status)}
+            </Text>
+            <View style={styles.modalOptions}>
+              {STATUS_OPTIONS.map((opt) => {
+                const sc2 = statusColors(opt.value);
+                const isCurrent = opt.value === doc.status;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => !isCurrent && handleStatusChange(opt.value)}
+                    disabled={isCurrent || updatingStatus}
+                    style={({ pressed }) => [
+                      styles.optionRow,
+                      {
+                        backgroundColor: isCurrent
+                          ? sc2.bg
+                          : pressed
+                            ? colors.secondary
+                            : "transparent",
+                        borderColor: isCurrent ? sc2.border : colors.border,
+                        opacity: updatingStatus && !isCurrent ? 0.5 : 1,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.optionDot,
+                        { backgroundColor: sc2.text },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        {
+                          color: isCurrent ? sc2.text : colors.foreground,
+                          fontFamily: isCurrent
+                            ? "Inter_700Bold"
+                            : "Inter_500Medium",
+                        },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isCurrent && (
+                      <Feather name="check" size={16} color={sc2.text} />
+                    )}
+                    {updatingStatus && opt.value !== doc.status && (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              onPress={() => setStatusModalVisible(false)}
+              style={[styles.cancelBtn, { borderColor: colors.border }]}
+            >
+              <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>
+                Cancel
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -291,6 +453,29 @@ const styles = StyleSheet.create({
   kindText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
   docNumber: { fontSize: 22, fontFamily: "Inter_700Bold" },
   muted: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  changeStatusBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  changeStatusText: { fontSize: 11, fontFamily: "Inter_500Medium" },
   card: { padding: 16, borderRadius: 14, borderWidth: 1, gap: 10 },
   fieldRow: { gap: 4 },
   fieldLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 0.6 },
@@ -316,17 +501,42 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 13 },
   totalValue: { fontSize: 14 },
   totalDivider: { height: 1, marginVertical: 4 },
-  viewOnlyHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: "center",
-  },
-  viewOnlyText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  // modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 4,
+  },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 2 },
+  modalSubtitle: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 8 },
+  modalOptions: { gap: 6 },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  optionDot: { width: 8, height: 8, borderRadius: 4 },
+  optionLabel: { flex: 1, fontSize: 15 },
+  cancelBtn: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
