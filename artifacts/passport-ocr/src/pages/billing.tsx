@@ -45,6 +45,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -74,6 +81,8 @@ import {
   Eye,
   X,
   Calendar,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 
 type Kind = "invoice" | "quotation";
@@ -326,6 +335,30 @@ export default function BillingPage() {
   );
 }
 
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "payment_received", label: "Payment Received" },
+  { value: "completed", label: "Completed" },
+];
+
+function docStatusClass(s: string): string {
+  switch (s) {
+    case "sent":
+      return "text-blue-600 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:bg-blue-950/40";
+    case "payment_received":
+      return "text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950/40";
+    case "completed":
+      return "text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/40";
+    default:
+      return "text-slate-500 border-slate-200 bg-slate-50 dark:text-slate-400 dark:border-slate-700 dark:bg-slate-900/40";
+  }
+}
+
+function docStatusLabel(s: string): string {
+  return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? (s || "Draft");
+}
+
 function DocumentRow({
   doc,
   onEdit,
@@ -335,6 +368,22 @@ function DocumentRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updateMutation = useUpdateBillingDocument();
+
+  const changeStatus = (newStatus: string) => {
+    updateMutation.mutate(
+      { id: doc.id, data: { status: newStatus } as Parameters<typeof updateMutation.mutate>[0]["data"] },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
+        },
+        onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
+      },
+    );
+  };
+
   const sub = Number(doc.subtotal || 0);
   const rate = Number(doc.gstRate || 0);
   const grand = doc.gstInclusive ? sub : sub + (sub * rate) / 100;
@@ -373,7 +422,7 @@ function DocumentRow({
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between md:justify-end gap-2 md:gap-4 md:min-w-[280px]">
+      <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3 md:min-w-[320px]">
         <div className="text-right">
           <div className="text-base font-bold font-mono tabular-nums">{formatMVR(grand)}</div>
           {rate > 0 && (
@@ -382,6 +431,38 @@ function DocumentRow({
             </div>
           )}
         </div>
+
+        {/* Status badge — click to change */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border cursor-pointer transition-opacity hover:opacity-80 ${docStatusClass(doc.status)}`}
+              data-testid={`status-badge-${doc.id}`}
+            >
+              {docStatusLabel(doc.status)}
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Change status</DropdownMenuLabel>
+            {STATUS_OPTIONS.map(({ value, label }) => (
+              <DropdownMenuItem
+                key={value}
+                onClick={() => changeStatus(value)}
+                className="text-sm gap-2"
+                data-testid={`status-option-${value}-${doc.id}`}
+              >
+                {doc.status === value ? (
+                  <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                ) : (
+                  <span className="h-3.5 w-3.5 flex-shrink-0" />
+                )}
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="flex items-center gap-1 opacity-100 md:opacity-60 md:group-hover:opacity-100 transition-opacity">
           <Link href={`/billing/${doc.id}/print`}>
             <Button
