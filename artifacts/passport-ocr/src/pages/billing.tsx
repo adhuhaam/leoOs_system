@@ -503,6 +503,7 @@ function DocumentFormDialog({
       clientId: String(c.id),
       customerName: c.name,
       customerAddress: c.address ?? s.customerAddress,
+      customerTin: c.tin ?? s.customerTin,
     }));
   };
 

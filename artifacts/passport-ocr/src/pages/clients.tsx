@@ -192,6 +192,9 @@ export default function ClientsPage() {
                           "—"
                         )}
                       </TableCell>
+                      <TableCell className="hidden xl:table-cell text-xs text-muted-foreground font-mono">
+                        {c.tin || <span className="font-sans">—</span>}
+                      </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -294,7 +297,7 @@ function ClientFormDialog(
       // On create, only send fields the user actually filled in — keeps the
       // generated payload small and avoids sending "" for fields they skipped.
       const createPayload: Record<string, string> = { name };
-      (["contactPerson", "phone", "email", "address", "notes"] as const).forEach((k) => {
+      (["contactPerson", "phone", "email", "address", "tin", "notes"] as const).forEach((k) => {
         const v = form[k].trim();
         if (v) createPayload[k] = v;
       });
@@ -309,7 +312,7 @@ function ClientFormDialog(
       // On update, send nullable fields explicitly so blanking an input
       // actually clears the stored value (server treats null as "set to null").
       const updatePayload: Record<string, string | null> = { name };
-      (["contactPerson", "phone", "email", "address", "notes"] as const).forEach((k) => {
+      (["contactPerson", "phone", "email", "address", "tin", "notes"] as const).forEach((k) => {
         const v = form[k].trim();
         updatePayload[k] = v === "" ? null : v;
       });
@@ -375,6 +378,15 @@ function ClientFormDialog(
                 value={form.address}
                 onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
                 data-testid="input-client-address"
+              />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label>TIN (Tax Identification Number)</Label>
+              <Input
+                placeholder="e.g. 1009905GST001"
+                value={form.tin}
+                onChange={(e) => setForm((s) => ({ ...s, tin: e.target.value }))}
+                data-testid="input-client-tin"
               />
             </div>
             <div className="space-y-1.5 col-span-2">
