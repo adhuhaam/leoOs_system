@@ -77,21 +77,23 @@ export default function ClientDetailScreen() {
   );
 
   const { data: invoicesData = [] } = useListBillingDocuments(
-    { kind: "invoice" },
-    { query: { queryKey: getListBillingDocumentsQueryKey({ kind: "invoice" }), enabled: !!client } },
+    { clientId: id },
+    { query: { queryKey: getListBillingDocumentsQueryKey({ clientId: id }), enabled: !!client } },
   );
   const { data: quotationsData = [] } = useListBillingDocuments(
-    { kind: "quotation" },
-    { query: { queryKey: getListBillingDocumentsQueryKey({ kind: "quotation" }), enabled: !!client } },
+    { clientId: id, kind: "quotation" },
+    { query: { queryKey: getListBillingDocumentsQueryKey({ clientId: id, kind: "quotation" }), enabled: !!client } },
   );
 
   const clientDocs = useMemo<BillingDocumentSummary[]>(() => {
-    if (!client) return [];
-    const name = client.name.trim().toLowerCase();
-    return [...(invoicesData as BillingDocumentSummary[]), ...(quotationsData as BillingDocumentSummary[])]
-      .filter((d) => d.customerName.trim().toLowerCase() === name)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [invoicesData, quotationsData, client]);
+    const byId = new Map<number, BillingDocumentSummary>();
+    for (const d of [...(invoicesData as BillingDocumentSummary[]), ...(quotationsData as BillingDocumentSummary[])]) {
+      byId.set(d.id, d);
+    }
+    return [...byId.values()].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [invoicesData, quotationsData]);
 
   const candidates = candidatesData as Passport[];
 
