@@ -138,8 +138,9 @@ export default function BillingPage() {
   const stats = useMemo(() => {
     const total = documents.reduce((s, d) => {
       const sub = Number(d.subtotal || 0);
+      // Inclusive subtotals already contain GST; exclusive need it added.
       const rate = Number(d.gstRate || 0);
-      const grand = sub + (sub * rate) / 100;
+      const grand = d.gstInclusive ? sub : sub + (sub * rate) / 100;
       return s + grand;
     }, 0);
     return { count: documents.length, total };
@@ -336,7 +337,7 @@ function DocumentRow({
 }) {
   const sub = Number(doc.subtotal || 0);
   const rate = Number(doc.gstRate || 0);
-  const grand = sub + (sub * rate) / 100;
+  const grand = doc.gstInclusive ? sub : sub + (sub * rate) / 100;
   return (
     <div
       className="flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors group"
@@ -377,7 +378,7 @@ function DocumentRow({
           <div className="text-base font-bold font-mono tabular-nums">{formatMVR(grand)}</div>
           {rate > 0 && (
             <div className="text-[10px] text-muted-foreground">
-              GST {rate}%
+              GST {rate}% {doc.gstInclusive ? "incl" : "excl"}
             </div>
           )}
         </div>
@@ -447,7 +448,7 @@ function emptyForm(kind: Kind): FormState {
     dueDate: kind === "invoice" ? todayIso() : "",
     terms: kind === "invoice" ? "Custom" : "",
     gstRate: kind === "invoice" ? "8" : "0",
-    gstInclusive: false,
+    gstInclusive: true,
     notes:
       kind === "invoice"
         ? "Thank you.\nThis invoice is valid without a stamp or signature.\nAll payments shall be made in favor of Leo E. Services.\n\nBank: Maldives Islamic Bank\nAccount Number: 90101480044441000\nCurrency: MVR"
@@ -507,8 +508,11 @@ function DocumentFormDialog({
 
   const subtotal = form.items.reduce((s, it) => s + calcLine(it.qty, it.rate), 0);
   const gstRateNum = Number(form.gstRate || 0);
-  const gstAmount = (subtotal * gstRateNum) / 100;
-  const grand = subtotal + gstAmount;
+  const taxable = form.gstInclusive
+    ? subtotal / (1 + gstRateNum / 100)
+    : subtotal;
+  const gstAmount = form.gstInclusive ? subtotal - taxable : (subtotal * gstRateNum) / 100;
+  const grand = form.gstInclusive ? subtotal : subtotal + gstAmount;
 
   const setItem = (i: number, patch: Partial<FormState["items"][number]>) =>
     setForm((s) => ({
@@ -831,23 +835,43 @@ function DocumentFormDialog({
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Tax
               </h4>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">GST rate (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.gstRate}
-                  onChange={(e) => setForm((s) => ({ ...s, gstRate: e.target.value }))}
-                  data-testid="input-gst-rate"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">GST rate (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.gstRate}
+                    onChange={(e) => setForm((s) => ({ ...s, gstRate: e.target.value }))}
+                    data-testid="input-gst-rate"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Pricing</Label>
+                  <Select
+                    value={form.gstInclusive ? "incl" : "excl"}
+                    onValueChange={(v) => setForm((s) => ({ ...s, gstInclusive: v === "incl" }))}
+                  >
+                    <SelectTrigger data-testid="select-gst-inclusive">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="incl">Tax Inclusive</SelectItem>
+                      <SelectItem value="excl">Tax Exclusive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
             <div className="rounded-lg border border-border/60 p-4 bg-gradient-to-br from-muted/40 to-muted/10 space-y-1.5">
-              <Row label="Sub Total" value={subtotal} />
+              <Row label={form.gstInclusive ? "Sub Total (Tax Inclusive)" : "Sub Total"} value={subtotal} />
               {gstRateNum > 0 && (
-                <Row label={`GST (${gstRateNum}%)`} value={gstAmount} muted />
+                <>
+                  <Row label="Total Taxable" value={taxable} muted />
+                  <Row label={`GST (${gstRateNum}%)`} value={gstAmount} muted />
+                </>
               )}
               <div className="border-t border-border/60 my-2" />
               <Row label="Total" value={grand} bold />
