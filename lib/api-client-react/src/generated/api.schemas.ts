@@ -9,6 +9,10 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface ExtensionToken {
+  token: string;
+}
+
 export interface LoginInput {
   /** @minLength 1 */
   password: string;

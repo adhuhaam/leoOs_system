@@ -28,7 +28,16 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true }));
+app.use(
+  cors({
+    credentials: true,
+    // Reflect the request origin so chrome-extension://* origins (and any
+    // other trusted callers) receive the Access-Control-Allow-Origin header
+    // value they need. This is safe for a single-tenant app where auth is
+    // enforced separately on every protected route.
+    origin: true,
+  }),
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(sessionMiddleware);

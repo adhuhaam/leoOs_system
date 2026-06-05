@@ -22,6 +22,10 @@ export const appSettingsTable = pgTable("app_settings", {
   // scrypt hash of the override password. When NULL, auth falls back to the
   // APP_PASSWORD environment variable.
   passwordHash: text("password_hash"),
+
+  // Static token for the Chrome extension (Authorization: Bearer <token>).
+  // NULL means no token has been generated yet.
+  extensionToken: text("extension_token"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

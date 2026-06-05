@@ -28,6 +28,7 @@ export * from "./expenseCategoryInput";
 export * from "./expenseCategoryUpdate";
 export * from "./expenseInput";
 export * from "./expenseUpdate";
+export * from "./extensionToken";
 export * from "./getAuthStatus200";
 export * from "./healthStatus";
 export * from "./listBillingDocumentsKind";

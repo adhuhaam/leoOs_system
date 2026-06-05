@@ -107,6 +107,36 @@ paths:
         "401":
           description: Current password is incorrect
 
+  /auth/extension-token:
+    get:
+      operationId: getExtensionToken
+      tags: [auth]
+      summary: Get the extension API token (generates one on first call)
+      responses:
+        "200":
+          description: Token value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionToken"
+        "401":
+          description: Authentication required
+
+  /auth/extension-token/regenerate:
+    post:
+      operationId: regenerateExtensionToken
+      tags: [auth]
+      summary: Rotate the extension API token (old token immediately invalidated)
+      responses:
+        "200":
+          description: New token value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionToken"
+        "401":
+          description: Authentication required
+
   /system/settings:
     get:
       operationId: getSystemSettings
@@ -1076,6 +1106,13 @@ components:
           type: string
       required:
         - status
+
+    ExtensionToken:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
 
     LoginInput:
       type: object

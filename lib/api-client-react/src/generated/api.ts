@@ -35,6 +35,7 @@ import type {
   ExpenseCategoryUpdate,
   ExpenseInput,
   ExpenseUpdate,
+  ExtensionToken,
   GetAuthStatus200,
   HealthStatus,
   ListBillingDocumentsParams,
@@ -475,6 +476,162 @@ export const useChangePassword = <
   TContext
 > => {
   return useMutation(getChangePasswordMutationOptions(options));
+};
+
+/**
+ * @summary Get the extension API token (generates one on first call)
+ */
+export const getGetExtensionTokenUrl = () => {
+  return `/api/auth/extension-token`;
+};
+
+export const getExtensionToken = async (
+  options?: RequestInit,
+): Promise<ExtensionToken> => {
+  return customFetch<ExtensionToken>(getGetExtensionTokenUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetExtensionTokenQueryKey = () => {
+  return [`/api/auth/extension-token`] as const;
+};
+
+export const getGetExtensionTokenQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExtensionToken>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getExtensionToken>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetExtensionTokenQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getExtensionToken>>
+  > = ({ signal }) => getExtensionToken({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExtensionToken>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetExtensionTokenQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExtensionToken>>
+>;
+export type GetExtensionTokenQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the extension API token (generates one on first call)
+ */
+
+export function useGetExtensionToken<
+  TData = Awaited<ReturnType<typeof getExtensionToken>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getExtensionToken>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExtensionTokenQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Rotate the extension API token (old token immediately invalidated)
+ */
+export const getRegenerateExtensionTokenUrl = () => {
+  return `/api/auth/extension-token/regenerate`;
+};
+
+export const regenerateExtensionToken = async (
+  options?: RequestInit,
+): Promise<ExtensionToken> => {
+  return customFetch<ExtensionToken>(getRegenerateExtensionTokenUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRegenerateExtensionTokenMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateExtensionToken>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof regenerateExtensionToken>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["regenerateExtensionToken"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof regenerateExtensionToken>>,
+    void
+  > = () => {
+    return regenerateExtensionToken(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegenerateExtensionTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateExtensionToken>>
+>;
+
+export type RegenerateExtensionTokenMutationError = ErrorType<void>;
+
+/**
+ * @summary Rotate the extension API token (old token immediately invalidated)
+ */
+export const useRegenerateExtensionToken = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateExtensionToken>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof regenerateExtensionToken>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getRegenerateExtensionTokenMutationOptions(options));
 };
 
 /**

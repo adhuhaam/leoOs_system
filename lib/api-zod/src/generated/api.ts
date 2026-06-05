@@ -46,6 +46,20 @@ export const ChangePasswordBody = zod.object({
 });
 
 /**
+ * @summary Get the extension API token (generates one on first call)
+ */
+export const GetExtensionTokenResponse = zod.object({
+  token: zod.string(),
+});
+
+/**
+ * @summary Rotate the extension API token (old token immediately invalidated)
+ */
+export const RegenerateExtensionTokenResponse = zod.object({
+  token: zod.string(),
+});
+
+/**
  * @summary Read tenant system settings (app name, theme)
  */
 export const getSystemSettingsResponseAccentHueMin = 0;

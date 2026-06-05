@@ -16,10 +16,13 @@ import {
   useGetSystemSettings,
   useUpdateSystemSettings,
   useChangePassword,
+  useGetExtensionToken,
+  useRegenerateExtensionToken,
   getListLoaOptionsQueryKey,
   getListCompaniesQueryKey,
   getListExpenseCategoriesQueryKey,
   getGetSystemSettingsQueryKey,
+  getGetExtensionTokenQueryKey,
 } from "@workspace/api-client-react";
 import type { LoaOption, Company, ExpenseCategory } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,7 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet, Cog, Palette, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet, Cog, Palette, KeyRound, Eye, EyeOff, Copy, RefreshCw, Plug } from "lucide-react";
 
 type Category = "work_type" | "work_site" | "job_title";
 
@@ -1884,7 +1887,182 @@ function SystemSection() {
 
       {/* Password */}
       <PasswordCard hasCustomPassword={data.hasCustomPassword} />
+
+      {/* Extension access */}
+      <ExtensionAccessCard />
     </div>
+  );
+}
+
+function ExtensionAccessCard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data, isLoading } = useGetExtensionToken();
+  const regenerateMutation = useRegenerateExtensionToken();
+
+  const [showToken, setShowToken] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const token = data?.token ?? null;
+  const baseUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/api` : "/api";
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: `${label} copied to clipboard` });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
+  const handleRegenerate = () => {
+    regenerateMutation.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetExtensionTokenQueryKey() });
+        setConfirmOpen(false);
+        setShowToken(false);
+        toast({ title: "Token regenerated", description: "The old token no longer works." });
+      },
+      onError: () => {
+        toast({ title: "Failed to regenerate token", variant: "destructive" });
+      },
+    });
+  };
+
+  const maskedToken = token ? `${token.slice(0, 8)}${"•".repeat(24)}${token.slice(-8)}` : "";
+
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Plug className="h-3.5 w-3.5 text-sky-500" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+            Developer
+          </span>
+        </div>
+        <div className="-mt-3">
+          <h2 className="text-xl font-semibold tracking-tight">Extension access</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Use these values to configure your Chrome extension. The token authenticates API
+            calls without a browser session — treat it like a password.
+          </p>
+        </div>
+
+        {/* API Base URL */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">API base URL</Label>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={baseUrl}
+              className="font-mono text-sm bg-muted/40"
+              data-testid="input-ext-base-url"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => copyText(baseUrl, "API base URL")}
+              title="Copy URL"
+              data-testid="button-copy-base-url"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Set this as the base URL in your extension config.
+          </p>
+        </div>
+
+        {/* Token */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">API token</Label>
+          {isLoading ? (
+            <div className="h-10 rounded-md border border-border bg-muted/40 animate-pulse" />
+          ) : (
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  readOnly
+                  value={showToken ? (token ?? "") : maskedToken}
+                  className="font-mono text-sm bg-muted/40 pr-10"
+                  data-testid="input-ext-token"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  data-testid="button-toggle-token-visibility"
+                >
+                  {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => token && copyText(token, "Token")}
+                disabled={!token}
+                title="Copy token"
+                data-testid="button-copy-token"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Send this as{" "}
+            <code className="bg-muted px-1 py-0.5 rounded text-[10px]">
+              Authorization: Bearer &lt;token&gt;
+            </code>{" "}
+            on every extension request.
+          </p>
+        </div>
+
+        {/* Regenerate */}
+        <div className="flex justify-end pt-1">
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="button-regenerate-token"
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Regenerate token
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Regenerate extension token?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The current token will stop working immediately. You will need to update your
+                  Chrome extension with the new token before it can make API calls again.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={regenerateMutation.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleRegenerate();
+                  }}
+                  disabled={regenerateMutation.isPending}
+                  data-testid="button-confirm-regenerate-token"
+                >
+                  {regenerateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                  )}
+                  Regenerate
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

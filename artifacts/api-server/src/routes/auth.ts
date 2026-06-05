@@ -121,6 +121,42 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+// GET /auth/extension-token — return current token (generate one if none exists yet)
+router.get("/auth/extension-token", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const rows = await db
+    .select({ extensionToken: appSettingsTable.extensionToken })
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.id, 1))
+    .limit(1);
+  let token = rows[0]?.extensionToken ?? null;
+  if (!token) {
+    token = randomBytes(32).toString("hex");
+    await db
+      .insert(appSettingsTable)
+      .values({ id: 1, extensionToken: token })
+      .onConflictDoUpdate({ target: appSettingsTable.id, set: { extensionToken: token } });
+  }
+  res.json({ token });
+});
+
+// POST /auth/extension-token/regenerate — rotate the token (old one immediately invalid)
+router.post("/auth/extension-token/regenerate", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const token = randomBytes(32).toString("hex");
+  await db
+    .insert(appSettingsTable)
+    .values({ id: 1, extensionToken: token })
+    .onConflictDoUpdate({ target: appSettingsTable.id, set: { extensionToken: token } });
+  res.json({ token });
+});
+
 /**
  * Middleware that gates protected API routes. Returns 401 (not 302) so the
  * SPA can decide where to redirect.
@@ -129,6 +165,41 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   if (req.session?.authenticated) {
     next();
     return;
+  }
+  res.status(401).json({ error: "Authentication required" });
+}
+
+/**
+ * Like requireAuth but also accepts a valid Authorization: Bearer <token>
+ * header. Used for routes that the Chrome extension needs to call.
+ */
+export async function requireAuthOrToken(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (req.session?.authenticated) {
+    next();
+    return;
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    try {
+      const rows = await db
+        .select({ extensionToken: appSettingsTable.extensionToken })
+        .from(appSettingsTable)
+        .where(eq(appSettingsTable.id, 1))
+        .limit(1);
+      const stored = rows[0]?.extensionToken;
+      if (stored && stored === token) {
+        next();
+        return;
+      }
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
   }
   res.status(401).json({ error: "Authentication required" });
 }
