@@ -110,13 +110,8 @@ export default function BillingPrintPage() {
   const isInvoice = doc.kind === "invoice";
   const subtotal = doc.items.reduce((s, it) => s + Number(it.amount || 0), 0);
   const gstRate = Number(doc.gstRate || 0);
-  const taxable = doc.gstInclusive
-    ? subtotal / (1 + gstRate / 100)
-    : subtotal;
-  const gstAmount = doc.gstInclusive
-    ? subtotal - taxable
-    : (subtotal * gstRate) / 100;
-  const grand = doc.gstInclusive ? subtotal : subtotal + gstAmount;
+  const gstAmount = (subtotal * gstRate) / 100;
+  const grand = subtotal + gstAmount;
   const itemsTotal = doc.items.reduce((s, it) => s + Number(it.qty || 0), 0);
 
   return (
@@ -283,24 +278,13 @@ export default function BillingPrintPage() {
               )}
             </div>
             <div className="space-y-2 text-[11.5px] pt-3">
-              <TotalRow
-                label="Sub Total"
-                value={subtotal}
-                hint={doc.gstInclusive ? "(Tax Inclusive)" : undefined}
-              />
+              <TotalRow label="Sub Total" value={subtotal} />
               {gstRate > 0 && (
-                <>
-                  <TotalRow label="Total Taxable Amount" value={taxable} />
-                  <TotalRow label={`GST (${gstRate}%)`} value={gstAmount} />
-                </>
+                <TotalRow label={`GST (${gstRate}%)`} value={gstAmount} />
               )}
               <TotalRow label="Total" value={grand} grand />
               {isInvoice && (
-                <TotalRow
-                  label="Balance Due"
-                  value={grand}
-                  highlight
-                />
+                <TotalRow label="Balance Due" value={grand} highlight />
               )}
             </div>
           </div>
