@@ -9,6 +9,7 @@ import {
   useDeleteBillingDocument,
   useListCompanies,
   useListClients,
+  useListPassports,
   getListBillingDocumentsQueryKey,
   getGetBillingDocumentQueryKey,
 } from "@workspace/api-client-react";
@@ -17,6 +18,7 @@ import type {
   BillingItemInput,
   Company,
   Client,
+  Passport,
 } from "@workspace/api-client-react";
 
 // Issuing company is hardcoded to LEO Employment Services — resolved by name
@@ -69,6 +71,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -83,6 +87,7 @@ import {
   Calendar,
   ChevronDown,
   Check,
+  Users,
 } from "lucide-react";
 
 type Kind = "invoice" | "quotation";
@@ -697,6 +702,25 @@ function DocumentFormDialog({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
+
+  const addEmployeeItems = (
+    newItems: { description: string; detail: string; qty: string; rate: string }[],
+  ) => {
+    setForm((s) => {
+      const hasBlankPlaceholder =
+        s.items.length === 1 &&
+        !s.items[0].description.trim() &&
+        !s.items[0].detail.trim() &&
+        s.items[0].qty === "1" &&
+        s.items[0].rate === "0";
+      return {
+        ...s,
+        items: hasBlankPlaceholder ? newItems : [...s.items, ...newItems],
+      };
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -819,13 +843,27 @@ function DocumentFormDialog({
 
           {/* Items */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Line items
               </h4>
-              <Button type="button" size="sm" variant="outline" onClick={addItem} data-testid="button-add-item">
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add line
-              </Button>
+              <div className="flex items-center gap-2">
+                {form.clientId && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEmployeePickerOpen(true)}
+                    data-testid="button-add-employees"
+                    className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    <Users className="h-3.5 w-3.5 mr-1" /> Add employees
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="outline" onClick={addItem} data-testid="button-add-item">
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add line
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               {form.items.map((it, i) => (
@@ -979,6 +1017,180 @@ function DocumentFormDialog({
           <Button onClick={handleSubmit} disabled={isPending} data-testid="button-save-document">
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {mode === "create" ? "Create" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+
+      {form.clientId && employeePickerOpen && (
+        <EmployeePickerDialog
+          clientId={Number(form.clientId)}
+          open={employeePickerOpen}
+          onOpenChange={setEmployeePickerOpen}
+          onAdd={(items) => {
+            addEmployeeItems(items);
+            setEmployeePickerOpen(false);
+          }}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+// ============================================================================
+// Employee picker dialog (add candidates linked to a client as line items)
+// ============================================================================
+
+function EmployeePickerDialog({
+  clientId,
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  clientId: number;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onAdd: (items: { description: string; detail: string; qty: string; rate: string }[]) => void;
+}) {
+  const { data: passports = [], isLoading } = useListPassports({ clientId: String(clientId) });
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [description, setDescription] = useState("");
+  const [rate, setRate] = useState("0");
+
+  const toggle = (id: number) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleAll = () => {
+    if (selected.size === passports.length) setSelected(new Set());
+    else setSelected(new Set(passports.map((p) => p.id)));
+  };
+
+  const handleAdd = () => {
+    const chosen = passports.filter((p) => selected.has(p.id));
+    if (chosen.length === 0) return;
+    const items = chosen.map((p) => ({
+      description: description.trim() || "Service",
+      detail: p.fullName ?? p.passportNumber ?? String(p.id),
+      qty: "1",
+      rate,
+    }));
+    onAdd(items);
+  };
+
+  const allSelected = passports.length > 0 && selected.size === passports.length;
+  const someSelected = selected.size > 0 && !allSelected;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add employees</DialogTitle>
+          <DialogDescription>
+            Select candidates linked to this client. One line item is added per employee.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          {/* Shared description + rate */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Service description</Label>
+              <Input
+                placeholder="Visa Processing Fee"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                data-testid="input-emp-description"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Rate (MVR)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                data-testid="input-emp-rate"
+              />
+            </div>
+          </div>
+
+          {/* Candidate list */}
+          {isLoading ? (
+            <div className="py-8 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : passports.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              No candidates linked to this client yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Select all */}
+              <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/60">
+                <Checkbox
+                  id="select-all-employees"
+                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleAll}
+                  data-testid="checkbox-select-all"
+                />
+                <label
+                  htmlFor="select-all-employees"
+                  className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none"
+                >
+                  {allSelected ? "Deselect all" : "Select all"} ({passports.length})
+                </label>
+              </div>
+
+              <ScrollArea className="max-h-64 pr-2">
+                <div className="space-y-1">
+                  {(passports as Passport[]).map((p) => (
+                    <label
+                      key={p.id}
+                      htmlFor={`emp-${p.id}`}
+                      className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/50 cursor-pointer select-none"
+                    >
+                      <Checkbox
+                        id={`emp-${p.id}`}
+                        checked={selected.has(p.id)}
+                        onCheckedChange={() => toggle(p.id)}
+                        data-testid={`checkbox-emp-${p.id}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {p.fullName ?? "—"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-mono">
+                          {p.passportNumber ?? "No passport number"}
+                        </p>
+                      </div>
+                      {p.status && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                          {p.status}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAdd}
+            disabled={selected.size === 0}
+            data-testid="button-confirm-add-employees"
+          >
+            Add {selected.size > 0 ? `${selected.size} employee${selected.size > 1 ? "s" : ""}` : "employees"}
           </Button>
         </DialogFooter>
       </DialogContent>
