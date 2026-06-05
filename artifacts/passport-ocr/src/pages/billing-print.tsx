@@ -43,10 +43,18 @@ export default function BillingPrintPage() {
   const { data: doc, isLoading } = useGetBillingDocument(id);
   const { data: companies = [] } = useListCompanies({ withBranding: true });
   const company = companies.find((c) => c.id === doc?.companyId);
-  const { logoImage: systemLogo } = useSystemSettings();
+  const {
+    logoImage: systemLogo,
+    companyAddress: systemAddress,
+    companyPhone: systemPhone,
+    companyEmail: systemEmail,
+  } = useSystemSettings();
 
-  // Use per-company letterhead if set, otherwise fall back to the system logo.
+  // Use per-company values if set, otherwise fall back to system settings.
   const headerLogo = company?.letterheadImage ?? systemLogo;
+  const headerAddress = company?.address ?? systemAddress;
+  const headerPhone = company?.phone ?? systemPhone;
+  const headerEmail = company?.email ?? systemEmail;
 
   // Set the document title so "Save as PDF" suggests a sensible filename.
   useEffect(() => {
@@ -170,11 +178,11 @@ export default function BillingPrintPage() {
               {company?.registrationNumber && (
                 <p className="mt-1.5">{company.registrationNumber}</p>
               )}
-              {company?.address && (
-                <p className="whitespace-pre-line mt-0.5">{company.address}</p>
+              {headerEmail && <p className="mt-0.5">{headerEmail}</p>}
+              {headerPhone && <p className="mt-0.5">{headerPhone}</p>}
+              {headerAddress && (
+                <p className="whitespace-pre-line mt-0.5">{headerAddress}</p>
               )}
-              {company?.phone && <p className="mt-0.5">{company.phone}</p>}
-              {company?.email && <p className="mt-0.5">{company.email}</p>}
             </div>
           </div>
 
