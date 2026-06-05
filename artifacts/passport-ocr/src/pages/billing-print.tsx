@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Printer } from "lucide-react";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 
 function formatMVR(amount: string | number | null | undefined): string {
   if (amount == null || amount === "") return "MVR 0.00";
@@ -42,6 +43,10 @@ export default function BillingPrintPage() {
   const { data: doc, isLoading } = useGetBillingDocument(id);
   const { data: companies = [] } = useListCompanies({ withBranding: true });
   const company = companies.find((c) => c.id === doc?.companyId);
+  const { logoImage: systemLogo } = useSystemSettings();
+
+  // Use per-company letterhead if set, otherwise fall back to the system logo.
+  const headerLogo = company?.letterheadImage ?? systemLogo;
 
   // Set the document title so "Save as PDF" suggests a sensible filename.
   useEffect(() => {
@@ -152,9 +157,9 @@ export default function BillingPrintPage() {
 
             {/* Right: organization logo + company text block */}
             <div className="text-right text-[11px] text-slate-700 leading-snug">
-              {company?.letterheadImage && (
+              {headerLogo && (
                 <img
-                  src={company.letterheadImage}
+                  src={headerLogo}
                   alt={doc.companyName}
                   className="ml-auto max-h-20 object-contain mb-3"
                 />
