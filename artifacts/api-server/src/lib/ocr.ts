@@ -1,7 +1,16 @@
 import { createWorker, PSM } from "tesseract.js";
 import { parse as parseMRZ } from "mrz";
 import sharp from "sharp";
+import path from "node:path";
+import fs from "node:fs";
 import { logger } from "./logger";
+
+/**
+ * Path to bundled tessdata directory (contains ocrb.traineddata).
+ * __dirname is set by the esbuild banner to the dist/ directory at runtime,
+ * so ../tessdata resolves to artifacts/api-server/tessdata/.
+ */
+const TESSDATA_DIR = path.resolve(__dirname, "../tessdata");
 
 export interface ExtractedPassportData {
   fullName: string | null;
@@ -37,14 +46,30 @@ async function getGeneralWorker(): Promise<Awaited<ReturnType<typeof createWorke
 async function getMrzWorker(): Promise<Awaited<ReturnType<typeof createWorker>>> {
   if (_mrzWorker) return _mrzWorker;
   logger.info("Initializing MRZ Tesseract worker");
-  _mrzWorker = await createWorker("eng");
-  // Restrict to valid MRZ characters only — prevents '<' being misread as C/L/K.
-  // PSM 6 = single uniform block, best for MRZ strips.
+
+  // Prefer the bundled ocrb.traineddata — specifically trained for the OCR-B
+  // font used in all ICAO passport MRZs (Bangladesh, India, Nepal, etc.).
+  // Falls back to eng + whitelist if the file hasn't been downloaded yet.
+  const ocrbPath = path.join(TESSDATA_DIR, "ocrb.traineddata");
+  const hasOcrb = fs.existsSync(ocrbPath);
+
+  if (hasOcrb) {
+    logger.info({ tessdata: TESSDATA_DIR }, "Using bundled ocrb.traineddata for MRZ");
+    _mrzWorker = await createWorker("ocrb", 1, { langPath: TESSDATA_DIR });
+  } else {
+    logger.warn("ocrb.traineddata not found — falling back to eng + whitelist");
+    _mrzWorker = await createWorker("eng");
+  }
+
+  // PSM.SINGLE_BLOCK + char whitelist as a safety net regardless of model.
+  // With ocrb the model itself handles '<' correctly; the whitelist ensures
+  // nothing unexpected slips through on very noisy images.
   await _mrzWorker.setParameters({
     tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",
     tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
   });
-  logger.info("MRZ Tesseract worker ready");
+
+  logger.info({ model: hasOcrb ? "ocrb" : "eng" }, "MRZ Tesseract worker ready");
   return _mrzWorker;
 }
 
