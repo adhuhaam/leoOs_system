@@ -378,7 +378,7 @@ function DoneStep({
 
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="outline">
-          <a href={`/api/loa/${loaId}/print`} target="_blank" rel="noopener noreferrer">
+          <a href={`/api/loa/${loaId}/pdf`} target="_blank" rel="noopener noreferrer">
             <Eye className="h-4 w-4 mr-2" /> View LOA
           </a>
         </Button>
@@ -394,7 +394,7 @@ function DoneStep({
 
       <div className="pt-2 border-t border-border/60 flex flex-wrap gap-2">
         <Button asChild variant="outline">
-          <a href="/master">
+          <a href="/master-list">
             <Users className="h-4 w-4 mr-2" /> Go to Master List
           </a>
         </Button>
@@ -497,57 +497,63 @@ export default function UploadPage() {
     if (!passport || !activePassportId || !assignForm.companyId) return;
 
     const selectedCompany = companies.find((c) => String(c.id) === assignForm.companyId);
+    const cid = Number(assignForm.companyId);
 
-    // 1. Update passport's companyId
-    updatePassportMutation.mutate({
-      id: activePassportId,
-      data: { companyId: Number(assignForm.companyId) },
-    });
-
-    // 2. Create LOA
-    createLoaMutation.mutate(
+    // Step 1: assign company to passport. Step 2 (LOA creation) only runs on success
+    // so company assignment is guaranteed before the LOA record exists.
+    updatePassportMutation.mutate(
+      { id: activePassportId, data: { companyId: cid } },
       {
-        data: {
-          companyId: Number(assignForm.companyId),
-          passportId: activePassportId,
-          // Snapshot company
-          companyName: selectedCompany?.name,
-          companyAddress: selectedCompany?.address ?? undefined,
-          companyEmail: selectedCompany?.email ?? undefined,
-          companyPhone: selectedCompany?.phone ?? undefined,
-          companyCountry: selectedCompany?.country ?? undefined,
-          companyRegistrationNumber: selectedCompany?.registrationNumber ?? undefined,
-          // Snapshot candidate
-          candidateName: passport.fullName ?? undefined,
-          candidateAddress: passport.address ?? undefined,
-          candidateNationality: passport.nationality ?? undefined,
-          candidateDateOfBirth: passport.dateOfBirth ?? undefined,
-          candidatePassportNumber: passport.passportNumber ?? undefined,
-          candidateEmergencyContact: assignForm.emergencyContact || undefined,
-          // Employment
-          jobTitle: assignForm.jobTitle || undefined,
-          workType: assignForm.workType || undefined,
-          basicSalary: assignForm.basicSalary || undefined,
-          salaryPaymentDate: assignForm.salaryPaymentDate || undefined,
-          workSite: assignForm.workSite || undefined,
-          dateOfCommence: assignForm.dateOfCommence || undefined,
-          jobDescription: assignForm.jobDescription || undefined,
-          workingHours: assignForm.workingHours || undefined,
-          workStatus: assignForm.workStatus || undefined,
-          contractDuration: assignForm.contractDuration || undefined,
-          signatoryName: assignForm.signatoryName || undefined,
-          signatoryDesignation: assignForm.signatoryDesignation || undefined,
-          signatureDate: assignForm.signatureDate || undefined,
-        },
-      },
-      {
-        onSuccess: (loa) => {
-          setCreatedLoaId(loa.id);
-          setStep("done");
-          toast({ title: "LOA created successfully" });
-        },
         onError: () =>
-          toast({ title: "Failed to create LOA", variant: "destructive" }),
+          toast({ title: "Failed to assign company", description: "Please try again.", variant: "destructive" }),
+        onSuccess: () => {
+          // Step 2: create LOA now that passport.companyId is persisted
+          createLoaMutation.mutate(
+            {
+              data: {
+                companyId: cid,
+                passportId: activePassportId,
+                // Snapshot company
+                companyName: selectedCompany?.name,
+                companyAddress: selectedCompany?.address ?? undefined,
+                companyEmail: selectedCompany?.email ?? undefined,
+                companyPhone: selectedCompany?.phone ?? undefined,
+                companyCountry: selectedCompany?.country ?? undefined,
+                companyRegistrationNumber: selectedCompany?.registrationNumber ?? undefined,
+                // Snapshot candidate
+                candidateName: passport.fullName ?? undefined,
+                candidateAddress: passport.address ?? undefined,
+                candidateNationality: passport.nationality ?? undefined,
+                candidateDateOfBirth: passport.dateOfBirth ?? undefined,
+                candidatePassportNumber: passport.passportNumber ?? undefined,
+                candidateEmergencyContact: assignForm.emergencyContact || undefined,
+                // Employment
+                jobTitle: assignForm.jobTitle || undefined,
+                workType: assignForm.workType || undefined,
+                basicSalary: assignForm.basicSalary || undefined,
+                salaryPaymentDate: assignForm.salaryPaymentDate || undefined,
+                workSite: assignForm.workSite || undefined,
+                dateOfCommence: assignForm.dateOfCommence || undefined,
+                jobDescription: assignForm.jobDescription || undefined,
+                workingHours: assignForm.workingHours || undefined,
+                workStatus: assignForm.workStatus || undefined,
+                contractDuration: assignForm.contractDuration || undefined,
+                signatoryName: assignForm.signatoryName || undefined,
+                signatoryDesignation: assignForm.signatoryDesignation || undefined,
+                signatureDate: assignForm.signatureDate || undefined,
+              },
+            },
+            {
+              onSuccess: (loa) => {
+                setCreatedLoaId(loa.id);
+                setStep("done");
+                toast({ title: "LOA created successfully" });
+              },
+              onError: () =>
+                toast({ title: "Failed to create LOA", variant: "destructive" }),
+            }
+          );
+        },
       }
     );
   };
