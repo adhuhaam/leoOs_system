@@ -33,10 +33,10 @@ const upload = multer({
   },
 });
 
-async function bufferToBase64Image(
+async function preprocessImageBuffer(
   buffer: Buffer,
   mimetype: string
-): Promise<{ base64: string; mime: string }> {
+): Promise<{ imgBuffer: Buffer; mime: string }> {
   if (mimetype === "application/pdf") {
     // Convert PDF first page to image using temp file
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "passport-"));
@@ -60,20 +60,19 @@ async function bufferToBase64Image(
       }
 
       const imgBuffer = await fs.readFile(result.path);
-      const base64 = imgBuffer.toString("base64");
-      return { base64, mime: "image/png" };
+      return { imgBuffer, mime: "image/png" };
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   }
 
   // For images, resize if too large and convert to JPEG
-  const processed = await sharp(buffer)
+  const imgBuffer = await sharp(buffer)
     .resize(1600, 1200, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 90 })
     .toBuffer();
 
-  return { base64: processed.toString("base64"), mime: "image/jpeg" };
+  return { imgBuffer, mime: "image/jpeg" };
 }
 
 // GET /passports — list all (open)
@@ -195,17 +194,13 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
   (req.file as { buffer: Buffer | null }).buffer = null as unknown as Buffer;
 
   (async () => {
-    let base64: string | null = null;
     try {
-      const converted = await bufferToBase64Image(fileBuffer, fileMime);
-      base64 = converted.base64;
-      const mime = converted.mime;
+      const { imgBuffer, mime } = await preprocessImageBuffer(fileBuffer, fileMime);
 
-      // Buffer no longer needed — release it before the slow OCR API call.
+      // Raw upload buffer no longer needed — zero and release before OCR.
       fileBuffer.fill(0);
 
-      const extracted = await extractPassportData(base64, mime);
-      base64 = null; // base64 string no longer needed
+      const extracted = await extractPassportData(imgBuffer, mime);
 
       await db
         .update(passportsTable)
@@ -217,7 +212,6 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 
       logger.info({ passportId: passport.id }, "OCR extraction completed — file data fully released");
     } catch (err) {
-      base64 = null;
       logger.error({ err, passportId: passport.id }, "OCR extraction failed — deleting draft record");
       // Delete the draft so a failed extraction leaves no trace in the DB.
       await db.delete(passportsTable).where(eq(passportsTable.id, passport.id));

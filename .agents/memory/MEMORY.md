@@ -1,0 +1,1 @@
+- [Tesseract.js esbuild setup](tesseract-esbuild.md) — must be in esbuild externals AND onlyBuiltDependencies; uses WASM + worker_threads and breaks if bundled
