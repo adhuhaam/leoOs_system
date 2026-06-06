@@ -778,6 +778,13 @@ export type ListCompaniesParams = {
   withBranding?: boolean;
 };
 
+export type ListLoaParams = {
+  /**
+   * Filter entries by passport ID
+   */
+  passportId?: number;
+};
+
 export type ListClientsParams = {
   search?: string;
 };

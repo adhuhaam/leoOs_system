@@ -43,6 +43,7 @@ import type {
   ListCompaniesParams,
   ListExpensesParams,
   ListLoaOptionsParams,
+  ListLoaParams,
   ListPassportsParams,
   ListPasswordsParams,
   Loa,
@@ -1667,35 +1668,53 @@ export const useDeleteCompany = <
 /**
  * @summary List all LOA entries
  */
-export const getListLoaUrl = () => {
-  return `/api/loa`;
+export const getListLoaUrl = (params?: ListLoaParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/loa?${stringifiedParams}`
+    : `/api/loa`;
 };
 
-export const listLoa = async (options?: RequestInit): Promise<Loa[]> => {
-  return customFetch<Loa[]>(getListLoaUrl(), {
+export const listLoa = async (
+  params?: ListLoaParams,
+  options?: RequestInit,
+): Promise<Loa[]> => {
+  return customFetch<Loa[]>(getListLoaUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListLoaQueryKey = () => {
-  return [`/api/loa`] as const;
+export const getListLoaQueryKey = (params?: ListLoaParams) => {
+  return [`/api/loa`, ...(params ? [params] : [])] as const;
 };
 
 export const getListLoaQueryOptions = <
   TData = Awaited<ReturnType<typeof listLoa>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof listLoa>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: ListLoaParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listLoa>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListLoaQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListLoaQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listLoa>>> = ({
     signal,
-  }) => listLoa({ signal, ...requestOptions });
+  }) => listLoa(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listLoa>>,
@@ -1716,11 +1735,14 @@ export type ListLoaQueryError = ErrorType<unknown>;
 export function useListLoa<
   TData = Awaited<ReturnType<typeof listLoa>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof listLoa>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListLoaQueryOptions(options);
+>(
+  params?: ListLoaParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listLoa>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLoaQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

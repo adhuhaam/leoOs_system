@@ -12,8 +12,13 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/loa", async (_req, res): Promise<void> => {
-  const entries = await db.select().from(loaTable).orderBy(desc(loaTable.createdAt));
+router.get("/loa", async (req, res): Promise<void> => {
+  const rawPassportId = req.query.passportId;
+  const passportId = rawPassportId ? parseInt(String(rawPassportId), 10) : null;
+  const entries =
+    passportId && !isNaN(passportId)
+      ? await db.select().from(loaTable).where(eq(loaTable.passportId, passportId)).orderBy(desc(loaTable.createdAt))
+      : await db.select().from(loaTable).orderBy(desc(loaTable.createdAt));
   res.json(entries);
 });
 

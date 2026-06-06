@@ -1,13 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useListPassports,
   useListLoa,
   useListCompanies,
   useListClients,
+  useListLoaOptions,
   useDeletePassport,
   useUpdatePassport,
+  useUpdateLoa,
   getListPassportsQueryKey,
   getGetPassportStatsQueryKey,
+  getListLoaQueryKey,
 } from "@workspace/api-client-react";
 import type { Passport } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -464,9 +467,14 @@ function EditCandidateDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateMutation = useUpdatePassport();
+  const updateLoaMutation = useUpdateLoa();
   const { data: clients = [] } = useListClients();
+  const { data: companies = [] } = useListCompanies();
 
-  // "" sentinel for "Unallocated" — we translate to null on save.
+  // Fetch the existing LOA entry for this passport (most recent).
+  const { data: loaEntries = [] } = useListLoa({ passportId: passport.id });
+  const existingLoa = loaEntries[0] ?? null;
+
   const [form, setForm] = useState({
     fullName: passport.fullName || "",
     passportNumber: passport.passportNumber || "",
@@ -475,27 +483,76 @@ function EditCandidateDialog({
     dateOfIssue: passport.dateOfIssue || "",
     dateOfExpiry: passport.dateOfExpiry || "",
     address: passport.address || "",
+    companyId: passport.companyId != null ? String(passport.companyId) : "",
     clientId: passport.clientId != null ? String(passport.clientId) : "",
     workPermitNumber: passport.workPermitNumber || "",
     agent: passport.agent || "",
+    // LOA employment fields — populated from existingLoa once loaded.
+    jobTitle: "",
+    workType: "",
+    workSite: "",
   });
+
+  // Populate employment fields when the LOA entry loads.
+  useEffect(() => {
+    if (existingLoa) {
+      setForm((prev) => ({
+        ...prev,
+        jobTitle: existingLoa.jobTitle ?? "",
+        workType: existingLoa.workType ?? "",
+        workSite: existingLoa.workSite ?? "",
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingLoa?.id]);
+
+  // Load LOA options for the currently selected company (for suggestion selects).
+  const selectedCompanyId = form.companyId ? Number(form.companyId) : undefined;
+  const { data: loaOptions = [] } = useListLoaOptions({ companyId: selectedCompanyId ?? 0 });
+  const jobTitleOpts = loaOptions.filter((o) => o.category === "job_title").map((o) => o.value);
+  const workTypeOpts = loaOptions.filter((o) => o.category === "work_type").map((o) => o.value);
+  const workSiteOpts = loaOptions.filter((o) => o.category === "work_site").map((o) => o.value);
+
+  const isPending = updateMutation.isPending || updateLoaMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { clientId, workPermitNumber, agent, ...rest } = form;
-    const payload = {
-      ...rest,
-      clientId: clientId === "" ? null : Number(clientId),
-      workPermitNumber: workPermitNumber.trim() ? workPermitNumber.trim() : null,
-      agent: agent.trim() ? agent.trim() : null,
-    };
+    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, ...rest } = form;
+
     updateMutation.mutate(
-      { id: passport.id, data: payload },
+      {
+        id: passport.id,
+        data: {
+          ...rest,
+          companyId: companyId === "" ? null : Number(companyId),
+          clientId: clientId === "" ? null : Number(clientId),
+          workPermitNumber: workPermitNumber.trim() || null,
+          agent: agent.trim() || null,
+        },
+      },
       {
         onSuccess: () => {
-          toast({ title: "Candidate updated" });
-          queryClient.invalidateQueries({ queryKey: getListPassportsQueryKey() });
-          onOpenChange(false);
+          const invalidate = () => {
+            queryClient.invalidateQueries({ queryKey: getListPassportsQueryKey() });
+            queryClient.invalidateQueries({ queryKey: getListLoaQueryKey() });
+            toast({ title: "Candidate updated" });
+            onOpenChange(false);
+          };
+          if (existingLoa) {
+            updateLoaMutation.mutate(
+              {
+                id: existingLoa.id,
+                data: {
+                  jobTitle: jobTitle.trim() || undefined,
+                  workType: workType.trim() || undefined,
+                  workSite: workSite.trim() || undefined,
+                },
+              },
+              { onSuccess: invalidate, onError: () => toast({ title: "LOA fields failed to save", variant: "destructive" }) },
+            );
+          } else {
+            invalidate();
+          }
         },
         onError: () => toast({ title: "Failed to update", variant: "destructive" }),
       },
@@ -507,7 +564,7 @@ function EditCandidateDialog({
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Candidate</DialogTitle>
-          <DialogDescription>Update the candidate&apos;s passport details, allocation, and operational fields.</DialogDescription>
+          <DialogDescription>Update passport details, company, employment terms, and allocation.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -535,10 +592,7 @@ function EditCandidateDialog({
               </div>
               <div className="space-y-1.5">
                 <Label>Nationality</Label>
-                <Select
-                  value={form.nationality}
-                  onValueChange={(v) => setForm({ ...form, nationality: v })}
-                >
+                <Select value={form.nationality} onValueChange={(v) => setForm({ ...form, nationality: v })}>
                   <SelectTrigger data-testid="select-edit-nationality">
                     <SelectValue placeholder="Select nationality" />
                   </SelectTrigger>
@@ -554,53 +608,86 @@ function EditCandidateDialog({
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Birth</Label>
-                <Input
-                  value={form.dateOfBirth}
-                  onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
-                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                  data-testid="input-edit-dob"
-                />
+                <Input value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} placeholder="YYYY-MM-DD or DD/MM/YYYY" data-testid="input-edit-dob" />
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Issue</Label>
-                <Input
-                  value={form.dateOfIssue}
-                  onChange={(e) => setForm({ ...form, dateOfIssue: e.target.value })}
-                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                  data-testid="input-edit-issue"
-                />
+                <Input value={form.dateOfIssue} onChange={(e) => setForm({ ...form, dateOfIssue: e.target.value })} placeholder="YYYY-MM-DD or DD/MM/YYYY" data-testid="input-edit-issue" />
               </div>
               <div className="space-y-1.5">
                 <Label>Date of Expiry</Label>
-                <Input
-                  value={form.dateOfExpiry}
-                  onChange={(e) => setForm({ ...form, dateOfExpiry: e.target.value })}
-                  placeholder="YYYY-MM-DD or DD/MM/YYYY"
-                  data-testid="input-edit-expiry"
-                />
+                <Input value={form.dateOfExpiry} onChange={(e) => setForm({ ...form, dateOfExpiry: e.target.value })} placeholder="YYYY-MM-DD or DD/MM/YYYY" data-testid="input-edit-expiry" />
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Address</Label>
-                <Input
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  data-testid="input-edit-address"
-                />
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} data-testid="input-edit-address" />
               </div>
             </div>
           </div>
 
-          {/* Allocation / placement */}
+          {/* Company & employment */}
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Company &amp; Employment</p>
+            <div className="space-y-1.5">
+              <Label>Company</Label>
+              <Select
+                value={form.companyId === "" ? "__none__" : form.companyId}
+                onValueChange={(v) => setForm({ ...form, companyId: v === "__none__" ? "" : v })}
+              >
+                <SelectTrigger data-testid="select-edit-company">
+                  <SelectValue placeholder="Select recruiting company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {existingLoa && (
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <EmploymentField
+                  label="Job Title"
+                  value={form.jobTitle}
+                  onChange={(v) => setForm({ ...form, jobTitle: v })}
+                  options={jobTitleOpts}
+                  testId="edit-job-title"
+                />
+                <EmploymentField
+                  label="Work Type"
+                  value={form.workType}
+                  onChange={(v) => setForm({ ...form, workType: v })}
+                  options={workTypeOpts}
+                  testId="edit-work-type"
+                />
+                <EmploymentField
+                  label="Work Site"
+                  value={form.workSite}
+                  onChange={(v) => setForm({ ...form, workSite: v })}
+                  options={workSiteOpts}
+                  testId="edit-work-site"
+                  className="col-span-2"
+                />
+              </div>
+            )}
+            {!existingLoa && (
+              <p className="text-[11px] text-muted-foreground">No LOA exists for this candidate yet — employment terms are set when the LOA is created.</p>
+            )}
+          </div>
+
+          {/* Allocation / placement — independent of company */}
           <div className="space-y-3 border-t pt-4">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Allocation</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5 col-span-2">
-                <Label>Allocation (Client)</Label>
+                <Label>Allocated Client</Label>
                 <Select
                   value={form.clientId === "" ? "__none__" : form.clientId}
-                  onValueChange={(v) =>
-                    setForm({ ...form, clientId: v === "__none__" ? "" : v })
-                  }
+                  onValueChange={(v) => setForm({ ...form, clientId: v === "__none__" ? "" : v })}
                 >
                   <SelectTrigger data-testid="select-edit-client">
                     <SelectValue placeholder="Where is this candidate allocated?" />
@@ -615,27 +702,16 @@ function EditCandidateDialog({
                   </SelectContent>
                 </Select>
                 {clients.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    No clients yet — add one from the Clients page first.
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">No clients yet — add one from the Clients page first.</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label>Work Permit Number</Label>
-                <Input
-                  value={form.workPermitNumber}
-                  onChange={(e) => setForm({ ...form, workPermitNumber: e.target.value })}
-                  className="font-mono"
-                  data-testid="input-edit-work-permit"
-                />
+                <Input value={form.workPermitNumber} onChange={(e) => setForm({ ...form, workPermitNumber: e.target.value })} className="font-mono" data-testid="input-edit-work-permit" />
               </div>
               <div className="space-y-1.5">
                 <Label>Agent</Label>
-                <Input
-                  value={form.agent}
-                  onChange={(e) => setForm({ ...form, agent: e.target.value })}
-                  data-testid="input-edit-agent"
-                />
+                <Input value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} data-testid="input-edit-agent" />
               </div>
             </div>
           </div>
@@ -644,14 +720,80 @@ function EditCandidateDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-candidate">
-              {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending} data-testid="button-save-candidate">
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * A Select + optional free-text Input for an employment field.
+ * If the company has configured options for this category they appear as choices.
+ * If the current value is not among them (custom) it is preserved and editable.
+ */
+function EmploymentField({
+  label,
+  value,
+  onChange,
+  options,
+  testId,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  testId: string;
+  className?: string;
+}) {
+  const isCustom = value !== "" && !options.includes(value);
+  const [showCustom, setShowCustom] = useState(isCustom);
+
+  if (options.length === 0) {
+    return (
+      <div className={`space-y-1.5 ${className ?? ""}`}>
+        <Label>{label}</Label>
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={`Enter ${label.toLowerCase()}`} data-testid={`input-${testId}`} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`space-y-1.5 ${className ?? ""}`}>
+      <Label>{label}</Label>
+      <Select
+        value={showCustom ? "__custom__" : value || "__none__"}
+        onValueChange={(v) => {
+          if (v === "__none__") { setShowCustom(false); onChange(""); }
+          else if (v === "__custom__") { setShowCustom(true); onChange(value); }
+          else { setShowCustom(false); onChange(v); }
+        }}
+      >
+        <SelectTrigger data-testid={`select-${testId}`}>
+          <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">— None —</SelectItem>
+          {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          {isCustom && !showCustom && <SelectItem value={value}>{value}</SelectItem>}
+          <SelectItem value="__custom__">— Custom… —</SelectItem>
+        </SelectContent>
+      </Select>
+      {showCustom && (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Enter custom ${label.toLowerCase()}`}
+          autoFocus
+          data-testid={`input-${testId}-custom`}
+        />
+      )}
+    </div>
   );
 }
 

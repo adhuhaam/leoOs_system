@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { eq, desc, isNull, and, type SQL } from "drizzle-orm";
-import { db, passportsTable, clientsTable, companiesTable } from "@workspace/db";
+import { db, passportsTable, clientsTable, companiesTable, loaTable } from "@workspace/db";
 import {
   GetPassportParams,
   UpdatePassportParams,
@@ -333,6 +333,36 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   if (!passport) {
     res.status(404).json({ error: "Passport not found" });
     return;
+  }
+
+  // Cascade company change to linked LOA entries so the print view reflects the new company.
+  const bodyAny = body.data as { companyId?: number | null };
+  if ("companyId" in bodyAny) {
+    if (bodyAny.companyId != null) {
+      const [company] = await db
+        .select()
+        .from(companiesTable)
+        .where(eq(companiesTable.id, bodyAny.companyId));
+      if (company) {
+        await db
+          .update(loaTable)
+          .set({
+            companyId: company.id,
+            companyName: company.name,
+            companyAddress: company.address ?? null,
+            companyEmail: company.email ?? null,
+            companyPhone: company.phone ?? null,
+            companyCountry: company.country ?? null,
+            companyRegistrationNumber: company.registrationNumber ?? null,
+          })
+          .where(eq(loaTable.passportId, params.data.id));
+      }
+    } else {
+      await db
+        .update(loaTable)
+        .set({ companyId: null, companyName: null, companyAddress: null, companyEmail: null, companyPhone: null, companyCountry: null, companyRegistrationNumber: null })
+        .where(eq(loaTable.passportId, params.data.id));
+    }
   }
 
   res.json(passport);

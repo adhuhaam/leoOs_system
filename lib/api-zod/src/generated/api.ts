@@ -541,6 +541,13 @@ export const DeleteCompanyParams = zod.object({
 /**
  * @summary List all LOA entries
  */
+export const ListLoaQueryParams = zod.object({
+  passportId: zod.coerce
+    .number()
+    .optional()
+    .describe("Filter entries by passport ID"),
+});
+
 export const ListLoaResponseItem = zod.object({
   id: zod.number(),
   companyId: zod.number().nullish(),

@@ -38,6 +38,7 @@ export * from "./listCompaniesParams";
 export * from "./listExpensesParams";
 export * from "./listLoaOptionsCategory";
 export * from "./listLoaOptionsParams";
+export * from "./listLoaParams";
 export * from "./listPassportsParams";
 export * from "./listPasswordsParams";
 export * from "./loa";
