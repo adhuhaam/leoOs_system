@@ -184,11 +184,28 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 
   req.log.info({ passportId: passport.id }, "Passport record created, starting OCR");
 
-  // Process asynchronously and update record
+  // FILE RETENTION POLICY: uploaded files are NEVER stored anywhere.
+  // multer uses memory storage (no disk writes for images).
+  // For PDFs, bufferToBase64Image writes a temp file and deletes it in finally{}.
+  // We capture the buffer and mimetype here, then immediately release
+  // both references once base64 conversion is done — before any await.
+  const fileBuffer = req.file.buffer;
+  const fileMime = req.file.mimetype;
+  // Release multer's reference so the buffer can be GC'd as soon as possible.
+  (req.file as { buffer: Buffer | null }).buffer = null as unknown as Buffer;
+
   (async () => {
+    let base64: string | null = null;
     try {
-      const { base64, mime } = await bufferToBase64Image(req.file!.buffer, req.file!.mimetype);
+      const converted = await bufferToBase64Image(fileBuffer, fileMime);
+      base64 = converted.base64;
+      const mime = converted.mime;
+
+      // Buffer no longer needed — release it before the slow OCR API call.
+      fileBuffer.fill(0);
+
       const extracted = await extractPassportData(base64, mime);
+      base64 = null; // base64 string no longer needed
 
       await db
         .update(passportsTable)
@@ -198,12 +215,11 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
         })
         .where(eq(passportsTable.id, passport.id));
 
-      logger.info({ passportId: passport.id }, "OCR extraction completed");
+      logger.info({ passportId: passport.id }, "OCR extraction completed — file data fully released");
     } catch (err) {
+      base64 = null;
       logger.error({ err, passportId: passport.id }, "OCR extraction failed — deleting draft record");
       // Delete the draft so a failed extraction leaves no trace in the DB.
-      // The wizard UI still shows the error to the user (via the polling response
-      // returning 404 after deletion, which we handle below), so they can retry.
       await db.delete(passportsTable).where(eq(passportsTable.id, passport.id));
     }
   })();
