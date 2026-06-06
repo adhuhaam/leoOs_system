@@ -1,1 +1,1 @@
-- [Tesseract.js esbuild setup](tesseract-esbuild.md) — must be in esbuild externals AND onlyBuiltDependencies; uses WASM + worker_threads and breaks if bundled
+- [Tesseract.js esbuild + MRZ accuracy](tesseract-esbuild.md) — must be in esbuild externals AND onlyBuiltDependencies; no ocrb.traineddata; trust check digits & recover doc number by edit distance
