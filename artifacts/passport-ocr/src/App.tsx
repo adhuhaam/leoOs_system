@@ -12,6 +12,7 @@ import MasterListPage from "@/pages/master-list";
 import CompaniesPage from "@/pages/companies";
 import ClientsPage from "@/pages/clients";
 import LoaPage from "@/pages/loa";
+import LoaPrintPage from "@/pages/loa-print";
 import ExpensesPage from "@/pages/expenses";
 import BillingPage from "@/pages/billing";
 import BillingPrintPage from "@/pages/billing-print";
@@ -25,8 +26,9 @@ function Router() {
   return (
     <AuthGate>
       <Switch>
-        {/* Print view renders standalone — no app sidebar/header */}
+        {/* Print views render standalone — no app sidebar/header */}
         <Route path="/billing/:id/print" component={BillingPrintPage} />
+        <Route path="/loa/:id/print" component={LoaPrintPage} />
         <Route>
           <AppLayout>
             <Switch>

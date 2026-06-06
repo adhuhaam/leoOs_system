@@ -22,7 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, FileText, Trash2, Download, Building2, User, ChevronRight } from "lucide-react";
+import { Plus, FileText, Trash2, Download, Printer, Building2, User, ChevronRight } from "lucide-react";
 
 const STEPS = ["Select Company & Candidate", "Employment Details", "Signatory"] as const;
 type Step = 0 | 1 | 2;
@@ -111,6 +111,17 @@ function LoaTable({ entries, onDelete }: { entries: Loa[]; onDelete: (id: number
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
+                  <Link href={`/loa/${loa.id}/print`}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="View / Print LOA"
+                      data-testid={`button-view-loa-${loa.id}`}
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
                   <Button
                     variant="ghost"
                     size="icon"
