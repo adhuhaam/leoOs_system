@@ -33,7 +33,6 @@ async function buildAll() {
       "fontkit",
       "brotli",
       "sharp",
-      "tesseract.js",
       "better-sqlite3",
       "sqlite3",
       "canvas",
