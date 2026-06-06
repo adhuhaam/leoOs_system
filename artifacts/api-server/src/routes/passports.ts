@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { eq, sql, desc, isNull } from "drizzle-orm";
-import { db, passportsTable, clientsTable } from "@workspace/db";
+import { db, passportsTable, clientsTable, companiesTable } from "@workspace/db";
 import {
   GetPassportParams,
   UpdatePassportParams,
@@ -41,7 +41,6 @@ async function bufferToBase64Image(
     // Convert PDF first page to image using temp file
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "passport-"));
     const tmpPdf = path.join(tmpDir, "passport.pdf");
-    const tmpImg = path.join(tmpDir, "passport");
 
     try {
       await fs.writeFile(tmpPdf, buffer);
@@ -77,7 +76,7 @@ async function bufferToBase64Image(
   return { base64: processed.toString("base64"), mime: "image/jpeg" };
 }
 
-// GET /passports — list all (session OR extension token)
+// GET /passports — list all (open)
 router.get("/passports", async (req, res): Promise<void> => {
   const parsed = ListPassportsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -85,7 +84,13 @@ router.get("/passports", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, nationality, status, clientId } = parsed.data;
+  const { search, nationality, status, clientId, companyId } = parsed.data as {
+    search?: string;
+    nationality?: string;
+    status?: string;
+    clientId?: string;
+    companyId?: string;
+  };
 
   const conditions = [];
   if (nationality) {
@@ -100,8 +105,14 @@ router.get("/passports", async (req, res): Promise<void> => {
     const n = Number(clientId);
     if (!Number.isNaN(n)) conditions.push(eq(passportsTable.clientId, n));
   }
+  if (companyId === "none") {
+    conditions.push(isNull(passportsTable.companyId));
+  } else if (companyId) {
+    const n = Number(companyId);
+    if (!Number.isNaN(n)) conditions.push(eq(passportsTable.companyId, n));
+  }
 
-  // Left-join clients so each row carries clientName for display.
+  // Left-join clients and companies so each row carries names for display.
   const results = await db
     .select({
       id: passportsTable.id,
@@ -115,6 +126,8 @@ router.get("/passports", async (req, res): Promise<void> => {
       status: passportsTable.status,
       errorMessage: passportsTable.errorMessage,
       originalFilename: passportsTable.originalFilename,
+      companyId: passportsTable.companyId,
+      companyName: companiesTable.name,
       clientId: passportsTable.clientId,
       clientName: clientsTable.name,
       workPermitNumber: passportsTable.workPermitNumber,
@@ -124,6 +137,7 @@ router.get("/passports", async (req, res): Promise<void> => {
     })
     .from(passportsTable)
     .leftJoin(clientsTable, eq(passportsTable.clientId, clientsTable.id))
+    .leftJoin(companiesTable, eq(passportsTable.companyId, companiesTable.id))
     .where(conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined)
     .orderBy(desc(passportsTable.createdAt));
 
@@ -191,7 +205,7 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
   res.status(201).json(passport);
 });
 
-// GET /passports/stats — dashboard stats (session OR extension token)
+// GET /passports/stats — dashboard stats (open)
 router.get("/passports/stats", async (_req, res): Promise<void> => {
   const all = await db.select().from(passportsTable).orderBy(desc(passportsTable.createdAt));
 
@@ -208,7 +222,7 @@ router.get("/passports/stats", async (_req, res): Promise<void> => {
   res.json(stats);
 });
 
-// GET /passports/:id — get single (session OR extension token)
+// GET /passports/:id — get single (open)
 router.get("/passports/:id", async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
@@ -217,8 +231,30 @@ router.get("/passports/:id", async (req, res): Promise<void> => {
   }
 
   const [passport] = await db
-    .select()
+    .select({
+      id: passportsTable.id,
+      fullName: passportsTable.fullName,
+      passportNumber: passportsTable.passportNumber,
+      dateOfBirth: passportsTable.dateOfBirth,
+      dateOfIssue: passportsTable.dateOfIssue,
+      dateOfExpiry: passportsTable.dateOfExpiry,
+      address: passportsTable.address,
+      nationality: passportsTable.nationality,
+      status: passportsTable.status,
+      errorMessage: passportsTable.errorMessage,
+      originalFilename: passportsTable.originalFilename,
+      companyId: passportsTable.companyId,
+      companyName: companiesTable.name,
+      clientId: passportsTable.clientId,
+      clientName: clientsTable.name,
+      workPermitNumber: passportsTable.workPermitNumber,
+      agent: passportsTable.agent,
+      createdAt: passportsTable.createdAt,
+      updatedAt: passportsTable.updatedAt,
+    })
     .from(passportsTable)
+    .leftJoin(clientsTable, eq(passportsTable.clientId, clientsTable.id))
+    .leftJoin(companiesTable, eq(passportsTable.companyId, companiesTable.id))
     .where(eq(passportsTable.id, params.data.id));
 
   if (!passport) {
@@ -251,6 +287,19 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
       .where(eq(clientsTable.id, body.data.clientId));
     if (!exists) {
       res.status(400).json({ error: "Allocation client does not exist" });
+      return;
+    }
+  }
+
+  // Validate companyId points to an existing company (or null to clear).
+  if ((body.data as { companyId?: number | null }).companyId != null) {
+    const cid = (body.data as { companyId?: number | null }).companyId as number;
+    const [exists] = await db
+      .select({ id: companiesTable.id })
+      .from(companiesTable)
+      .where(eq(companiesTable.id, cid));
+    if (!exists) {
+      res.status(400).json({ error: "Company does not exist" });
       return;
     }
   }

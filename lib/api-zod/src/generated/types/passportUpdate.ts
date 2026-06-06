@@ -15,6 +15,8 @@ export interface PassportUpdate {
   address?: string;
   nationality?: string;
   /** @nullable */
+  companyId?: number | null;
+  /** @nullable */
   clientId?: number | null;
   /** @nullable */
   workPermitNumber?: string | null;

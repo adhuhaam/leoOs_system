@@ -8,6 +8,7 @@
 import type { LoaOptionInputCategory } from "./loaOptionInputCategory";
 
 export interface LoaOptionInput {
+  companyId: number;
   category: LoaOptionInputCategory;
   /** @minLength 1 */
   value: string;

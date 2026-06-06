@@ -84,6 +84,8 @@ export const LoaOptionCategory = {
 
 export interface LoaOption {
   id: number;
+  /** Company this option belongs to. */
+  companyId: number;
   category: LoaOptionCategory;
   value: string;
   createdAt: string;
@@ -99,6 +101,7 @@ export const LoaOptionInputCategory = {
 } as const;
 
 export interface LoaOptionInput {
+  companyId: number;
   category: LoaOptionInputCategory;
   /** @minLength 1 */
   value: string;
@@ -250,6 +253,16 @@ export interface Passport {
   /** @nullable */
   originalFilename?: string | null;
   /**
+   * ID of the recruiting company this employee belongs to.
+   * @nullable
+   */
+  companyId?: number | null;
+  /**
+   * Joined company name for display (computed; ignored on writes).
+   * @nullable
+   */
+  companyName?: string | null;
+  /**
    * ID of the client the candidate is allocated to.
    * @nullable
    */
@@ -279,6 +292,8 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  /** @nullable */
+  companyId?: number | null;
   /** @nullable */
   clientId?: number | null;
   /** @nullable */
@@ -739,6 +754,10 @@ export type ListPassportsParams = {
    * Filter by allocated client. Pass `none` for unallocated candidates.
    */
   clientId?: string;
+  /**
+   * Filter by company ID. Pass `none` for candidates with no company.
+   */
+  companyId?: string;
 };
 
 export type ListCompaniesParams = {
@@ -779,6 +798,10 @@ export const ListBillingDocumentsKind = {
 } as const;
 
 export type ListLoaOptionsParams = {
+  /**
+   * Company ID to scope options to.
+   */
+  companyId: number;
   /**
    * Filter by category (work_type, work_site, job_title)
    */

@@ -9,6 +9,10 @@ import type { ListLoaOptionsCategory } from "./listLoaOptionsCategory";
 
 export type ListLoaOptionsParams = {
   /**
+   * Company ID to scope options to.
+   */
+  companyId: number;
+  /**
    * Filter by category (work_type, work_site, job_title)
    */
   category?: ListLoaOptionsCategory;

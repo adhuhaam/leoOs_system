@@ -185,6 +185,12 @@ export const ListPassportsQueryParams = zod.object({
     .describe(
       "Filter by allocated client. Pass `none` for unallocated candidates.",
     ),
+  companyId: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Filter by company ID. Pass `none` for candidates with no company.",
+    ),
 });
 
 export const ListPassportsResponseItem = zod.object({
@@ -199,6 +205,14 @@ export const ListPassportsResponseItem = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  companyId: zod
+    .number()
+    .nullish()
+    .describe("ID of the recruiting company this employee belongs to."),
+  companyName: zod
+    .string()
+    .nullish()
+    .describe("Joined company name for display (computed; ignored on writes)."),
   clientId: zod
     .number()
     .nullish()
@@ -244,6 +258,16 @@ export const GetPassportStatsResponse = zod.object({
       status: zod.enum(["processing", "completed", "failed"]),
       errorMessage: zod.string().nullish(),
       originalFilename: zod.string().nullish(),
+      companyId: zod
+        .number()
+        .nullish()
+        .describe("ID of the recruiting company this employee belongs to."),
+      companyName: zod
+        .string()
+        .nullish()
+        .describe(
+          "Joined company name for display (computed; ignored on writes).",
+        ),
       clientId: zod
         .number()
         .nullish()
@@ -281,6 +305,14 @@ export const GetPassportResponse = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  companyId: zod
+    .number()
+    .nullish()
+    .describe("ID of the recruiting company this employee belongs to."),
+  companyName: zod
+    .string()
+    .nullish()
+    .describe("Joined company name for display (computed; ignored on writes)."),
   clientId: zod
     .number()
     .nullish()
@@ -310,6 +342,7 @@ export const UpdatePassportBody = zod.object({
   dateOfExpiry: zod.string().optional(),
   address: zod.string().optional(),
   nationality: zod.string().optional(),
+  companyId: zod.number().nullish(),
   clientId: zod.number().nullish(),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
@@ -327,6 +360,14 @@ export const UpdatePassportResponse = zod.object({
   status: zod.enum(["processing", "completed", "failed"]),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
+  companyId: zod
+    .number()
+    .nullish()
+    .describe("ID of the recruiting company this employee belongs to."),
+  companyName: zod
+    .string()
+    .nullish()
+    .describe("Joined company name for display (computed; ignored on writes)."),
   clientId: zod
     .number()
     .nullish()
@@ -1124,9 +1165,10 @@ export const DeleteBillingDocumentParams = zod.object({
 });
 
 /**
- * @summary List LOA dropdown options
+ * @summary List LOA dropdown options for a company
  */
 export const ListLoaOptionsQueryParams = zod.object({
+  companyId: zod.coerce.number().describe("Company ID to scope options to."),
   category: zod
     .enum(["work_type", "work_site", "job_title"])
     .optional()
@@ -1135,6 +1177,7 @@ export const ListLoaOptionsQueryParams = zod.object({
 
 export const ListLoaOptionsResponseItem = zod.object({
   id: zod.number(),
+  companyId: zod.number().describe("Company this option belongs to."),
   category: zod.enum(["work_type", "work_site", "job_title"]),
   value: zod.string(),
   createdAt: zod.string(),
@@ -1146,6 +1189,7 @@ export const ListLoaOptionsResponse = zod.array(ListLoaOptionsResponseItem);
  */
 
 export const CreateLoaOptionBody = zod.object({
+  companyId: zod.number(),
   category: zod.enum(["work_type", "work_site", "job_title"]),
   value: zod.string().min(1),
 });
@@ -1163,6 +1207,7 @@ export const UpdateLoaOptionBody = zod.object({
 
 export const UpdateLoaOptionResponse = zod.object({
   id: zod.number(),
+  companyId: zod.number().describe("Company this option belongs to."),
   category: zod.enum(["work_type", "work_site", "job_title"]),
   value: zod.string(),
   createdAt: zod.string(),

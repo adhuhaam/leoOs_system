@@ -9,6 +9,8 @@ import type { LoaOptionCategory } from "./loaOptionCategory";
 
 export interface LoaOption {
   id: number;
+  /** Company this option belongs to. */
+  companyId: number;
   category: LoaOptionCategory;
   value: string;
   createdAt: string;

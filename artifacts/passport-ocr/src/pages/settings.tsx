@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useListLoaOptions,
-  useCreateLoaOption,
-  useUpdateLoaOption,
-  useDeleteLoaOption,
-  useListCompanies,
-  useCreateCompany,
-  useUpdateCompany,
-  useDeleteCompany,
   useListExpenseCategories,
   useCreateExpenseCategory,
   useUpdateExpenseCategory,
@@ -18,13 +10,11 @@ import {
   useChangePassword,
   useGetExtensionToken,
   useRegenerateExtensionToken,
-  getListLoaOptionsQueryKey,
-  getListCompaniesQueryKey,
   getListExpenseCategoriesQueryKey,
   getGetSystemSettingsQueryKey,
   getGetExtensionTokenQueryKey,
 } from "@workspace/api-client-react";
-import type { LoaOption, Company, ExpenseCategory } from "@workspace/api-client-react";
+import type { ExpenseCategory } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,52 +34,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Briefcase, MapPin, Hammer, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, ListChecks, Wallet, Cog, Palette, KeyRound, Eye, EyeOff, Copy, RefreshCw, Plug } from "lucide-react";
+import { Plus, Trash2, Settings as SettingsIcon, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, Wallet, Cog, Palette, KeyRound, Eye, EyeOff, Copy, RefreshCw, Plug } from "lucide-react";
 
-type Category = "work_type" | "work_site" | "job_title";
-
-interface ListConfig {
-  category: Category;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  accent: string; // tailwind gradient classes
-  placeholder: string;
-}
-
-const LISTS: ListConfig[] = [
-  {
-    category: "job_title",
-    title: "Job Titles",
-    description: "Occupations / roles selectable in the LOA form.",
-    icon: Briefcase,
-    accent: "from-indigo-500 to-violet-500",
-    placeholder: "e.g. Construction Worker",
-  },
-  {
-    category: "work_type",
-    title: "Work Types",
-    description: "Type of work (manual, technical, supervisory, etc.)",
-    icon: Hammer,
-    accent: "from-amber-500 to-orange-500",
-    placeholder: "e.g. Manual Labour",
-  },
-  {
-    category: "work_site",
-    title: "Work Sites",
-    description: "Project locations or sites of employment.",
-    icon: MapPin,
-    accent: "from-emerald-500 to-teal-500",
-    placeholder: "e.g. Guraidhoo, Maldives",
-  },
-];
 
 export default function SettingsPage() {
-  // Persist the active tab in the URL hash so deep-links / back button work.
   const initialTab = (() => {
-    if (typeof window === "undefined") return "companies";
+    if (typeof window === "undefined") return "system";
     const h = window.location.hash.replace("#", "");
-    return ["system", "companies", "expenses", "loa"].includes(h) ? h : "system";
+    return ["system", "expenses"].includes(h) ? h : "system";
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -102,7 +54,6 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Hero header — gradient surface */}
       <div className="relative overflow-hidden rounded-2xl border border-border/60 shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-indigo-500/5 to-teal-500/10" />
         <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-violet-400/15 blur-3xl" />
@@ -116,30 +67,23 @@ export default function SettingsPage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground mt-2 text-sm md:text-base max-w-2xl">
-            Configure your companies, expense categories, and the dropdown values used
-            throughout LEO OS. Changes take effect immediately.
+            Configure the application name, branding, theme, and expense categories.
+            Company details and LOA options are managed in the{" "}
+            <a href="/companies" className="text-primary hover:underline">Companies</a> page.
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="sticky top-0 z-10 -mx-2 px-2 py-2 bg-background/80 backdrop-blur-sm rounded-lg">
-          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-2 gap-1 max-w-sm">
             <TabsTrigger
               value="system"
               className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
               data-testid="tab-system"
             >
               <Cog className="h-4 w-4" />
-              <span className="hidden sm:inline">System</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="companies"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
-              data-testid="tab-companies"
-            >
-              <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Companies</span>
+              System
             </TabsTrigger>
             <TabsTrigger
               value="expenses"
@@ -147,17 +91,7 @@ export default function SettingsPage() {
               data-testid="tab-expenses"
             >
               <Wallet className="h-4 w-4" />
-              <span className="hidden sm:inline">Expense Categories</span>
-              <span className="sm:hidden">Expenses</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="loa"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
-              data-testid="tab-loa"
-            >
-              <ListChecks className="h-4 w-4" />
-              <span className="hidden sm:inline">LOA Options</span>
-              <span className="sm:hidden">LOA</span>
+              Expense Categories
             </TabsTrigger>
           </TabsList>
         </div>
@@ -166,16 +100,8 @@ export default function SettingsPage() {
           <SystemSection />
         </TabsContent>
 
-        <TabsContent value="companies" className="mt-0 focus-visible:outline-none">
-          <CompaniesDetailsSection />
-        </TabsContent>
-
         <TabsContent value="expenses" className="mt-0 focus-visible:outline-none">
           <ExpenseCategoriesSection />
-        </TabsContent>
-
-        <TabsContent value="loa" className="mt-0 focus-visible:outline-none">
-          <LoaOptionsSection />
         </TabsContent>
       </Tabs>
     </div>
@@ -530,79 +456,7 @@ function ColorPicker({
   );
 }
 
-// ============================================================================
-// Company Details (name, address, email, country, registration number)
-// ============================================================================
-
-function CompaniesDetailsSection() {
-  // Includes branding blobs (letterhead/signature) so each card can render them
-  // inline. The list is short (a handful of companies) so the extra payload is fine.
-  const { data: companies = [], isLoading } = useListCompanies({ withBranding: true });
-  const [addOpen, setAddOpen] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 className="h-3.5 w-3.5 text-teal-600" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Companies</span>
-          </div>
-          <h2 className="text-xl font-semibold tracking-tight">Companies</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Each card holds everything for one company — details, default signatory, letterhead, and e-signature.
-            All of it appears on every Letter of Appointment generated for that company.
-          </p>
-        </div>
-        <Button onClick={() => setAddOpen(true)} data-testid="button-add-company">
-          <Plus className="h-4 w-4 mr-1" /> Add company
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-96" />)}
-        </div>
-      ) : companies.length === 0 ? (
-        <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-border rounded-lg">
-          No companies yet. Click <span className="font-medium">Add company</span> to create your first one.
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {companies.map((c) => <CompanyDetailsCard key={c.id} company={c} />)}
-        </div>
-      )}
-
-      <AddCompanyDialog open={addOpen} onOpenChange={setAddOpen} />
-    </div>
-  );
-}
-
-interface CompanyFormState {
-  name: string;
-  address: string;
-  email: string;
-  phone: string;
-  country: string;
-  registrationNumber: string;
-  signatoryName: string;
-  signatoryDesignation: string;
-}
-
-function companyToForm(c: Company): CompanyFormState {
-  return {
-    name: c.name ?? "",
-    address: c.address ?? "",
-    email: c.email ?? "",
-    phone: c.phone ?? "",
-    country: c.country ?? "",
-    registrationNumber: c.registrationNumber ?? "",
-    signatoryName: c.signatoryName ?? "",
-    signatoryDesignation: c.signatoryDesignation ?? "",
-  };
-}
-
-function CompanyDetailsCard({ company }: { company: Company }) {
+function CompanyDetailsCard({ company }: { company: never }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateCompany = useUpdateCompany();

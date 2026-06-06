@@ -1,56 +1,68 @@
 import { Router, type IRouter } from "express";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { db, loaOptionsTable, LOA_OPTION_CATEGORIES } from "@workspace/db";
-import {
-  ListLoaOptionsQueryParams,
-  CreateLoaOptionBody,
-  DeleteLoaOptionParams,
-  UpdateLoaOptionParams,
-  UpdateLoaOptionBody,
-} from "@workspace/api-zod";
+import { z } from "zod/v4";
 
 const router: IRouter = Router();
 
+const ListQuery = z.object({
+  companyId: z.coerce.number().int().positive(),
+  category: z.enum(LOA_OPTION_CATEGORIES).optional(),
+});
+
+const CreateBody = z.object({
+  companyId: z.number().int().positive(),
+  category: z.enum(LOA_OPTION_CATEGORIES),
+  value: z.string().min(1),
+});
+
+const UpdateBody = z.object({
+  value: z.string().min(1),
+});
+
+const IdParam = z.object({ id: z.coerce.number().int().positive() });
+
 router.get("/loa-options", async (req, res): Promise<void> => {
-  const parsed = ListLoaOptionsQueryParams.safeParse(req.query);
+  const parsed = ListQuery.safeParse(req.query);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: "companyId is required and must be a positive integer" });
     return;
   }
-  const { category } = parsed.data;
+  const { companyId, category } = parsed.data;
   const rows = await db
     .select()
     .from(loaOptionsTable)
-    .where(category ? eq(loaOptionsTable.category, category) : undefined)
+    .where(
+      and(
+        eq(loaOptionsTable.companyId, companyId),
+        category ? eq(loaOptionsTable.category, category) : undefined
+      )
+    )
     .orderBy(asc(loaOptionsTable.category), asc(loaOptionsTable.value));
   res.json(rows);
 });
 
 router.post("/loa-options", async (req, res): Promise<void> => {
-  const parsed = CreateLoaOptionBody.safeParse(req.body);
+  const parsed = CreateBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const value = parsed.data.value.trim();
+  const { companyId, category, value: rawValue } = parsed.data;
+  const value = rawValue.trim();
   if (!value) {
     res.status(400).json({ error: "Value cannot be empty" });
     return;
   }
-  if (!(LOA_OPTION_CATEGORIES as readonly string[]).includes(parsed.data.category)) {
-    res.status(400).json({ error: "Invalid category" });
-    return;
-  }
 
-  // Check for existing duplicate (case-insensitive) within the same category.
-  // Note: there is also a DB-level unique index on (category, lower(value))
-  // — the catch below converts a race-condition unique violation into 409.
+  // Check for existing duplicate (case-insensitive) within the same company+category.
   const existing = await db
     .select()
     .from(loaOptionsTable)
     .where(
       and(
-        eq(loaOptionsTable.category, parsed.data.category),
+        eq(loaOptionsTable.companyId, companyId),
+        eq(loaOptionsTable.category, category),
         sql`lower(${loaOptionsTable.value}) = lower(${value})`
       )
     );
@@ -62,11 +74,10 @@ router.post("/loa-options", async (req, res): Promise<void> => {
   try {
     const [row] = await db
       .insert(loaOptionsTable)
-      .values({ category: parsed.data.category, value })
+      .values({ companyId, category, value })
       .returning();
     res.status(201).json(row);
   } catch (err) {
-    // Postgres unique-violation code → translate to 409 instead of 500
     if ((err as { code?: string })?.code === "23505") {
       res.status(409).json({ error: "Option already exists in this category" });
       return;
@@ -77,12 +88,12 @@ router.post("/loa-options", async (req, res): Promise<void> => {
 });
 
 router.patch("/loa-options/:id", async (req, res): Promise<void> => {
-  const params = UpdateLoaOptionParams.safeParse(req.params);
+  const params = IdParam.safeParse(req.params);
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const body = UpdateLoaOptionBody.safeParse(req.body);
+  const body = UpdateBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
@@ -102,12 +113,13 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  // Check for duplicates within the same category, excluding this row
+  // Check for duplicates within same company+category, excluding this row.
   const dup = await db
     .select()
     .from(loaOptionsTable)
     .where(
       and(
+        eq(loaOptionsTable.companyId, current.companyId),
         eq(loaOptionsTable.category, current.category),
         sql`lower(${loaOptionsTable.value}) = lower(${value})`,
         sql`${loaOptionsTable.id} <> ${params.data.id}`
@@ -136,9 +148,9 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/loa-options/:id", async (req, res): Promise<void> => {
-  const params = DeleteLoaOptionParams.safeParse(req.params);
+  const params = IdParam.safeParse(req.params);
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: "Invalid ID" });
     return;
   }
   const [row] = await db

@@ -14,4 +14,8 @@ export type ListPassportsParams = {
    * Filter by allocated client. Pass `none` for unallocated candidates.
    */
   clientId?: string;
+  /**
+   * Filter by company ID. Pass `none` for candidates with no company.
+   */
+  companyId?: string;
 };

@@ -2,6 +2,7 @@ import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clientsTable } from "./clients";
+import { companiesTable } from "./companies";
 
 export const passportsTable = pgTable("passports", {
   id: serial("id").primaryKey(),
@@ -15,9 +16,9 @@ export const passportsTable = pgTable("passports", {
   status: text("status").notNull().default("processing"),
   errorMessage: text("error_message"),
   originalFilename: text("original_filename"),
+  // Which recruiting company this employee belongs to.
+  companyId: integer("company_id").references((): import("drizzle-orm/pg-core").AnyPgColumn => companiesTable.id, { onDelete: "set null" }),
   // Operational fields — where the candidate ends up after onboarding.
-  // FK to clients.id, set to NULL when the client is deleted (matches the DB
-  // constraint added in the same migration as these columns).
   clientId: integer("client_id").references((): import("drizzle-orm/pg-core").AnyPgColumn => clientsTable.id, { onDelete: "set null" }),
   workPermitNumber: text("work_permit_number"),
   agent: text("agent"),

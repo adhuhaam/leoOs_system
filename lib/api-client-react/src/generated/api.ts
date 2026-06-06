@@ -4383,9 +4383,9 @@ export const useDeleteBillingDocument = <
 };
 
 /**
- * @summary List LOA dropdown options
+ * @summary List LOA dropdown options for a company
  */
-export const getListLoaOptionsUrl = (params?: ListLoaOptionsParams) => {
+export const getListLoaOptionsUrl = (params: ListLoaOptionsParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -4402,7 +4402,7 @@ export const getListLoaOptionsUrl = (params?: ListLoaOptionsParams) => {
 };
 
 export const listLoaOptions = async (
-  params?: ListLoaOptionsParams,
+  params: ListLoaOptionsParams,
   options?: RequestInit,
 ): Promise<LoaOption[]> => {
   return customFetch<LoaOption[]>(getListLoaOptionsUrl(params), {
@@ -4419,7 +4419,7 @@ export const getListLoaOptionsQueryOptions = <
   TData = Awaited<ReturnType<typeof listLoaOptions>>,
   TError = ErrorType<unknown>,
 >(
-  params?: ListLoaOptionsParams,
+  params: ListLoaOptionsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listLoaOptions>>,
@@ -4450,14 +4450,14 @@ export type ListLoaOptionsQueryResult = NonNullable<
 export type ListLoaOptionsQueryError = ErrorType<unknown>;
 
 /**
- * @summary List LOA dropdown options
+ * @summary List LOA dropdown options for a company
  */
 
 export function useListLoaOptions<
   TData = Awaited<ReturnType<typeof listLoaOptions>>,
   TError = ErrorType<unknown>,
 >(
-  params?: ListLoaOptionsParams,
+  params: ListLoaOptionsParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof listLoaOptions>>,

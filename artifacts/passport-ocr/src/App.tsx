@@ -9,6 +9,7 @@ import { useApplySystemSettings } from "@/hooks/use-system-settings";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import MasterListPage from "@/pages/master-list";
+import CompaniesPage from "@/pages/companies";
 import ClientsPage from "@/pages/clients";
 import LoaPage from "@/pages/loa";
 import ExpensesPage from "@/pages/expenses";
@@ -20,22 +21,21 @@ import SettingsPage from "@/pages/settings";
 const queryClient = new QueryClient();
 
 function Router() {
-  // Sync persisted system settings (theme + title) into the live document.
   useApplySystemSettings();
   return (
     <AuthGate>
       <Switch>
-        {/* Print view renders standalone — no app sidebar/header so the
-            printed PDF only contains the document itself. */}
+        {/* Print view renders standalone — no app sidebar/header */}
         <Route path="/billing/:id/print" component={BillingPrintPage} />
         <Route>
           <AppLayout>
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/upload" component={UploadPage} />
-              {/* /passports kept as an alias so old bookmarks land on the merged page */}
+              {/* /passports kept as alias so old bookmarks still work */}
               <Route path="/passports" component={MasterListPage} />
               <Route path="/master-list" component={MasterListPage} />
+              <Route path="/companies" component={CompaniesPage} />
               <Route path="/clients" component={ClientsPage} />
               <Route path="/loa" component={LoaPage} />
               <Route path="/expenses" component={ExpensesPage} />

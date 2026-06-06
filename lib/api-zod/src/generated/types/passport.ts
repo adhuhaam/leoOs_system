@@ -32,6 +32,16 @@ export interface Passport {
   /** @nullable */
   originalFilename?: string | null;
   /**
+   * ID of the recruiting company this employee belongs to.
+   * @nullable
+   */
+  companyId?: number | null;
+  /**
+   * Joined company name for display (computed; ignored on writes).
+   * @nullable
+   */
+  companyName?: string | null;
+  /**
    * ID of the client the candidate is allocated to.
    * @nullable
    */

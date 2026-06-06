@@ -190,6 +190,11 @@ paths:
           description: Filter by allocated client. Pass `none` for unallocated candidates.
           schema:
             type: string
+        - name: companyId
+          in: query
+          description: Filter by company ID. Pass `none` for candidates with no company.
+          schema:
+            type: string
       responses:
         "200":
           description: List of passport records
@@ -1016,8 +1021,14 @@ paths:
     get:
       operationId: listLoaOptions
       tags: [loa-options]
-      summary: List LOA dropdown options
+      summary: List LOA dropdown options for a company
       parameters:
+        - name: companyId
+          in: query
+          required: true
+          description: Company ID to scope options to.
+          schema:
+            type: integer
         - name: category
           in: query
           description: Filter by category (work_type, work_site, job_title)
@@ -1211,10 +1222,13 @@ components:
 
     LoaOption:
       type: object
-      required: [id, category, value, createdAt]
+      required: [id, companyId, category, value, createdAt]
       properties:
         id:
           type: integer
+        companyId:
+          type: integer
+          description: Company this option belongs to.
         category:
           type: string
           enum: [work_type, work_site, job_title]
@@ -1225,8 +1239,10 @@ components:
 
     LoaOptionInput:
       type: object
-      required: [category, value]
+      required: [companyId, category, value]
       properties:
+        companyId:
+          type: integer
         category:
           type: string
           enum: [work_type, work_site, job_title]
@@ -1420,6 +1436,12 @@ components:
           type: ["string", "null"]
         originalFilename:
           type: ["string", "null"]
+        companyId:
+          type: ["integer", "null"]
+          description: ID of the recruiting company this employee belongs to.
+        companyName:
+          type: ["string", "null"]
+          description: Joined company name for display (computed; ignored on writes).
         clientId:
           type: ["integer", "null"]
           description: ID of the client the candidate is allocated to.
@@ -1460,6 +1482,8 @@ components:
           type: string
         nationality:
           type: string
+        companyId:
+          type: ["integer", "null"]
         clientId:
           type: ["integer", "null"]
         workPermitNumber:

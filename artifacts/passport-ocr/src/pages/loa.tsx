@@ -9,6 +9,7 @@ import {
   useCreateCompany,
   useListLoaOptions,
   getListLoaQueryKey,
+  getListLoaOptionsQueryKey,
 } from "@workspace/api-client-react";
 import type { Loa, Passport, Company, LoaOption } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -324,9 +325,21 @@ function OptionPicker({
 }
 
 function StepTwo({ form, setForm }: { form: FormData; setForm: (f: FormData) => void }) {
-  const { data: jobTitles = [] } = useListLoaOptions({ category: "job_title" });
-  const { data: workTypes = [] } = useListLoaOptions({ category: "work_type" });
-  const { data: workSites = [] } = useListLoaOptions({ category: "work_site" });
+  const companyId = form.companyId ? Number(form.companyId) : 0;
+  const enabled = !!form.companyId;
+
+  const { data: jobTitles = [] } = useListLoaOptions(
+    { companyId, category: "job_title" },
+    { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "job_title" }) } }
+  );
+  const { data: workTypes = [] } = useListLoaOptions(
+    { companyId, category: "work_type" },
+    { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "work_type" }) } }
+  );
+  const { data: workSites = [] } = useListLoaOptions(
+    { companyId, category: "work_site" },
+    { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "work_site" }) } }
+  );
 
   const f = (key: keyof FormData, label: string, placeholder?: string, multiline?: boolean) => (
     <div className="space-y-1.5">
@@ -354,11 +367,11 @@ function StepTwo({ form, setForm }: { form: FormData; setForm: (f: FormData) => 
 
   return (
     <div className="space-y-4">
-      {noOptions && (
+      {noOptions && enabled && (
         <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-          Tip: Add reusable Job Titles, Work Types, and Work Sites in{" "}
-          <Link href="/settings" className="text-primary font-medium hover:underline">
-            Settings
+          Tip: Add Job Titles, Work Types, and Work Sites for this company in{" "}
+          <Link href="/companies" className="text-primary font-medium hover:underline">
+            Companies
           </Link>{" "}
           to enable dropdowns here.
         </div>
