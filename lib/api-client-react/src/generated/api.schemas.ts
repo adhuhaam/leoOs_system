@@ -250,6 +250,8 @@ export interface Passport {
    */
   nationality?: string | null;
   status: PassportStatus;
+  /** True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list/stats. */
+  submitted: boolean;
   /** @nullable */
   errorMessage?: string | null;
   /** @nullable */
@@ -296,6 +298,7 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  submitted?: boolean;
   /** @nullable */
   companyId?: number | null;
   /** @nullable */

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import PDFDocument from "pdfkit";
-import { db, loaTable, companiesTable } from "@workspace/db";
+import { db, loaTable, companiesTable, passportsTable } from "@workspace/db";
 import {
   CreateLoaBody,
   GetLoaParams,
@@ -24,6 +24,15 @@ router.post("/loa", async (req, res): Promise<void> => {
     return;
   }
   const [loa] = await db.insert(loaTable).values(parsed.data).returning();
+
+  // Mark the related passport as submitted now that the wizard is fully complete.
+  if (parsed.data.passportId) {
+    await db
+      .update(passportsTable)
+      .set({ submitted: true })
+      .where(eq(passportsTable.id, parsed.data.passportId));
+  }
+
   res.status(201).json(loa);
 });
 

@@ -203,6 +203,11 @@ export const ListPassportsResponseItem = zod.object({
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
   status: zod.enum(["processing", "completed", "failed"]),
+  submitted: zod
+    .boolean()
+    .describe(
+      "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list\/stats.",
+    ),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
   companyId: zod
@@ -260,6 +265,11 @@ export const GetPassportStatsResponse = zod.object({
       address: zod.string().nullish(),
       nationality: zod.string().nullish().describe("bangladesh or india"),
       status: zod.enum(["processing", "completed", "failed"]),
+      submitted: zod
+        .boolean()
+        .describe(
+          "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list\/stats.",
+        ),
       errorMessage: zod.string().nullish(),
       originalFilename: zod.string().nullish(),
       companyId: zod
@@ -307,6 +317,11 @@ export const GetPassportResponse = zod.object({
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
   status: zod.enum(["processing", "completed", "failed"]),
+  submitted: zod
+    .boolean()
+    .describe(
+      "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list\/stats.",
+    ),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
   companyId: zod
@@ -346,6 +361,7 @@ export const UpdatePassportBody = zod.object({
   dateOfExpiry: zod.string().optional(),
   address: zod.string().optional(),
   nationality: zod.string().optional(),
+  submitted: zod.boolean().optional(),
   companyId: zod.number().nullish(),
   clientId: zod.number().nullish(),
   workPermitNumber: zod.string().nullish(),
@@ -362,6 +378,11 @@ export const UpdatePassportResponse = zod.object({
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
   status: zod.enum(["processing", "completed", "failed"]),
+  submitted: zod
+    .boolean()
+    .describe(
+      "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list\/stats.",
+    ),
   errorMessage: zod.string().nullish(),
   originalFilename: zod.string().nullish(),
   companyId: zod

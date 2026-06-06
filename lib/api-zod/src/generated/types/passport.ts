@@ -27,6 +27,8 @@ export interface Passport {
    */
   nationality?: string | null;
   status: PassportStatus;
+  /** True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list/stats. */
+  submitted: boolean;
   /** @nullable */
   errorMessage?: string | null;
   /** @nullable */

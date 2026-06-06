@@ -1413,7 +1413,7 @@ components:
 
     Passport:
       type: object
-      required: [id, status, createdAt, updatedAt]
+      required: [id, status, submitted, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -1435,6 +1435,9 @@ components:
         status:
           type: string
           enum: [processing, completed, failed]
+        submitted:
+          type: boolean
+          description: "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list/stats."
         errorMessage:
           type: ["string", "null"]
         originalFilename:
@@ -1488,6 +1491,8 @@ components:
           type: string
         nationality:
           type: string
+        submitted:
+          type: boolean
         companyId:
           type: ["integer", "null"]
         clientId:

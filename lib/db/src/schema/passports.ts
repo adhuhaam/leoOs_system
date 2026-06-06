@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clientsTable } from "./clients";
@@ -14,6 +14,7 @@ export const passportsTable = pgTable("passports", {
   address: text("address"),
   nationality: text("nationality"),
   status: text("status").notNull().default("processing"),
+  submitted: boolean("submitted").notNull().default(false),
   errorMessage: text("error_message"),
   originalFilename: text("original_filename"),
   // Which recruiting company this employee belongs to.

@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
-import { eq, sql, desc, isNull } from "drizzle-orm";
+import { eq, desc, isNull, and } from "drizzle-orm";
 import { db, passportsTable, clientsTable, companiesTable } from "@workspace/db";
 import {
   GetPassportParams,
@@ -92,7 +92,9 @@ router.get("/passports", async (req, res): Promise<void> => {
     companyId?: string;
   };
 
-  const conditions = [];
+  // Only return fully-submitted records (wizard completed + LOA created).
+  // Draft records (submitted=false) are invisible to the list/master-list.
+  const conditions = [eq(passportsTable.submitted, true)];
   if (nationality) {
     conditions.push(eq(passportsTable.nationality, nationality));
   }
@@ -124,6 +126,7 @@ router.get("/passports", async (req, res): Promise<void> => {
       address: passportsTable.address,
       nationality: passportsTable.nationality,
       status: passportsTable.status,
+      submitted: passportsTable.submitted,
       errorMessage: passportsTable.errorMessage,
       originalFilename: passportsTable.originalFilename,
       companyId: passportsTable.companyId,
@@ -138,7 +141,7 @@ router.get("/passports", async (req, res): Promise<void> => {
     .from(passportsTable)
     .leftJoin(clientsTable, eq(passportsTable.clientId, clientsTable.id))
     .leftJoin(companiesTable, eq(passportsTable.companyId, companiesTable.id))
-    .where(conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined)
+    .where(and(...conditions))
     .orderBy(desc(passportsTable.createdAt));
 
   // Apply search filter in memory (name, passport number, work permit, agent).
@@ -211,9 +214,13 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
   res.status(201).json(passport);
 });
 
-// GET /passports/stats — dashboard stats (open)
+// GET /passports/stats — dashboard stats (open, submitted records only)
 router.get("/passports/stats", async (_req, res): Promise<void> => {
-  const all = await db.select().from(passportsTable).orderBy(desc(passportsTable.createdAt));
+  const all = await db
+    .select()
+    .from(passportsTable)
+    .where(eq(passportsTable.submitted, true))
+    .orderBy(desc(passportsTable.createdAt));
 
   const stats = {
     total: all.length,
@@ -247,6 +254,7 @@ router.get("/passports/:id", async (req, res): Promise<void> => {
       address: passportsTable.address,
       nationality: passportsTable.nationality,
       status: passportsTable.status,
+      submitted: passportsTable.submitted,
       errorMessage: passportsTable.errorMessage,
       originalFilename: passportsTable.originalFilename,
       companyId: passportsTable.companyId,
