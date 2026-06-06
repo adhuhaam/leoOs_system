@@ -123,6 +123,7 @@ function OptionPicker({
   placeholder,
   testId,
   isLoading,
+  companySelected,
 }: {
   label: string;
   value: string;
@@ -131,10 +132,11 @@ function OptionPicker({
   placeholder: string;
   testId: string;
   isLoading?: boolean;
+  companySelected?: boolean;
 }) {
+  const hasOptions = options.length > 0;
   const inList = !value || options.some((o) => o.value === value);
   const [customMode, setCustomMode] = useState(!inList && !!value);
-  const showCustom = customMode || (!isLoading && options.length === 0);
 
   if (isLoading) {
     return (
@@ -143,18 +145,42 @@ function OptionPicker({
         <Select disabled>
           <SelectTrigger className="text-muted-foreground" data-testid={`select-${testId}`}>
             <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 inline" />
-            <span className="text-xs">Loading options…</span>
+            <span className="text-xs">Loading…</span>
           </SelectTrigger>
         </Select>
       </div>
     );
   }
 
+  // No options configured for this company — show text input with a setup hint
+  if (!hasOptions && companySelected) {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">{label}</Label>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          data-testid={`input-${testId}`}
+          className="border-amber-300 focus-visible:ring-amber-400"
+        />
+        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+          No options configured.{" "}
+          <a href="/companies" className="underline hover:text-amber-800 dark:hover:text-amber-200">
+            Add {label.toLowerCase()} options
+          </a>{" "}
+          in the Companies page to use a dropdown here.
+        </p>
+      </div>
+    );
+  }
+
+  // Options available — dropdown with optional "Type custom" escape hatch
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium">{label}</Label>
-        {options.length > 0 && (
+        {hasOptions && (
           <button
             type="button"
             className="text-[10px] text-primary hover:underline"
@@ -163,11 +189,11 @@ function OptionPicker({
               if (!customMode) onChange("");
             }}
           >
-            {showCustom ? "Pick from list" : "Type custom"}
+            {customMode ? "Pick from list" : "Type custom"}
           </button>
         )}
       </div>
-      {showCustom ? (
+      {customMode ? (
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -318,6 +344,7 @@ function AssignStep({
                 isLoading={loadingJobTitles}
                 placeholder="e.g. Construction Worker"
                 testId="jobTitle"
+                companySelected={enabled}
               />
               <OptionPicker
                 key={`workType-${form.companyId}`}
@@ -328,6 +355,7 @@ function AssignStep({
                 isLoading={loadingWorkTypes}
                 placeholder="e.g. Manual Labour"
                 testId="workType"
+                companySelected={enabled}
               />
               {f("basicSalary", "Basic Salary (USD)", "e.g. 500")}
               {f("salaryPaymentDate", "Salary Payment Date")}
@@ -340,6 +368,7 @@ function AssignStep({
                 isLoading={loadingWorkSites}
                 placeholder="e.g. Guraidhoo, Maldives"
                 testId="workSite"
+                companySelected={enabled}
               />
               {f("dateOfCommence", "Date of Commence")}
               {f("workStatus", "Work Status")}
