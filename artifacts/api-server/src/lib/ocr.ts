@@ -1,7 +1,17 @@
 import { createWorker, PSM } from "tesseract.js";
 import { parse as parseMRZ } from "mrz";
 import sharp from "sharp";
+import path from "node:path";
 import { logger } from "./logger";
+
+/**
+ * Bundled tessdata directory — contains eng.traineddata (committed to repo).
+ * __dirname is set by the esbuild banner to the dist/ directory at runtime,
+ * so ../tessdata resolves to artifacts/api-server/tessdata/.
+ * Using a local langPath means the workers never need outbound network access,
+ * making the server fully offline-capable (Raspberry Pi, air-gapped deployments).
+ */
+const TESSDATA_DIR = path.resolve(__dirname, "../tessdata");
 
 export interface ExtractedPassportData {
   fullName: string | null;
@@ -28,8 +38,8 @@ let _mrzWorker: Awaited<ReturnType<typeof createWorker>> | null = null;
 
 async function getGeneralWorker(): Promise<Awaited<ReturnType<typeof createWorker>>> {
   if (_generalWorker) return _generalWorker;
-  logger.info("Initializing general Tesseract worker");
-  _generalWorker = await createWorker("eng");
+  logger.info({ tessdata: TESSDATA_DIR }, "Initializing general Tesseract worker");
+  _generalWorker = await createWorker("eng", 1, { langPath: TESSDATA_DIR });
   logger.info("General Tesseract worker ready");
   return _generalWorker;
 }
@@ -50,7 +60,7 @@ async function getMrzWorker(): Promise<Awaited<ReturnType<typeof createWorker>>>
     //
     // These two workers are kept separate so setParameters() calls on the MRZ
     // worker never race with in-flight general OCR requests.
-    _mrzWorker = await createWorker("eng");
+    _mrzWorker = await createWorker("eng", 1, { langPath: TESSDATA_DIR });
     await _mrzWorker.setParameters({
       tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<",
       tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
@@ -352,7 +362,20 @@ export async function extractPassportData(
   }
 
   // Step 5 — build result
-  const f = mrzResult?.fields as Record<string, string | null> | undefined;
+  //
+  // MRZ-derived fields (name, passport number, DOB, expiry, nationality) are
+  // ONLY used when the checksum validates (mrzResult.valid === true). An
+  // invalid parse means one or more fields failed the Luhn-style check digit —
+  // using those values would silently store wrong data. We fall back to null
+  // so the operator can correct the record manually rather than trust bad data.
+  const validMrz = mrzResult?.valid === true;
+  const f = validMrz
+    ? (mrzResult!.fields as Record<string, string | null>)
+    : undefined;
+
+  if (!validMrz) {
+    logger.warn({ valid: mrzResult?.valid }, "MRZ checksum failed — MRZ-derived fields set to null");
+  }
 
   const lastName  = cleanMrzName(f?.lastName  ?? "");
   const firstName = cleanMrzName(f?.firstName ?? "");
@@ -369,8 +392,8 @@ export async function extractPassportData(
   return {
     fullName:       fullName || null,
     passportNumber: f?.documentNumber?.replace(/</g, "").trim() ?? null,
-    dateOfBirth:    f?.birthDate      ? formatMRZDate(f.birthDate, false)      : null,
-    dateOfExpiry:   f?.expirationDate ? formatMRZDate(f.expirationDate, true)  : null,
+    dateOfBirth:    f?.birthDate      ? formatMRZDate(f.birthDate, false)     : null,
+    dateOfExpiry:   f?.expirationDate ? formatMRZDate(f.expirationDate, true) : null,
     dateOfIssue:    extractDateOfIssue(fullText),
     address:        extractAddress(fullText),
     nationality,
