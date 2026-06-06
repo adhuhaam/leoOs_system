@@ -217,10 +217,10 @@ export default function MasterListPage() {
                     ))}
                     {companies.length > 0 && (
                       <div className="px-2 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                        Companies (LOA)
+                        Companies
                       </div>
                     )}
-                    <SelectItem value="no-loa">— No LOA yet —</SelectItem>
+                    <SelectItem value="no-loa">— No company assigned —</SelectItem>
                     {companies.map((c) => (
                       <SelectItem key={`company-${c.id}`} value={`company:${c.id}`}>
                         {c.name}
@@ -279,7 +279,7 @@ export default function MasterListPage() {
                   <TableHead>Allocation</TableHead>
                   <TableHead className="hidden lg:table-cell">Work Permit #</TableHead>
                   <TableHead className="hidden lg:table-cell">Agent</TableHead>
-                  <TableHead className="hidden md:table-cell">LOA Company</TableHead>
+                  <TableHead className="hidden md:table-cell">Company</TableHead>
                   <TableHead className="hidden sm:table-cell text-center">LOAs</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
@@ -332,7 +332,7 @@ export default function MasterListPage() {
                         {companyName ? (
                           <span className="truncate max-w-[160px] inline-block">{companyName}</span>
                         ) : (
-                          <span className="text-muted-foreground italic text-xs">— No LOA —</span>
+                          <span className="text-muted-foreground italic text-xs">—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">

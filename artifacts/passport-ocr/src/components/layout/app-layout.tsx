@@ -27,6 +27,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@workspace/api-client-react";
@@ -95,6 +96,11 @@ function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
 function AppSidebar() {
   const [location] = useLocation();
   const qc = useQueryClient();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   async function handleLogout() {
     try {
@@ -121,7 +127,6 @@ function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map(({ href, label, icon: Icon }) => {
-                  // Match /master-list and /passports to same active state
                   const active =
                     href === "/"
                       ? location === "/"
@@ -135,7 +140,7 @@ function AppSidebar() {
                         tooltip={label}
                         data-testid={`nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
                       >
-                        <Link href={href}>
+                        <Link href={href} onClick={handleNavClick}>
                           <Icon className="h-4 w-4" />
                           <span>{label}</span>
                         </Link>
