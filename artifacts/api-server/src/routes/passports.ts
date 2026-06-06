@@ -164,12 +164,18 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
     return;
   }
 
+  // Parse optional companyId from multipart body (sent as string field)
+  const rawCompanyId = req.body?.companyId;
+  const parsedCompanyId = rawCompanyId ? parseInt(String(rawCompanyId), 10) : null;
+  const companyId = parsedCompanyId && !isNaN(parsedCompanyId) ? parsedCompanyId : null;
+
   // Create a pending passport record
   const [passport] = await db
     .insert(passportsTable)
     .values({
       status: "processing",
       originalFilename: req.file.originalname,
+      ...(companyId ? { companyId } : {}),
     })
     .returning();
 

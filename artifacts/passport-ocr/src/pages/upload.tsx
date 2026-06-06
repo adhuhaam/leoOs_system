@@ -32,6 +32,7 @@ import {
   Download,
   Eye,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -391,7 +392,12 @@ function DoneStep({
         </Button>
       </div>
 
-      <div className="pt-2 border-t border-border/60">
+      <div className="pt-2 border-t border-border/60 flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <a href="/master">
+            <Users className="h-4 w-4 mr-2" /> Go to Master List
+          </a>
+        </Button>
         <Button variant="ghost" onClick={onReset} data-testid="button-process-another">
           <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Process another document
         </Button>

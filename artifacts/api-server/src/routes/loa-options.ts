@@ -18,6 +18,7 @@ const CreateBody = z.object({
 
 const UpdateBody = z.object({
   value: z.string().min(1),
+  companyId: z.number().int().positive().optional(),
 });
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
@@ -110,6 +111,12 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
     .where(eq(loaOptionsTable.id, params.data.id));
   if (!current) {
     res.status(404).json({ error: "Option not found" });
+    return;
+  }
+
+  // Ownership check: if caller supplied companyId, it must match the stored row.
+  if (body.data.companyId != null && body.data.companyId !== current.companyId) {
+    res.status(403).json({ error: "Option does not belong to the specified company" });
     return;
   }
 

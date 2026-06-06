@@ -1257,6 +1257,9 @@ components:
         value:
           type: string
           minLength: 1
+        companyId:
+          type: integer
+          description: Optional — if supplied, the server verifies the option belongs to this company before updating.
 
     Client:
       type: object
@@ -1464,6 +1467,9 @@ components:
         file:
           type: string
           format: binary
+        companyId:
+          type: integer
+          description: Optional company to assign the passport to on upload.
 
     PassportUpdate:
       type: object

@@ -233,6 +233,10 @@ export const ListPassportsResponse = zod.array(ListPassportsResponseItem);
  */
 export const UploadPassportBody = zod.object({
   file: zod.instanceof(File),
+  companyId: zod
+    .number()
+    .optional()
+    .describe("Optional company to assign the passport to on upload."),
 });
 
 /**
@@ -1203,6 +1207,12 @@ export const UpdateLoaOptionParams = zod.object({
 
 export const UpdateLoaOptionBody = zod.object({
   value: zod.string().min(1),
+  companyId: zod
+    .number()
+    .optional()
+    .describe(
+      "Optional — if supplied, the server verifies the option belongs to this company before updating.",
+    ),
 });
 
 export const UpdateLoaOptionResponse = zod.object({

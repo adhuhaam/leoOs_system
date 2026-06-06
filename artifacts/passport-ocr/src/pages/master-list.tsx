@@ -71,8 +71,7 @@ export default function MasterListPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Server-side filters for the cheap fields + clientId. Company filter (LOA-derived)
-  // stays client-side because the company link only lives on the LOA snapshot.
+  // Server-side filters: company is now sourced from passport.companyId directly.
   const passportParams = {
     ...(search ? { search } : {}),
     ...(nationalityFilter !== "all" ? { nationality: nationalityFilter } : {}),
@@ -81,7 +80,11 @@ export default function MasterListPage() {
       ? { clientId: allocationFilter.slice("client:".length) }
       : allocationFilter === "unallocated"
         ? { clientId: "none" }
-        : {}),
+        : allocationFilter.startsWith("company:")
+          ? { companyId: allocationFilter.slice("company:".length) }
+          : allocationFilter === "no-loa"
+            ? { companyId: "none" }
+            : {}),
   };
   const { data: passports = [], isLoading } = useListPassports(passportParams, {
     query: { queryKey: getListPassportsQueryKey(passportParams) },
@@ -114,23 +117,19 @@ export default function MasterListPage() {
       const link = latestLoaByPassport.get(p.id);
       return {
         passport: p,
-        companyId: link?.companyId ?? null,
-        companyName: link?.companyName ?? null,
+        // Source of truth: passport.companyId (assigned via wizard or edit).
+        companyId: p.companyId ?? null,
+        companyName: p.companyName ?? null,
         loaCount: link?.count ?? 0,
       };
     });
   }, [passports, latestLoaByPassport]);
 
   const filteredRows = useMemo(() => {
-    // Server already handled "client:*" / "unallocated". Only the LOA-company
-    // filter ("company:N" / "no-loa") needs to run client-side here.
-    if (allocationFilter === "no-loa") return rows.filter((r) => r.companyId == null);
-    if (allocationFilter.startsWith("company:")) {
-      const id = Number(allocationFilter.slice("company:".length));
-      return rows.filter((r) => r.companyId === id);
-    }
+    // Server already handles company + client filters. No further client-side
+    // filtering needed — just return the server result as-is.
     return rows;
-  }, [rows, allocationFilter]);
+  }, [rows]);
 
   const activeFilterCount =
     (search ? 1 : 0) +

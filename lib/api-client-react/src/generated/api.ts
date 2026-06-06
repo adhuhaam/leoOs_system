@@ -902,6 +902,9 @@ export const uploadPassport = async (
 ): Promise<Passport> => {
   const formData = new FormData();
   formData.append(`file`, passportUpload.file);
+  if (passportUpload.companyId !== undefined) {
+    formData.append(`companyId`, passportUpload.companyId.toString());
+  }
 
   return customFetch<Passport>(getUploadPassportUrl(), {
     ...options,

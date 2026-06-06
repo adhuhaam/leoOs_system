@@ -8,4 +8,6 @@
 
 export interface PassportUpload {
   file: Blob;
+  /** Optional company to assign the passport to on upload. */
+  companyId?: number;
 }

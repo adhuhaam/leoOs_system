@@ -9,4 +9,6 @@
 export interface UpdateLoaOptionInput {
   /** @minLength 1 */
   value: string;
+  /** Optional — if supplied, the server verifies the option belongs to this company before updating. */
+  companyId?: number;
 }
