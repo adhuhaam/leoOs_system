@@ -6,3 +6,9 @@ id = "t5uU1OGi2r7qa1quyrY0u"
 uri = "file://leo-os-data-export.zip"
 type = "unspecified"
 title = "LEO OS — Data Export (SQL + Excel)"
+
+[[outputs]]
+id = "4rXf2khHenX8vfD_6Pr84"
+uri = "file://billing-expenses-export.xlsx"
+type = "table"
+title = "Billing & Expenses Export"
