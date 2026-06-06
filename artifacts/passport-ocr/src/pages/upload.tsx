@@ -449,13 +449,16 @@ export default function UploadPage() {
   const createLoaMutation = useCreateLoa();
   const { data: companies = [] } = useListCompanies();
 
-  const { data: passport } = useGetPassport(activePassportId as number, {
+  const { data: passport, isError: passportNotFound } = useGetPassport(activePassportId as number, {
     query: {
       enabled: !!activePassportId,
       queryKey: getGetPassportQueryKey(activePassportId as number),
+      retry: false,
       refetchInterval: (query) => {
         const data = query.state.data;
+        // Stop polling once complete, failed, or the record was deleted (404)
         if (data && (data.status === "completed" || data.status === "failed")) return false;
+        if (query.state.error) return false;
         return 2000;
       },
     },
@@ -720,25 +723,25 @@ export default function UploadPage() {
                       className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm
                         ${passport?.status === "completed"
                           ? "bg-gradient-to-br from-emerald-500 to-teal-500"
-                          : passport?.status === "failed"
+                          : (passport?.status === "failed" || passportNotFound)
                           ? "bg-gradient-to-br from-rose-500 to-red-500"
                           : "bg-gradient-to-br from-amber-500 to-orange-500"}`}
                     >
-                      {passport?.status === "processing" && (
+                      {passport?.status === "processing" && !passportNotFound && (
                         <Loader2 className="h-5 w-5 text-white animate-spin" />
                       )}
                       {passport?.status === "completed" && (
                         <CheckCircle2 className="h-5 w-5 text-white" />
                       )}
-                      {passport?.status === "failed" && (
+                      {(passport?.status === "failed" || passportNotFound) && (
                         <AlertCircle className="h-5 w-5 text-white" />
                       )}
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold tracking-tight">
-                        {passport?.status === "processing" && "Extracting data..."}
+                        {!passportNotFound && passport?.status === "processing" && "Extracting data..."}
                         {passport?.status === "completed" && "Extraction complete"}
-                        {passport?.status === "failed" && "Extraction failed"}
+                        {(passport?.status === "failed" || passportNotFound) && "Extraction failed"}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         {file?.name || passport?.originalFilename}
@@ -755,12 +758,14 @@ export default function UploadPage() {
                   </Button>
                 </div>
 
-                {passport?.status === "failed" && (
+                {(passport?.status === "failed" || passportNotFound) && (
                   <Alert variant="destructive" className="mt-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Extraction Failed</AlertTitle>
                     <AlertDescription>
-                      {passport.errorMessage || "An unknown error occurred during OCR processing."}
+                      {passportNotFound
+                        ? "OCR extraction failed. The document could not be read — please try again with a clearer image."
+                        : (passport?.errorMessage || "An unknown error occurred during OCR processing.")}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -790,7 +795,7 @@ export default function UploadPage() {
                   </>
                 )}
 
-                {passport?.status === "processing" && (
+                {passport?.status === "processing" && !passportNotFound && (
                   <div className="mt-4 space-y-2">
                     {[1, 2, 3].map((i) => (
                       <Skeleton key={i} className="h-8 w-full" />

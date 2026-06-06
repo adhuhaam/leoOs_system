@@ -200,14 +200,11 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 
       logger.info({ passportId: passport.id }, "OCR extraction completed");
     } catch (err) {
-      logger.error({ err, passportId: passport.id }, "OCR extraction failed");
-      await db
-        .update(passportsTable)
-        .set({
-          status: "failed",
-          errorMessage: err instanceof Error ? err.message : "Unknown error",
-        })
-        .where(eq(passportsTable.id, passport.id));
+      logger.error({ err, passportId: passport.id }, "OCR extraction failed — deleting draft record");
+      // Delete the draft so a failed extraction leaves no trace in the DB.
+      // The wizard UI still shows the error to the user (via the polling response
+      // returning 404 after deletion, which we handle below), so they can retry.
+      await db.delete(passportsTable).where(eq(passportsTable.id, passport.id));
     }
   })();
 
