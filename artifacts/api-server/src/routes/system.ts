@@ -53,6 +53,7 @@ function publicShape(row: typeof appSettingsTable.$inferSelect) {
     companyRegistrationNumber: row.companyRegistrationNumber,
     logoImage: row.logoImage,
     hasCustomPassword: row.passwordHash != null,
+    hasOpenAiApiKey: row.openaiApiKey != null,
   };
 }
 
@@ -92,6 +93,8 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
   if (data.companyRegistrationNumber !== undefined)
     patch.companyRegistrationNumber = trimOrNull(data.companyRegistrationNumber);
   if (data.logoImage !== undefined) patch.logoImage = data.logoImage ?? null;
+  if (data.openaiApiKey !== undefined)
+    patch.openaiApiKey = data.openaiApiKey === null ? null : (data.openaiApiKey?.trim() || null);
 
   await readSettings(); // make sure row exists
 

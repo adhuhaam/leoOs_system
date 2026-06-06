@@ -26,6 +26,11 @@ export const appSettingsTable = pgTable("app_settings", {
   // Static token for the Chrome extension (Authorization: Bearer <token>).
   // NULL means no token has been generated yet.
   extensionToken: text("extension_token"),
+
+  // Optional user-supplied OpenAI API key. When set this takes priority over
+  // the Replit AI Integrations proxy, allowing the app to run on a Raspberry
+  // Pi or any host without the Replit environment.
+  openaiApiKey: text("openai_api_key"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

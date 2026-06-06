@@ -86,6 +86,11 @@ export const GetSystemSettingsResponse = zod.object({
     .describe(
       "True if a DB-stored password override is set; false means env APP_PASSWORD is in use.",
     ),
+  hasOpenAiApiKey: zod
+    .boolean()
+    .describe(
+      "True if a user-supplied OpenAI API key is stored in the database.",
+    ),
 });
 
 /**
@@ -144,6 +149,12 @@ export const UpdateSystemSettingsBody = zod.object({
     .max(updateSystemSettingsBodyCompanyRegistrationNumberMax)
     .nullish(),
   logoImage: zod.string().nullish(),
+  openaiApiKey: zod
+    .string()
+    .nullish()
+    .describe(
+      "Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.",
+    ),
 });
 
 export const updateSystemSettingsResponseAccentHueMin = 0;
@@ -169,6 +180,11 @@ export const UpdateSystemSettingsResponse = zod.object({
     .boolean()
     .describe(
       "True if a DB-stored password override is set; false means env APP_PASSWORD is in use.",
+    ),
+  hasOpenAiApiKey: zod
+    .boolean()
+    .describe(
+      "True if a user-supplied OpenAI API key is stored in the database.",
     ),
 });
 

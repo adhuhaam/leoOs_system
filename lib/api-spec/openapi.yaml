@@ -1147,7 +1147,7 @@ components:
 
     SystemSettings:
       type: object
-      required: [appName, accentHue, hasCustomPassword]
+      required: [appName, accentHue, hasCustomPassword, hasOpenAiApiKey]
       properties:
         appName:
           type: string
@@ -1180,6 +1180,9 @@ components:
         hasCustomPassword:
           type: boolean
           description: True if a DB-stored password override is set; false means env APP_PASSWORD is in use.
+        hasOpenAiApiKey:
+          type: boolean
+          description: True if a user-supplied OpenAI API key is stored in the database.
 
     SystemSettingsInput:
       type: object
@@ -1219,6 +1222,10 @@ components:
         logoImage:
           type: string
           nullable: true
+        openaiApiKey:
+          type: string
+          nullable: true
+          description: Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.
 
     LoaOption:
       type: object

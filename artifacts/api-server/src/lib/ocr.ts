@@ -1,29 +1,53 @@
 import OpenAI from "openai";
 import { parse as parseMRZ, type ParseResult } from "mrz";
+import { eq } from "drizzle-orm";
+import { db, appSettingsTable } from "@workspace/db";
 import { logger } from "./logger";
 
 // ---------------------------------------------------------------------------
-// OpenAI client
+// OpenAI client factory
 //
-// Priority order for credentials:
-//   1. OPENAI_API_KEY  — user-provided key, uses OpenAI's own endpoint
-//   2. AI_INTEGRATIONS_OPENAI_API_KEY + AI_INTEGRATIONS_OPENAI_BASE_URL
-//                      — Replit AI Integrations proxy (no key setup needed)
-//
-// Set OPENAI_API_KEY in the environment secrets to use your own account.
+// Priority order for credentials (evaluated per OCR call so changes in
+// Settings take effect immediately without a server restart):
+//   1. OPENAI_API_KEY env var — set once in Replit Secrets for a fixed key
+//   2. DB openaiApiKey        — user-configured via the Settings page
+//   3. AI_INTEGRATIONS_OPENAI_API_KEY + AI_INTEGRATIONS_OPENAI_BASE_URL
+//                              — Replit AI Integrations proxy (no setup needed)
 // ---------------------------------------------------------------------------
-
-const userApiKey = process.env.OPENAI_API_KEY;
-const integrationApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const integrationBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-
-const openai = new OpenAI({
-  apiKey: userApiKey ?? integrationApiKey ?? "missing",
-  ...(userApiKey ? {} : { baseURL: integrationBaseUrl }),
-});
 
 /** Vision model to use. Override with OCR_MODEL env var if needed. */
 const OCR_MODEL = process.env.OCR_MODEL ?? "gpt-4o";
+
+async function makeOpenAIClient(): Promise<OpenAI> {
+  // Priority 1: explicit env var (fastest path, no DB round-trip)
+  const envKey = process.env.OPENAI_API_KEY;
+  if (envKey) {
+    return new OpenAI({ apiKey: envKey });
+  }
+
+  // Priority 2: user-saved key from the Settings page
+  try {
+    const rows = await db
+      .select({ openaiApiKey: appSettingsTable.openaiApiKey })
+      .from(appSettingsTable)
+      .where(eq(appSettingsTable.id, 1))
+      .limit(1);
+    const dbKey = rows[0]?.openaiApiKey;
+    if (dbKey) {
+      return new OpenAI({ apiKey: dbKey });
+    }
+  } catch (err) {
+    logger.warn({ err }, "Could not read openaiApiKey from DB; falling back to AI Integrations");
+  }
+
+  // Priority 3: Replit AI Integrations proxy
+  const integrationApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const integrationBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  return new OpenAI({
+    apiKey: integrationApiKey ?? "missing",
+    baseURL: integrationBaseUrl,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -175,6 +199,7 @@ export async function extractPassportData(
   const base64 = imageBuffer.toString("base64");
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
+  const openai = await makeOpenAIClient();
   const response = await openai.chat.completions.create({
     model: OCR_MODEL,
     max_tokens: 600,

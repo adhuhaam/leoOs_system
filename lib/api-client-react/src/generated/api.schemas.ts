@@ -45,6 +45,8 @@ export interface SystemSettings {
   logoImage?: string | null;
   /** True if a DB-stored password override is set; false means env APP_PASSWORD is in use. */
   hasCustomPassword: boolean;
+  /** True if a user-supplied OpenAI API key is stored in the database. */
+  hasOpenAiApiKey: boolean;
 }
 
 export interface SystemSettingsInput {
@@ -71,6 +73,8 @@ export interface SystemSettingsInput {
   /** @maxLength 100 */
   companyRegistrationNumber?: string | null;
   logoImage?: string | null;
+  /** Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations. */
+  openaiApiKey?: string | null;
 }
 
 export type LoaOptionCategory =

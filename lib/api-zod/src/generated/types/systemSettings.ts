@@ -23,4 +23,6 @@ export interface SystemSettings {
   logoImage?: string | null;
   /** True if a DB-stored password override is set; false means env APP_PASSWORD is in use. */
   hasCustomPassword: boolean;
+  /** True if a user-supplied OpenAI API key is stored in the database. */
+  hasOpenAiApiKey: boolean;
 }

@@ -30,4 +30,6 @@ export interface SystemSettingsInput {
   /** @maxLength 100 */
   companyRegistrationNumber?: string | null;
   logoImage?: string | null;
+  /** Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations. */
+  openaiApiKey?: string | null;
 }
