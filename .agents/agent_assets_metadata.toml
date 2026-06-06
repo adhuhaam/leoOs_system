@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "t5uU1OGi2r7qa1quyrY0u"
+uri = "file://leo-os-data-export.zip"
+type = "unspecified"
+title = "LEO OS — Data Export (SQL + Excel)"
