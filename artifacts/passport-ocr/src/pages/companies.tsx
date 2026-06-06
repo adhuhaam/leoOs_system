@@ -500,6 +500,78 @@ function CompanyFormDialog(
             </div>
           </div>
 
+          {mode === "edit" && (() => {
+            const company = props.company;
+            const handleImageUpload = async (kind: "letterheadImage" | "signatureImage", file: File | null) => {
+              if (!file) return;
+              if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+                toast({ title: "PNG or JPG only", variant: "destructive" });
+                return;
+              }
+              if (file.size > MAX_IMAGE_BYTES) {
+                toast({ title: `Max ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB`, variant: "destructive" });
+                return;
+              }
+              try {
+                const dataUrl = await readFileAsDataUrl(file);
+                updateMutation.mutate(
+                  { id: company.id, data: { [kind]: dataUrl } as Parameters<typeof updateMutation.mutate>[0]["data"] },
+                  {
+                    onSuccess: () => {
+                      queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                      toast({ title: "Image saved" });
+                    },
+                    onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
+                  },
+                );
+              } catch {
+                toast({ title: "Failed to read file", variant: "destructive" });
+              }
+            };
+            const handleImageClear = (kind: "letterheadImage" | "signatureImage") => {
+              updateMutation.mutate(
+                { id: company.id, data: { [kind]: null } as Parameters<typeof updateMutation.mutate>[0]["data"] },
+                {
+                  onSuccess: () => {
+                    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                    toast({ title: "Image removed" });
+                  },
+                  onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
+                },
+              );
+            };
+            return (
+              <div className="space-y-3 pt-1">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" /> Branding
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <ImageSlot
+                    label="Letterhead"
+                    hint="PNG/JPG · max 500 KB · appears at top of LOA prints"
+                    dataUrl={company.letterheadImage ?? null}
+                    onPick={(f) => handleImageUpload("letterheadImage", f)}
+                    onClear={() => handleImageClear("letterheadImage")}
+                    previewClass="h-28"
+                    testId={`edit-letterhead-${company.id}`}
+                    disabled={isPending}
+                  />
+                  <ImageSlot
+                    label="Signature"
+                    hint="PNG/JPG · max 500 KB · printed above signatory name"
+                    dataUrl={company.signatureImage ?? null}
+                    onPick={(f) => handleImageUpload("signatureImage", f)}
+                    onClear={() => handleImageClear("signatureImage")}
+                    previewClass="h-28"
+                    testId={`edit-signature-${company.id}`}
+                    disabled={isPending}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">Images save immediately when selected.</p>
+              </div>
+            );
+          })()}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
