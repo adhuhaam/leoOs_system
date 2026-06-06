@@ -66,8 +66,10 @@ async function preprocessImageBuffer(
     }
   }
 
-  // For images, resize if too large and convert to JPEG
+  // For images, honour EXIF orientation (phone cameras), resize if too large,
+  // and normalise to JPEG before sending to the OCR pipeline.
   const imgBuffer = await sharp(buffer)
+    .rotate()                                          // auto-rotate from EXIF
     .resize(1600, 1200, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 90 })
     .toBuffer();

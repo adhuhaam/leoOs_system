@@ -208,8 +208,12 @@ export async function extractPassportData(
       .replace(/```\s*$/i, "")
       .trim();
     gpt = JSON.parse(json);
-  } catch {
-    logger.warn({ raw }, "Failed to parse GPT JSON — using empty fallback");
+  } catch (parseErr) {
+    // Do NOT log `raw` here — it contains full passport PII (name, number, MRZ, DOB).
+    logger.warn(
+      { parseError: (parseErr as Error).message, responseLength: raw.length },
+      "Failed to parse GPT JSON response — using empty fallback"
+    );
   }
 
   // ---------------------------------------------------------------------------
