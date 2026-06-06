@@ -122,6 +122,7 @@ function OptionPicker({
   options,
   placeholder,
   testId,
+  isLoading,
 }: {
   label: string;
   value: string;
@@ -129,10 +130,25 @@ function OptionPicker({
   options: { id: number; value: string }[];
   placeholder: string;
   testId: string;
+  isLoading?: boolean;
 }) {
   const inList = !value || options.some((o) => o.value === value);
   const [customMode, setCustomMode] = useState(!inList && !!value);
-  const showCustom = customMode || options.length === 0;
+  const showCustom = customMode || (!isLoading && options.length === 0);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">{label}</Label>
+        <Select disabled>
+          <SelectTrigger className="text-muted-foreground" data-testid={`select-${testId}`}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 inline" />
+            <span className="text-xs">Loading options…</span>
+          </SelectTrigger>
+        </Select>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1.5">
@@ -161,7 +177,7 @@ function OptionPicker({
       ) : (
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger data-testid={`select-${testId}`}>
-            <SelectValue placeholder={`Select ${label.toLowerCase()}...`} />
+            <SelectValue placeholder={`Select ${label.toLowerCase()}…`} />
           </SelectTrigger>
           <SelectContent>
             {options.map((o) => (
@@ -190,15 +206,15 @@ function AssignStep({
   const companyId = form.companyId ? Number(form.companyId) : 0;
   const enabled = !!form.companyId;
 
-  const { data: jobTitles = [] } = useListLoaOptions(
+  const { data: jobTitles = [], isLoading: loadingJobTitles } = useListLoaOptions(
     { companyId, category: "job_title" },
     { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "job_title" }) } }
   );
-  const { data: workTypes = [] } = useListLoaOptions(
+  const { data: workTypes = [], isLoading: loadingWorkTypes } = useListLoaOptions(
     { companyId, category: "work_type" },
     { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "work_type" }) } }
   );
-  const { data: workSites = [] } = useListLoaOptions(
+  const { data: workSites = [], isLoading: loadingWorkSites } = useListLoaOptions(
     { companyId, category: "work_site" },
     { query: { enabled, queryKey: getListLoaOptionsQueryKey({ companyId, category: "work_site" }) } }
   );
@@ -253,6 +269,10 @@ function AssignStep({
               setForm((s) => ({
                 ...s,
                 companyId: v,
+                // Reset LOA option fields so pickers remount with the new company's options
+                jobTitle: "",
+                workType: "",
+                workSite: "",
                 signatoryName: c?.signatoryName ?? s.signatoryName,
                 signatoryDesignation: c?.signatoryDesignation ?? s.signatoryDesignation,
               }));
@@ -290,28 +310,34 @@ function AssignStep({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <OptionPicker
+                key={`jobTitle-${form.companyId}`}
                 label="Job Title / Occupation"
                 value={form.jobTitle}
                 onChange={(v) => setForm((s) => ({ ...s, jobTitle: v }))}
                 options={jobTitles}
+                isLoading={loadingJobTitles}
                 placeholder="e.g. Construction Worker"
                 testId="jobTitle"
               />
               <OptionPicker
+                key={`workType-${form.companyId}`}
                 label="Work Type"
                 value={form.workType}
                 onChange={(v) => setForm((s) => ({ ...s, workType: v }))}
                 options={workTypes}
+                isLoading={loadingWorkTypes}
                 placeholder="e.g. Manual Labour"
                 testId="workType"
               />
               {f("basicSalary", "Basic Salary (USD)", "e.g. 500")}
               {f("salaryPaymentDate", "Salary Payment Date")}
               <OptionPicker
+                key={`workSite-${form.companyId}`}
                 label="Work Site"
                 value={form.workSite}
                 onChange={(v) => setForm((s) => ({ ...s, workSite: v }))}
                 options={workSites}
+                isLoading={loadingWorkSites}
                 placeholder="e.g. Guraidhoo, Maldives"
                 testId="workSite"
               />
