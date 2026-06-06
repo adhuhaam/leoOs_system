@@ -18,6 +18,7 @@ import BillingPage from "@/pages/billing";
 import BillingPrintPage from "@/pages/billing-print";
 import PasswordsPage from "@/pages/passwords";
 import SettingsPage from "@/pages/settings";
+import EmployeeProfilePage from "@/pages/employee-profile";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ function Router() {
               {/* /passports kept as alias so old bookmarks still work */}
               <Route path="/passports" component={MasterListPage} />
               <Route path="/master-list" component={MasterListPage} />
+              <Route path="/employees/:id" component={EmployeeProfilePage} />
               <Route path="/companies" component={CompaniesPage} />
               <Route path="/clients" component={ClientsPage} />
               <Route path="/loa" component={LoaPage} />

@@ -30,6 +30,8 @@ tags:
     description: Daily task manager with subtasks and notes
   - name: push
     description: Mobile push notification device tokens
+  - name: xpat
+    description: Maldives Xpat MV work permit lookup (proxy)
 paths:
   /healthz:
     get:
@@ -915,6 +917,36 @@ paths:
       responses:
         "204":
           description: Removed
+
+  /xpat/work-permit:
+    get:
+      operationId: getXpatWorkPermit
+      tags: [xpat]
+      summary: Look up Xpat MV work permit data for a candidate
+      parameters:
+        - name: workPermitNumber
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: passportNumber
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Xpat work permit data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/XpatWorkPermit"
+        "400":
+          description: Missing required parameters
+        "401":
+          description: Authentication required
+        "502":
+          description: Upstream Xpat API unreachable
 
   /billing/documents:
     get:
@@ -1994,4 +2026,27 @@ components:
         platform:
           type: string
           enum: [ios, android, web]
+
+    XpatWorkPermit:
+      type: object
+      properties:
+        fullName: { type: ["string", "null"] }
+        firstName: { type: ["string", "null"] }
+        middleName: { type: ["string", "null"] }
+        lastName: { type: ["string", "null"] }
+        gender: { type: ["string", "null"] }
+        dateOfBirth: { type: ["string", "null"] }
+        nationality: { type: ["string", "null"] }
+        isoAlpha3CountryCode: { type: ["string", "null"] }
+        contactNumber: { type: ["string", "null"] }
+        occupationName: { type: ["string", "null"] }
+        isValid: { type: ["boolean", "null"] }
+        workPermitStateName: { type: ["string", "null"] }
+        workPermitIssuedDate: { type: ["string", "null"] }
+        workPermitExpiry: { type: ["string", "null"] }
+        employerName: { type: ["string", "null"] }
+        employerNumber: { type: ["string", "null"] }
+        employerContactNumber: { type: ["string", "null"] }
+        photoUrl: { type: ["string", "null"] }
+        verifyUrl: { type: ["string", "null"] }
 

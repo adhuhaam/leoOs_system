@@ -1,1 +1,2 @@
 - [Tesseract.js esbuild + MRZ accuracy](tesseract-esbuild.md) — must be in esbuild externals AND onlyBuiltDependencies; no ocrb.traineddata; trust check digits & recover doc number by edit distance
+- [Xpat MV API](xpat-api.md) — both WorkPermitNumber + PassportNumber required; key hardcoded server-side in xpat.ts; photo/card served as img src from backend proxy routes

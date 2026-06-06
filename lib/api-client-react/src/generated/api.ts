@@ -37,6 +37,7 @@ import type {
   ExpenseUpdate,
   ExtensionToken,
   GetAuthStatus200,
+  GetXpatWorkPermitParams,
   HealthStatus,
   ListBillingDocumentsParams,
   ListClientsParams,
@@ -66,6 +67,7 @@ import type {
   TaskInput,
   TaskUpdate,
   UpdateLoaOptionInput,
+  XpatWorkPermit,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3959,6 +3961,103 @@ export const useUnregisterPushToken = <
 > => {
   return useMutation(getUnregisterPushTokenMutationOptions(options));
 };
+
+/**
+ * @summary Look up Xpat MV work permit data for a candidate
+ */
+export const getGetXpatWorkPermitUrl = (params: GetXpatWorkPermitParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/xpat/work-permit?${stringifiedParams}`
+    : `/api/xpat/work-permit`;
+};
+
+export const getXpatWorkPermit = async (
+  params: GetXpatWorkPermitParams,
+  options?: RequestInit,
+): Promise<XpatWorkPermit> => {
+  return customFetch<XpatWorkPermit>(getGetXpatWorkPermitUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetXpatWorkPermitQueryKey = (
+  params?: GetXpatWorkPermitParams,
+) => {
+  return [`/api/xpat/work-permit`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetXpatWorkPermitQueryOptions = <
+  TData = Awaited<ReturnType<typeof getXpatWorkPermit>>,
+  TError = ErrorType<void>,
+>(
+  params: GetXpatWorkPermitParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getXpatWorkPermit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetXpatWorkPermitQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getXpatWorkPermit>>
+  > = ({ signal }) => getXpatWorkPermit(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getXpatWorkPermit>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetXpatWorkPermitQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getXpatWorkPermit>>
+>;
+export type GetXpatWorkPermitQueryError = ErrorType<void>;
+
+/**
+ * @summary Look up Xpat MV work permit data for a candidate
+ */
+
+export function useGetXpatWorkPermit<
+  TData = Awaited<ReturnType<typeof getXpatWorkPermit>>,
+  TError = ErrorType<void>,
+>(
+  params: GetXpatWorkPermitParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getXpatWorkPermit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetXpatWorkPermitQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List invoices and quotations

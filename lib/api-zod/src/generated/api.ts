@@ -1063,6 +1063,36 @@ export const UnregisterPushTokenParams = zod.object({
 });
 
 /**
+ * @summary Look up Xpat MV work permit data for a candidate
+ */
+export const GetXpatWorkPermitQueryParams = zod.object({
+  workPermitNumber: zod.coerce.string(),
+  passportNumber: zod.coerce.string(),
+});
+
+export const GetXpatWorkPermitResponse = zod.object({
+  fullName: zod.string().nullish(),
+  firstName: zod.string().nullish(),
+  middleName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  gender: zod.string().nullish(),
+  dateOfBirth: zod.string().nullish(),
+  nationality: zod.string().nullish(),
+  isoAlpha3CountryCode: zod.string().nullish(),
+  contactNumber: zod.string().nullish(),
+  occupationName: zod.string().nullish(),
+  isValid: zod.boolean().nullish(),
+  workPermitStateName: zod.string().nullish(),
+  workPermitIssuedDate: zod.string().nullish(),
+  workPermitExpiry: zod.string().nullish(),
+  employerName: zod.string().nullish(),
+  employerNumber: zod.string().nullish(),
+  employerContactNumber: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
+  verifyUrl: zod.string().nullish(),
+});
+
+/**
  * @summary List invoices and quotations
  */
 export const ListBillingDocumentsQueryParams = zod.object({

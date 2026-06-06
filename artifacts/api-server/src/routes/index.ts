@@ -13,6 +13,7 @@ import passwordsRouter from "./passwords";
 import tasksRouter from "./tasks";
 import pushTokensRouter from "./push-tokens";
 import systemRouter from "./system";
+import xpatRouter from "./xpat";
 
 const router: IRouter = Router();
 
@@ -39,5 +40,6 @@ router.use(billingRouter);
 router.use(passwordsRouter);
 router.use(tasksRouter);
 router.use(pushTokensRouter);
+router.use(xpatRouter);
 
 export default router;

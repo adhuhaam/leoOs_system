@@ -753,6 +753,47 @@ export interface PushTokenInput {
   platform: PushTokenInputPlatform;
 }
 
+export interface XpatWorkPermit {
+  /** @nullable */
+  fullName?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  middleName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  isoAlpha3CountryCode?: string | null;
+  /** @nullable */
+  contactNumber?: string | null;
+  /** @nullable */
+  occupationName?: string | null;
+  /** @nullable */
+  isValid?: boolean | null;
+  /** @nullable */
+  workPermitStateName?: string | null;
+  /** @nullable */
+  workPermitIssuedDate?: string | null;
+  /** @nullable */
+  workPermitExpiry?: string | null;
+  /** @nullable */
+  employerName?: string | null;
+  /** @nullable */
+  employerNumber?: string | null;
+  /** @nullable */
+  employerContactNumber?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+  /** @nullable */
+  verifyUrl?: string | null;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
 };
@@ -796,6 +837,11 @@ export type ListExpensesParams = {
 
 export type ListPasswordsParams = {
   search?: string;
+};
+
+export type GetXpatWorkPermitParams = {
+  workPermitNumber: string;
+  passportNumber: string;
 };
 
 export type ListBillingDocumentsParams = {

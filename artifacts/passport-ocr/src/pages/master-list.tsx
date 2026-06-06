@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import {
   useListPassports,
   useListLoa,
@@ -8,11 +9,13 @@ import {
   useDeletePassport,
   useUpdatePassport,
   useUpdateLoa,
+  useGetXpatWorkPermit,
+  getGetXpatWorkPermitQueryKey,
   getListPassportsQueryKey,
   getGetPassportStatsQueryKey,
   getListLoaQueryKey,
 } from "@workspace/api-client-react";
-import type { Passport } from "@workspace/api-client-react";
+import type { Passport, XpatWorkPermit } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,13 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -47,10 +43,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Filter, MoreHorizontal, Pencil, Trash2, Loader2, Users, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Search, Filter, Loader2, Users, X, Eye, Pencil,
+  ShieldCheck, ShieldX, ExternalLink,
+} from "lucide-react";
+
+const XPAT_STALE = 15 * 60 * 1000;
 
 // Maps stored demonyms (e.g. "bangladeshi") to the canonical country key.
-// Handles old records written before the OCR normalization was added.
 const DEMONYM_MAP: Record<string, string> = {
   bangladeshi: "bangladesh",
   indian: "india",
@@ -70,7 +71,6 @@ function normalizeNationality(raw: string | null | undefined): string {
 
 type StatusFilter = "all" | "completed" | "processing" | "failed";
 type NationalityFilter = "all" | "bangladesh" | "india" | "nepal";
-// "all" / "none" / "<company-id>" / "client:<client-id>"
 type AllocationFilter = string;
 
 interface Row {
@@ -80,11 +80,189 @@ interface Row {
   loaCount: number;
 }
 
+function WpStatusBadge({ xpat }: { xpat: XpatWorkPermit }) {
+  if (xpat.isValid === true) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded whitespace-nowrap">
+        <ShieldCheck className="h-3 w-3" />
+        {xpat.workPermitStateName ?? "Valid"}
+      </span>
+    );
+  }
+  if (xpat.isValid === false) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 rounded whitespace-nowrap">
+        <ShieldX className="h-3 w-3" />
+        {xpat.workPermitStateName ?? "Invalid"}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
+      {xpat.workPermitStateName ?? "Unknown"}
+    </span>
+  );
+}
+
+/** A single table row that fetches its own Xpat data lazily. */
+function PassportRow({
+  row,
+  onEdit,
+  onDelete,
+}: {
+  row: Row;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { passport, companyName, loaCount } = row;
+  const [, navigate] = useLocation();
+
+  const wp = passport.workPermitNumber ?? null;
+  const pp = passport.passportNumber ?? null;
+  const hasXpat = !!(wp && pp);
+
+  const xpatParams = { workPermitNumber: wp ?? "", passportNumber: pp ?? "" };
+  const { data: xpat, isLoading: xpatLoading } = useGetXpatWorkPermit(xpatParams, {
+    query: {
+      enabled: hasXpat,
+      staleTime: XPAT_STALE,
+      queryKey: getGetXpatWorkPermitQueryKey(xpatParams),
+    },
+  });
+
+  const photoSrc = xpat?.photoUrl
+    ? `/api/xpat/photo?photoUrl=${encodeURIComponent(xpat.photoUrl)}`
+    : null;
+
+  const initials = (passport.fullName ?? "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
+
+  return (
+    <TableRow data-testid={`row-master-${passport.id}`}>
+      {/* Photo */}
+      <TableCell className="w-12 pr-2">
+        {hasXpat && xpatLoading ? (
+          <Skeleton className="h-9 w-9 rounded-full" />
+        ) : photoSrc ? (
+          <img
+            src={photoSrc}
+            alt={passport.fullName ?? ""}
+            className="h-9 w-9 rounded-full object-cover border"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+              target.nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+        ) : (
+          <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center">
+            <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
+          </div>
+        )}
+        {/* Fallback shown by onError above */}
+        {photoSrc && (
+          <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center hidden">
+            <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
+          </div>
+        )}
+      </TableCell>
+
+      {/* Name / Passport # */}
+      <TableCell>
+        <p className="font-medium uppercase text-sm leading-tight">{passport.fullName || "—"}</p>
+        <p className="font-mono text-[11px] text-muted-foreground">{passport.passportNumber || "—"}</p>
+        {wp && <p className="font-mono text-[10px] text-muted-foreground/70">{wp}</p>}
+      </TableCell>
+
+      {/* Company / Client */}
+      <TableCell className="hidden md:table-cell">
+        <p className="text-sm truncate max-w-[140px]">{companyName || <span className="text-muted-foreground italic text-xs">No company</span>}</p>
+        {passport.clientName ? (
+          <p className="text-xs text-muted-foreground truncate max-w-[140px]">{passport.clientName}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">Unallocated</p>
+        )}
+      </TableCell>
+
+      {/* Xpat: Status + Expiry */}
+      <TableCell className="hidden lg:table-cell">
+        {hasXpat && xpatLoading ? (
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+        ) : xpat ? (
+          <div className="space-y-1">
+            <WpStatusBadge xpat={xpat} />
+            {xpat.workPermitExpiry && (
+              <p className="text-[10px] text-muted-foreground">
+                Exp: {xpat.workPermitExpiry}
+              </p>
+            )}
+          </div>
+        ) : hasXpat ? (
+          <span className="text-[10px] text-muted-foreground">—</span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground italic">No WP data</span>
+        )}
+      </TableCell>
+
+      {/* OCR Status */}
+      <TableCell>
+        {passport.status === "completed" && (
+          <span className="text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-1 rounded">
+            DONE
+          </span>
+        )}
+        {passport.status === "processing" && (
+          <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded">
+            OCR
+          </span>
+        )}
+        {passport.status === "failed" && (
+          <span className="text-[10px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-1 rounded">
+            FAIL
+          </span>
+        )}
+      </TableCell>
+
+      {/* Actions: View + Edit */}
+      <TableCell>
+        <div className="flex gap-1.5 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={() => navigate(`/employees/${passport.id}`)}
+            data-testid={`button-view-master-${passport.id}`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">View</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={onEdit}
+            data-testid={`button-edit-master-${passport.id}`}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function MasterListPage() {
   const [search, setSearch] = useState("");
   const [nationalityFilter, setNationalityFilter] = useState<NationalityFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  // Combined filter: by allocated client OR by LOA-issuing company.
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>("all");
 
   const [editPassport, setEditPassport] = useState<Passport | null>(null);
@@ -93,7 +271,6 @@ export default function MasterListPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Server-side filters: company is now sourced from passport.companyId directly.
   const passportParams = {
     ...(search ? { search } : {}),
     ...(nationalityFilter !== "all" ? { nationality: nationalityFilter } : {}),
@@ -115,7 +292,6 @@ export default function MasterListPage() {
   const { data: companies = [] } = useListCompanies();
   const { data: clients = [] } = useListClients();
 
-  // Build a passport → most-recent-LOA map. LOAs are returned newest-first.
   const latestLoaByPassport = useMemo(() => {
     const m = new Map<number, { companyId: number | null; companyName: string | null; count: number }>();
     for (const loa of loas) {
@@ -139,7 +315,6 @@ export default function MasterListPage() {
       const link = latestLoaByPassport.get(p.id);
       return {
         passport: p,
-        // Source of truth: passport.companyId (assigned via wizard or edit).
         companyId: p.companyId ?? null,
         companyName: p.companyName ?? null,
         loaCount: link?.count ?? 0,
@@ -147,11 +322,7 @@ export default function MasterListPage() {
     });
   }, [passports, latestLoaByPassport]);
 
-  const filteredRows = useMemo(() => {
-    // Server already handles company + client filters. No further client-side
-    // filtering needed — just return the server result as-is.
-    return rows;
-  }, [rows]);
+  const filteredRows = useMemo(() => rows, [rows]);
 
   const activeFilterCount =
     (search ? 1 : 0) +
@@ -295,24 +466,19 @@ export default function MasterListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Passport #</TableHead>
-                  <TableHead className="hidden md:table-cell">Nationality</TableHead>
-                  <TableHead className="hidden xl:table-cell">Expiry</TableHead>
-                  <TableHead>Allocation</TableHead>
-                  <TableHead className="hidden lg:table-cell">Work Permit #</TableHead>
-                  <TableHead className="hidden lg:table-cell">Agent</TableHead>
-                  <TableHead className="hidden md:table-cell">Company</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">LOAs</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead className="hidden md:table-cell">Company / Client</TableHead>
+                  <TableHead className="hidden lg:table-cell">WP Status</TableHead>
+                  <TableHead>OCR</TableHead>
+                  <TableHead className="w-[120px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 11 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-5 w-20 bg-muted animate-pulse rounded" />
                         </TableCell>
@@ -321,99 +487,20 @@ export default function MasterListPage() {
                   ))
                 ) : filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                       {passports.length === 0
                         ? "No candidates yet — upload a passport from the Process Document page."
                         : "No candidates match your filters."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredRows.map(({ passport, companyName, loaCount }) => (
-                    <TableRow key={passport.id} data-testid={`row-master-${passport.id}`}>
-                      <TableCell className="font-medium uppercase">{passport.fullName || "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{passport.passportNumber || "—"}</TableCell>
-                      <TableCell className="capitalize hidden md:table-cell">{passport.nationality || "—"}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
-                        {passport.dateOfExpiry || "—"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {passport.clientName ? (
-                          <span className="truncate max-w-[160px] inline-block font-medium">
-                            {passport.clientName}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground italic text-xs">— Unallocated —</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell font-mono text-xs">
-                        {passport.workPermitNumber || <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                        {passport.agent || "—"}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">
-                        {companyName ? (
-                          <span className="truncate max-w-[160px] inline-block">{companyName}</span>
-                        ) : (
-                          <span className="text-muted-foreground italic text-xs">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-center">
-                        {loaCount > 0 ? (
-                          <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{loaCount}</span>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {passport.status === "completed" && (
-                          <span className="text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-1 rounded">
-                            COMPLETED
-                          </span>
-                        )}
-                        {passport.status === "processing" && (
-                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded">
-                            PROCESSING
-                          </span>
-                        )}
-                        {passport.status === "failed" && (
-                          <span className="text-[10px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-1 rounded">
-                            FAILED
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              data-testid={`button-actions-master-${passport.id}`}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => setEditPassport(passport)}
-                              data-testid={`menu-edit-master-${passport.id}`}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit Candidate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeletePassportId(passport.id)}
-                              data-testid={`menu-delete-master-${passport.id}`}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                  filteredRows.map((row) => (
+                    <PassportRow
+                      key={row.passport.id}
+                      row={row}
+                      onEdit={() => setEditPassport(row.passport)}
+                      onDelete={() => setDeletePassportId(row.passport.id)}
+                    />
                   ))
                 )}
               </TableBody>
@@ -471,9 +558,30 @@ function EditCandidateDialog({
   const { data: clients = [] } = useListClients();
   const { data: companies = [] } = useListCompanies();
 
-  // Fetch the existing LOA entry for this passport (most recent).
   const { data: loaEntries = [] } = useListLoa({ passportId: passport.id });
   const existingLoa = loaEntries[0] ?? null;
+
+  const wp = passport.workPermitNumber ?? null;
+  const pp = passport.passportNumber ?? null;
+  const hasXpat = !!(wp && pp);
+
+  const xpatParams2 = { workPermitNumber: wp ?? "", passportNumber: pp ?? "" };
+  const { data: xpat, isLoading: xpatLoading } = useGetXpatWorkPermit(xpatParams2, {
+    query: {
+      enabled: hasXpat,
+      staleTime: XPAT_STALE,
+      queryKey: getGetXpatWorkPermitQueryKey(xpatParams2),
+    },
+  });
+
+  const photoSrc = xpat?.photoUrl
+    ? `/api/xpat/photo?photoUrl=${encodeURIComponent(xpat.photoUrl)}`
+    : null;
+
+  const cardSrc =
+    hasXpat && wp && pp
+      ? `/api/xpat/card?workPermitNumber=${encodeURIComponent(wp)}&passportNumber=${encodeURIComponent(pp)}`
+      : null;
 
   const [form, setForm] = useState({
     fullName: passport.fullName || "",
@@ -487,13 +595,11 @@ function EditCandidateDialog({
     clientId: passport.clientId != null ? String(passport.clientId) : "",
     workPermitNumber: passport.workPermitNumber || "",
     agent: passport.agent || "",
-    // LOA employment fields — populated from existingLoa once loaded.
     jobTitle: "",
     workType: "",
     workSite: "",
   });
 
-  // Populate employment fields when the LOA entry loads.
   useEffect(() => {
     if (existingLoa) {
       setForm((prev) => ({
@@ -506,7 +612,6 @@ function EditCandidateDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingLoa?.id]);
 
-  // Load LOA options for the currently selected company (for suggestion selects).
   const selectedCompanyId = form.companyId ? Number(form.companyId) : undefined;
   const { data: loaOptions = [] } = useListLoaOptions({ companyId: selectedCompanyId ?? 0 });
   const jobTitleOpts = loaOptions.filter((o) => o.category === "job_title").map((o) => o.value);
@@ -559,6 +664,13 @@ function EditCandidateDialog({
     );
   };
 
+  const initials = (passport.fullName ?? "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
@@ -566,6 +678,79 @@ function EditCandidateDialog({
           <DialogTitle>Edit Candidate</DialogTitle>
           <DialogDescription>Update passport details, company, employment terms, and allocation.</DialogDescription>
         </DialogHeader>
+
+        {/* Xpat photo + status banner */}
+        {hasXpat && (
+          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 border">
+            {xpatLoading ? (
+              <>
+                <Skeleton className="h-14 w-14 rounded-full flex-shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </>
+            ) : (
+              <>
+                {photoSrc ? (
+                  <img
+                    src={photoSrc}
+                    alt={passport.fullName ?? ""}
+                    className="h-14 w-14 rounded-full object-cover border-2 border-background shadow flex-shrink-0"
+                    onError={(e) => {
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-full bg-background border-2 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-muted-foreground">{initials}</span>
+                  </div>
+                )}
+                <div className="flex-1 space-y-1 min-w-0">
+                  {xpat ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {xpat.isValid === true && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded">
+                            <ShieldCheck className="h-3 w-3" /> {xpat.workPermitStateName ?? "Valid"}
+                          </span>
+                        )}
+                        {xpat.isValid === false && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded">
+                            <ShieldX className="h-3 w-3" /> {xpat.workPermitStateName ?? "Invalid"}
+                          </span>
+                        )}
+                        {xpat.isValid == null && xpat.workPermitStateName && (
+                          <span className="text-[11px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            {xpat.workPermitStateName}
+                          </span>
+                        )}
+                        {xpat.workPermitExpiry && (
+                          <span className="text-[11px] text-muted-foreground">
+                            Expires: <span className="font-medium text-foreground">{xpat.workPermitExpiry}</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {xpat.occupationName ?? "—"} · {xpat.employerName ?? "—"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">No Xpat data available</p>
+                  )}
+                </div>
+                {xpat?.verifyUrl && (
+                  <a href={xpat.verifyUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </a>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Passport details */}
@@ -679,7 +864,7 @@ function EditCandidateDialog({
             )}
           </div>
 
-          {/* Allocation / placement — independent of company */}
+          {/* Allocation */}
           <div className="space-y-3 border-t pt-4">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Allocation</p>
             <div className="grid grid-cols-2 gap-4">
@@ -716,6 +901,59 @@ function EditCandidateDialog({
             </div>
           </div>
 
+          {/* Xpat / Immigration panel */}
+          {hasXpat && xpat && (
+            <div className="space-y-3 border-t pt-4">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Xpat / Immigration Information</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                {[
+                  ["First Name", xpat.firstName],
+                  ["Middle Name", xpat.middleName],
+                  ["Last Name", xpat.lastName],
+                  ["Gender", xpat.gender],
+                  ["Date of Birth", xpat.dateOfBirth],
+                  ["Nationality", xpat.nationality],
+                  ["ISO Code", xpat.isoAlpha3CountryCode],
+                  ["Contact", xpat.contactNumber],
+                  ["Occupation", xpat.occupationName],
+                  ["WP Status", xpat.workPermitStateName],
+                  ["WP Issued", xpat.workPermitIssuedDate],
+                  ["WP Expiry", xpat.workPermitExpiry],
+                  ["Employer", xpat.employerName],
+                  ["Employer #", xpat.employerNumber],
+                  ["Employer Contact", xpat.employerContactNumber],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="space-y-0.5">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{label}</p>
+                    <p className="font-medium">{value || <span className="text-muted-foreground">—</span>}</p>
+                  </div>
+                ))}
+              </div>
+              {xpat.verifyUrl && (
+                <a
+                  href={xpat.verifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View on eGov Xpat MV
+                </a>
+              )}
+              {cardSrc && (
+                <div className="pt-1">
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">Work Permit Card</p>
+                  <img
+                    src={cardSrc}
+                    alt="Work Permit Card"
+                    className="rounded border w-full max-w-sm object-contain"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
@@ -733,8 +971,6 @@ function EditCandidateDialog({
 
 /**
  * A Select + optional free-text Input for an employment field.
- * If the company has configured options for this category they appear as choices.
- * If the current value is not among them (custom) it is preserved and editable.
  */
 function EmploymentField({
   label,
@@ -796,4 +1032,3 @@ function EmploymentField({
     </div>
   );
 }
-
