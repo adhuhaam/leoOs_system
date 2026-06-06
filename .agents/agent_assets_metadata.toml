@@ -18,3 +18,9 @@ id = "_7F5QBmx8Iot8hlGNYLj8"
 uri = "file://leo-os-full-dump.zip"
 type = "unspecified"
 title = "LEO OS — Full Database Dump (SQL)"
+
+[[outputs]]
+id = "uoSvUCia7cRgPV9hwPpKa"
+uri = "file://billing-detail-export.xlsx"
+type = "table"
+title = "Billing Details & Expenses Export"
