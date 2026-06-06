@@ -12,3 +12,9 @@ id = "4rXf2khHenX8vfD_6Pr84"
 uri = "file://billing-expenses-export.xlsx"
 type = "table"
 title = "Billing & Expenses Export"
+
+[[outputs]]
+id = "_7F5QBmx8Iot8hlGNYLj8"
+uri = "file://leo-os-full-dump.zip"
+type = "unspecified"
+title = "LEO OS — Full Database Dump (SQL)"
