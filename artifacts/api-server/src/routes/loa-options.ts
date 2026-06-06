@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { db, loaOptionsTable, LOA_OPTION_CATEGORIES } from "@workspace/db";
 import { z } from "zod";
 
@@ -50,25 +50,9 @@ router.post("/loa-options", async (req, res): Promise<void> => {
     return;
   }
   const { companyId, category, value: rawValue } = parsed.data;
-  const value = rawValue.trim();
+  const value = rawValue.trim().toLowerCase();
   if (!value) {
     res.status(400).json({ error: "Value cannot be empty" });
-    return;
-  }
-
-  // Check for existing duplicate (case-insensitive) within the same company+category.
-  const existing = await db
-    .select()
-    .from(loaOptionsTable)
-    .where(
-      and(
-        eq(loaOptionsTable.companyId, companyId),
-        eq(loaOptionsTable.category, category),
-        sql`lower(${loaOptionsTable.value}) = lower(${value})`
-      )
-    );
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Option already exists in this category" });
     return;
   }
 
@@ -99,7 +83,7 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  const value = body.data.value.trim();
+  const value = body.data.value.trim().toLowerCase();
   if (!value) {
     res.status(400).json({ error: "Value cannot be empty" });
     return;
@@ -117,23 +101,6 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
   // Ownership check: if caller supplied companyId, it must match the stored row.
   if (body.data.companyId != null && body.data.companyId !== current.companyId) {
     res.status(403).json({ error: "Option does not belong to the specified company" });
-    return;
-  }
-
-  // Check for duplicates within same company+category, excluding this row.
-  const dup = await db
-    .select()
-    .from(loaOptionsTable)
-    .where(
-      and(
-        eq(loaOptionsTable.companyId, current.companyId),
-        eq(loaOptionsTable.category, current.category),
-        sql`lower(${loaOptionsTable.value}) = lower(${value})`,
-        sql`${loaOptionsTable.id} <> ${params.data.id}`
-      )
-    );
-  if (dup.length > 0) {
-    res.status(409).json({ error: "Another option with this value already exists" });
     return;
   }
 

@@ -1,5 +1,4 @@
 import { pgTable, text, serial, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { companiesTable } from "./companies";
@@ -20,9 +19,9 @@ export const loaOptionsTable = pgTable(
     // Case-insensitive uniqueness per company so "Manager" and "manager" can't
     // both exist in the same category for the same company.
     uniqueCompanyCategoryValue: uniqueIndex("loa_options_company_category_value_idx").on(
-      sql`${t.companyId}`,
-      sql`${t.category}`,
-      sql`lower(${t.value})`
+      t.companyId,
+      t.category,
+      t.value
     ),
   })
 );
