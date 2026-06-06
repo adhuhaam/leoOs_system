@@ -319,9 +319,20 @@ export async function extractPassportData(
   } else {
     const gptNat = str(gpt.nationality);
     if (gptNat) {
-      // Normalise GPT's free-text nationality to a lowercase country name
+      // Normalise GPT's free-text nationality (demonym or country name) to
+      // the canonical lowercase country key used throughout the app.
       const lower = gptNat.toLowerCase().replace(/[^a-z\s]/g, "").trim();
-      nationality = lower || null;
+      const DEMONYM_MAP: Record<string, string> = {
+        bangladeshi: "bangladesh",
+        indian: "india",
+        nepali: "nepal",
+        nepalese: "nepal",
+        maldivian: "maldives",
+        pakistani: "pakistan",
+        "sri lankan": "sri lanka",
+        srilankan: "sri lanka",
+      };
+      nationality = (DEMONYM_MAP[lower] ?? lower) || null;
     }
   }
 

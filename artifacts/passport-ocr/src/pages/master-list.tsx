@@ -46,8 +46,27 @@ import {
 import { Label } from "@/components/ui/label";
 import { Search, Filter, MoreHorizontal, Pencil, Trash2, Loader2, Users, X } from "lucide-react";
 
+// Maps stored demonyms (e.g. "bangladeshi") to the canonical country key.
+// Handles old records written before the OCR normalization was added.
+const DEMONYM_MAP: Record<string, string> = {
+  bangladeshi: "bangladesh",
+  indian: "india",
+  nepali: "nepal",
+  nepalese: "nepal",
+  maldivian: "maldives",
+  pakistani: "pakistan",
+  "sri lankan": "sri lanka",
+  srilankan: "sri lanka",
+};
+
+function normalizeNationality(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const lower = raw.toLowerCase().trim();
+  return DEMONYM_MAP[lower] ?? lower;
+}
+
 type StatusFilter = "all" | "completed" | "processing" | "failed";
-type NationalityFilter = "all" | "bangladesh" | "india";
+type NationalityFilter = "all" | "bangladesh" | "india" | "nepal";
 // "all" / "none" / "<company-id>" / "client:<client-id>"
 type AllocationFilter = string;
 
@@ -237,6 +256,7 @@ export default function MasterListPage() {
                     <SelectItem value="all">All Nationalities</SelectItem>
                     <SelectItem value="bangladesh">Bangladesh</SelectItem>
                     <SelectItem value="india">India</SelectItem>
+                    <SelectItem value="nepal">Nepal</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -450,7 +470,7 @@ function EditCandidateDialog({
   const [form, setForm] = useState({
     fullName: passport.fullName || "",
     passportNumber: passport.passportNumber || "",
-    nationality: passport.nationality || "",
+    nationality: normalizeNationality(passport.nationality),
     dateOfBirth: passport.dateOfBirth || "",
     dateOfIssue: passport.dateOfIssue || "",
     dateOfExpiry: passport.dateOfExpiry || "",
@@ -525,6 +545,10 @@ function EditCandidateDialog({
                   <SelectContent>
                     <SelectItem value="bangladesh">Bangladesh</SelectItem>
                     <SelectItem value="india">India</SelectItem>
+                    <SelectItem value="nepal">Nepal</SelectItem>
+                    <SelectItem value="maldives">Maldives</SelectItem>
+                    <SelectItem value="pakistan">Pakistan</SelectItem>
+                    <SelectItem value="sri lanka">Sri Lanka</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -23,7 +23,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 
 type StatusFilter = "all" | "completed" | "processing" | "failed";
-type NationalityFilter = "all" | "bangladesh" | "india";
+type NationalityFilter = "all" | "bangladesh" | "india" | "nepal";
 
 const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -36,6 +36,7 @@ const NATIONALITY_FILTERS: { key: NationalityFilter; label: string }[] = [
   { key: "all", label: "Any" },
   { key: "bangladesh", label: "Bangladesh" },
   { key: "india", label: "India" },
+  { key: "nepal", label: "Nepal" },
 ];
 
 export default function MasterListScreen() {
