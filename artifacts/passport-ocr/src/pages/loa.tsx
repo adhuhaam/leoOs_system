@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   useListLoa,
   useCreateLoa,
@@ -22,7 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, FileText, Trash2, Download, Printer, Building2, User, ChevronRight } from "lucide-react";
+import { Plus, FileText, Trash2, Printer, Building2, User, ChevronRight } from "lucide-react";
 
 const STEPS = ["Select Company & Candidate", "Employment Details", "Signatory"] as const;
 type Step = 0 | 1 | 2;
@@ -69,13 +70,6 @@ const DEFAULT_FORM: FormData = {
 };
 
 function LoaTable({ entries, onDelete }: { entries: Loa[]; onDelete: (id: number) => void }) {
-  const downloadPdf = (id: number, name: string | null) => {
-    const a = document.createElement("a");
-    a.href = `/api/loa/${id}/pdf`;
-    a.download = `LOA-${name ?? id}.pdf`;
-    a.click();
-  };
-
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground" data-testid="loa-empty-state">
@@ -122,16 +116,6 @@ function LoaTable({ entries, onDelete }: { entries: Loa[]; onDelete: (id: number
                       <Printer className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => downloadPdf(loa.id, loa.candidateName ?? null)}
-                    title="Download PDF"
-                    data-testid={`button-download-loa-${loa.id}`}
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -553,6 +537,8 @@ export default function LoaPage() {
     return !!form.signatoryName.trim();
   };
 
+  const [, navigate] = useLocation();
+
   const handleGenerate = () => {
     if (!selectedCompany || !selectedPassport) return;
 
@@ -595,17 +581,11 @@ export default function LoaPage() {
       {
         onSuccess: (loa) => {
           queryClient.invalidateQueries({ queryKey: getListLoaQueryKey() });
-          toast({ title: "LOA generated", description: "Downloading PDF..." });
-          // Auto-download
-          setTimeout(() => {
-            const a = document.createElement("a");
-            a.href = `/api/loa/${loa.id}/pdf`;
-            a.download = `LOA-${selectedPassport.fullName?.replace(/\s+/g, "-") ?? loa.id}.pdf`;
-            a.click();
-          }, 300);
           setCreateOpen(false);
           setStep(0);
           setForm(DEFAULT_FORM);
+          // Navigate straight to the A4 print/view page — no PDF download.
+          navigate(`/loa/${loa.id}/print`);
         },
         onError: () => toast({ title: "Failed to generate LOA", variant: "destructive" }),
       }
@@ -705,7 +685,7 @@ export default function LoaPage() {
                 disabled={!canNext() || createLoa.isPending}
                 data-testid="button-generate-loa"
               >
-                {createLoa.isPending ? "Generating..." : "Generate & Download PDF"}
+                {createLoa.isPending ? "Generating..." : "Generate & View LOA"}
               </Button>
             )}
           </DialogFooter>
