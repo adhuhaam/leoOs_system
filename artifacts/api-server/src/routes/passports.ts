@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { eq, desc, isNull, and, type SQL } from "drizzle-orm";
 import { db, passportsTable, clientsTable, companiesTable } from "@workspace/db";
 import {
   GetPassportParams,
@@ -93,9 +93,7 @@ router.get("/passports", async (req, res): Promise<void> => {
     companyId?: string;
   };
 
-  // Only return fully-submitted records (wizard completed + LOA created).
-  // Draft records (submitted=false) are invisible to the list/master-list.
-  const conditions = [eq(passportsTable.submitted, true)];
+  const conditions: SQL[] = [];
   if (nationality) {
     conditions.push(eq(passportsTable.nationality, nationality));
   }
@@ -223,12 +221,11 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
   res.status(201).json(passport);
 });
 
-// GET /passports/stats — dashboard stats (open, submitted records only)
+// GET /passports/stats — dashboard stats
 router.get("/passports/stats", async (_req, res): Promise<void> => {
   const all = await db
     .select()
     .from(passportsTable)
-    .where(eq(passportsTable.submitted, true))
     .orderBy(desc(passportsTable.createdAt));
 
   const stats = {
