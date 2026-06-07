@@ -32,4 +32,10 @@ export interface SystemSettingsInput {
   logoImage?: string | null;
   /** Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations. */
   openaiApiKey?: string | null;
+  /** Google OAuth Web/Android client ID; null to clear. */
+  googleClientId?: string | null;
+  /** Google OAuth client secret; null to clear. */
+  googleClientSecret?: string | null;
+  /** Google OAuth iOS client ID; null to clear. */
+  googleClientIdIos?: string | null;
 }

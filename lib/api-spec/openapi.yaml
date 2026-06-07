@@ -1518,6 +1518,18 @@ components:
           type: string
           nullable: true
           description: Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.
+        googleClientId:
+          type: string
+          nullable: true
+          description: Google OAuth Web/Android client ID; null to clear.
+        googleClientSecret:
+          type: string
+          nullable: true
+          description: Google OAuth client secret; null to clear.
+        googleClientIdIos:
+          type: string
+          nullable: true
+          description: Google OAuth iOS client ID; null to clear.
 
     LoaOption:
       type: object

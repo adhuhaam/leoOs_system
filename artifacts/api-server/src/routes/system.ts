@@ -62,7 +62,16 @@ const GoogleKeysInput = z.object({
   googleClientIdIos: z.string().nullable().optional(),
 });
 
-router.get("/system/settings", async (_req, res) => {
+router.get("/system/settings", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const role = req.session.role ?? "";
+  if (role !== "superuser") {
+    res.status(403).json({ error: "Only superusers may view system settings" });
+    return;
+  }
   const row = await readSettings();
   res.json(publicShape(row!));
 });

@@ -144,7 +144,7 @@ function GoogleOAuthSection() {
     setSaving(true);
     try {
       // Only send fields that have values — blank means "keep existing"
-      const payload: Record<string, string> = {};
+      const payload: { googleClientId?: string; googleClientIdIos?: string; googleClientSecret?: string } = {};
       if (webClientId.trim()) payload.googleClientId = webClientId.trim();
       if (iosClientId.trim()) payload.googleClientIdIos = iosClientId.trim();
       if (clientSecret.trim()) payload.googleClientSecret = clientSecret.trim();
@@ -154,7 +154,7 @@ function GoogleOAuthSection() {
         return;
       }
 
-      await updateMutation.mutateAsync({ data: payload as Record<string, unknown> });
+      await updateMutation.mutateAsync({ data: payload });
       toast({ title: "Saved", description: "Google OAuth credentials updated." });
       setClientSecret("");
     } catch (err) {
