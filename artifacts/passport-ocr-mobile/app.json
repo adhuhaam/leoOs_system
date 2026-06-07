@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#fbf6ec"
+      "backgroundColor": "#0d2e28"
     },
     "ios": {
       "supportsTablet": false,
@@ -27,7 +27,7 @@
       "package": "com.leo.os",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#fbf6ec"
+        "backgroundColor": "#0d2e28"
       },
       "permissions": [
         "android.permission.CAMERA",
