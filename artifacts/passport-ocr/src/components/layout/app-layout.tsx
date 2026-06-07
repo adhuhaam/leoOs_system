@@ -68,8 +68,8 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/passwords", label: "Passwords", icon: KeyRound, roles: ["superuser", "admin"] },
   // Admin
   { href: "/users", label: "User Management", icon: UserCog, roles: ["superuser", "admin"] },
-  // System — admin/superuser only
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["superuser", "admin"] },
+  // System — superuser only
+  { href: "/settings", label: "Settings", icon: Settings, roles: ["superuser"] },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {

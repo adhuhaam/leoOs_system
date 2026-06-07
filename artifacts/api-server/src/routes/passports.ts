@@ -446,6 +446,11 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
       res.status(403).json({ error: "Access denied — passport not linked to your company" });
       return;
     }
+    // Company users cannot allocate candidates to clients — block clientId changes
+    if ("clientId" in body.data) {
+      res.status(403).json({ error: "Company role cannot assign client allocations" });
+      return;
+    }
   } else {
     // client, employee, agent, and any other role: no mutations allowed
     res.status(403).json({ error: "Insufficient permissions to update passports" });
