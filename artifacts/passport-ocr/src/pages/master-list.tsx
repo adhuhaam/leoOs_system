@@ -52,28 +52,13 @@ import {
 const XPAT_STALE = 15 * 60 * 1000;
 
 /**
- * Parse the photoId and serviceId from the Xpat photoUrl field.
- * The field looks like "/WorkPermit/GetImage?photoId=xxx&serviceId=yyy".
- * We extract the IDs and pass them to our own proxy — never the raw URL —
- * so the backend always constructs the target URL itself (no SSRF risk).
+ * Build a same-origin URL for the photo proxy.
+ * The backend validates the photoUrl is from the Xpat host before
+ * forwarding the request — no SSRF risk.
  */
-function parseXpatPhotoParams(photoUrl: string | null | undefined): { photoId: string; serviceId: string } | null {
-  if (!photoUrl) return null;
-  try {
-    const url = new URL(photoUrl, "https://mobile-xpat.egov.mv");
-    const photoId = url.searchParams.get("photoId");
-    const serviceId = url.searchParams.get("serviceId");
-    if (!photoId || !serviceId) return null;
-    return { photoId, serviceId };
-  } catch {
-    return null;
-  }
-}
-
 function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
-  const p = parseXpatPhotoParams(photoUrl);
-  if (!p) return null;
-  return `/api/xpat/photo?photoId=${encodeURIComponent(p.photoId)}&serviceId=${encodeURIComponent(p.serviceId)}`;
+  if (!photoUrl) return null;
+  return `/api/xpat/photo?photoUrl=${encodeURIComponent(photoUrl)}`;
 }
 
 function formatXpatDate(raw: string | null | undefined): string | null {
@@ -112,8 +97,16 @@ interface Row {
   loaCount: number;
 }
 
+/** The Xpat API returns isValid as a string e.g. "Valid" or "Invalid". */
+function isWpValid(v: string | null | undefined) {
+  return v != null && v.toLowerCase() === "valid";
+}
+function isWpInvalid(v: string | null | undefined) {
+  return v != null && v.toLowerCase() !== "valid";
+}
+
 function WpStatusBadge({ xpat }: { xpat: XpatWorkPermit }) {
-  if (xpat.isValid === true) {
+  if (isWpValid(xpat.isValid)) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded whitespace-nowrap">
         <ShieldCheck className="h-3 w-3" />
@@ -121,7 +114,7 @@ function WpStatusBadge({ xpat }: { xpat: XpatWorkPermit }) {
       </span>
     );
   }
-  if (xpat.isValid === false) {
+  if (isWpInvalid(xpat.isValid)) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-1.5 py-0.5 rounded whitespace-nowrap">
         <ShieldX className="h-3 w-3" />
@@ -757,12 +750,12 @@ function EditCandidateDialog({
                 {xpat ? (
                   <>
                     <div className="flex items-center gap-2 flex-wrap">
-                      {xpat.isValid === true && (
+                      {isWpValid(xpat.isValid) && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded">
                           <ShieldCheck className="h-3 w-3" /> {xpat.workPermitStateName ?? "Valid"}
                         </span>
                       )}
-                      {xpat.isValid === false && (
+                      {isWpInvalid(xpat.isValid) && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded">
                           <ShieldX className="h-3 w-3" /> {xpat.workPermitStateName ?? "Invalid"}
                         </span>

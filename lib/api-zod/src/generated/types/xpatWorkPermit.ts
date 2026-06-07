@@ -28,7 +28,7 @@ export interface XpatWorkPermit {
   /** @nullable */
   occupationName?: string | null;
   /** @nullable */
-  isValid?: boolean | null;
+  isValid?: string | null;
   /** @nullable */
   workPermitStateName?: string | null;
   /** @nullable */

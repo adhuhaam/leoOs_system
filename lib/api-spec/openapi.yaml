@@ -2040,7 +2040,7 @@ components:
         isoAlpha3CountryCode: { type: ["string", "null"] }
         contactNumber: { type: ["string", "null"] }
         occupationName: { type: ["string", "null"] }
-        isValid: { type: ["boolean", "null"] }
+        isValid: { type: ["string", "null"] }
         workPermitStateName: { type: ["string", "null"] }
         workPermitIssuedDate: { type: ["string", "null"] }
         workPermitExpiry: { type: ["string", "null"] }

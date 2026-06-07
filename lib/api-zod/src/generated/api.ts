@@ -1081,7 +1081,7 @@ export const GetXpatWorkPermitResponse = zod.object({
   isoAlpha3CountryCode: zod.string().nullish(),
   contactNumber: zod.string().nullish(),
   occupationName: zod.string().nullish(),
-  isValid: zod.boolean().nullish(),
+  isValid: zod.string().nullish(),
   workPermitStateName: zod.string().nullish(),
   workPermitIssuedDate: zod.string().nullish(),
   workPermitExpiry: zod.string().nullish(),

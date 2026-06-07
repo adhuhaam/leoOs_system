@@ -13,23 +13,9 @@ import { ArrowLeft, ExternalLink, UserCircle2, ShieldCheck, ShieldX } from "luci
 
 const XPAT_15_MIN = 15 * 60 * 1000;
 
-function parseXpatPhotoParams(photoUrl: string | null | undefined): { photoId: string; serviceId: string } | null {
-  if (!photoUrl) return null;
-  try {
-    const url = new URL(photoUrl, "https://mobile-xpat.egov.mv");
-    const photoId = url.searchParams.get("photoId");
-    const serviceId = url.searchParams.get("serviceId");
-    if (!photoId || !serviceId) return null;
-    return { photoId, serviceId };
-  } catch {
-    return null;
-  }
-}
-
 function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
-  const p = parseXpatPhotoParams(photoUrl);
-  if (!p) return null;
-  return `/api/xpat/photo?photoId=${encodeURIComponent(p.photoId)}&serviceId=${encodeURIComponent(p.serviceId)}`;
+  if (!photoUrl) return null;
+  return `/api/xpat/photo?photoUrl=${encodeURIComponent(photoUrl)}`;
 }
 
 function formatXpatDate(raw: string | null | undefined): string | null {
@@ -39,9 +25,16 @@ function formatXpatDate(raw: string | null | undefined): string | null {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function isWpValid(v: string | null | undefined) {
+  return v != null && v.toLowerCase() === "valid";
+}
+function isWpInvalid(v: string | null | undefined) {
+  return v != null && v.toLowerCase() !== "valid";
+}
+
 function wpStatusBadge(xpat: XpatWorkPermit | undefined) {
   if (!xpat) return null;
-  if (xpat.isValid === true) {
+  if (isWpValid(xpat.isValid)) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-1 rounded">
         <ShieldCheck className="h-3.5 w-3.5" />
@@ -49,7 +42,7 @@ function wpStatusBadge(xpat: XpatWorkPermit | undefined) {
       </span>
     );
   }
-  if (xpat.isValid === false) {
+  if (isWpInvalid(xpat.isValid)) {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-1 rounded">
         <ShieldX className="h-3.5 w-3.5" />

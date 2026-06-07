@@ -41,25 +41,35 @@ router.get("/xpat/work-permit", requireAuth, async (req, res): Promise<void> => 
   res.json(data);
 });
 
+/** Allowed host and path prefix for Xpat photo URLs — prevents SSRF. */
+const XPAT_PHOTO_HOST = "mobile-xpat.egov.mv";
+const XPAT_PHOTO_PATH = "/api/v1/WorkPermit/GetImage";
+
 /**
- * GET /xpat/photo?photoId=<id>&serviceId=<id>
- * Proxies the employee photo (JPEG) from the Xpat GetImage endpoint.
- * Accepts only the two opaque IDs (not a caller-supplied URL) so the
- * backend constructs the target URL itself — eliminating any SSRF risk.
- * Both params are validated to contain only safe word characters.
+ * GET /xpat/photo?photoUrl=<encoded-xpat-url>
+ * Proxies the employee photo (JPEG) from the Xpat API.
+ * Accepts the full photoUrl returned by the work-permit endpoint and
+ * validates it is from the known Xpat host before forwarding, so the
+ * API key is never sent to an attacker-controlled domain (no SSRF risk).
  */
 router.get("/xpat/photo", requireAuth, async (req, res): Promise<void> => {
-  const { photoId, serviceId } = req.query;
-  if (!photoId || !serviceId || typeof photoId !== "string" || typeof serviceId !== "string") {
-    res.status(400).json({ error: "photoId and serviceId are required" });
+  const { photoUrl } = req.query;
+  if (!photoUrl || typeof photoUrl !== "string") {
+    res.status(400).json({ error: "photoUrl is required" });
     return;
   }
-  // Allow only alphanumeric / dash / underscore to prevent injection.
-  if (!/^[\w-]+$/.test(photoId) || !/^[\w-]+$/.test(serviceId)) {
-    res.status(400).json({ error: "Invalid photoId or serviceId" });
+  let parsed: URL;
+  try {
+    parsed = new URL(photoUrl);
+  } catch {
+    res.status(400).json({ error: "Invalid photoUrl" });
     return;
   }
-  const url = `${XPAT_BASE}/WorkPermit/GetImage?photoId=${encodeURIComponent(photoId)}&serviceId=${encodeURIComponent(serviceId)}`;
+  if (parsed.hostname !== XPAT_PHOTO_HOST || !parsed.pathname.startsWith(XPAT_PHOTO_PATH)) {
+    res.status(400).json({ error: "photoUrl host or path not allowed" });
+    return;
+  }
+  const url = photoUrl; // validated above
   let upstream: Response;
   try {
     upstream = await fetch(url, {
