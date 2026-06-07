@@ -198,44 +198,50 @@ function PassportRow({
         )}
       </TableCell>
 
-      {/* Name / Passport # */}
+      {/* Candidate — name, numbers, company/allocation, WP status/expiry */}
       <TableCell>
+        {/* Name */}
         <p className="font-medium uppercase text-sm leading-tight">{passport.fullName || "—"}</p>
-        <p className="font-mono text-[11px] text-muted-foreground">{passport.passportNumber || "—"}</p>
-        {wp && <p className="font-mono text-[10px] text-muted-foreground/70">{wp}</p>}
-      </TableCell>
 
-      {/* Company / Client */}
-      <TableCell className="hidden md:table-cell">
-        <p className="text-sm truncate max-w-[140px]">{companyName || <span className="text-muted-foreground italic text-xs">No company</span>}</p>
-        {passport.clientName ? (
-          <p className="text-xs text-muted-foreground truncate max-w-[140px]">{passport.clientName}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Unallocated</p>
-        )}
-      </TableCell>
+        {/* Passport # + WP # */}
+        <p className="font-mono text-[11px] text-muted-foreground leading-tight">
+          {passport.passportNumber || "—"}
+          {wp && <span className="text-muted-foreground/60"> · {wp}</span>}
+        </p>
 
-      {/* Xpat: Status + Expiry */}
-      <TableCell className="hidden lg:table-cell">
-        {!hasXpat ? (
-          <span className="text-[11px] text-muted-foreground">—</span>
-        ) : xpatLoading ? (
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-        ) : xpat ? (
-          <div className="space-y-1">
-            <WpStatusBadge xpat={xpat} />
-            {xpat.workPermitExpiry && (
-              <p className="text-[10px] text-muted-foreground">
-                Exp: {formatXpatDate(xpat.workPermitExpiry)}
-              </p>
-            )}
-          </div>
-        ) : (
-          <span className="text-[11px] text-muted-foreground">—</span>
-        )}
+        {/* Company → Client (from passport table, always instant) */}
+        <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+          {companyName
+            ? <span className="font-medium text-foreground/80">{companyName}</span>
+            : <span className="italic">No company</span>}
+          {" → "}
+          {passport.clientName
+            ? <span>{passport.clientName}</span>
+            : <span className="italic">Unallocated</span>}
+        </p>
+
+        {/* WP Status + Expiry (from Xpat API — brief skeleton on first load) */}
+        <div className="mt-1">
+          {!hasXpat ? (
+            <span className="text-[10px] text-muted-foreground">No WP# — Xpat data unavailable</span>
+          ) : xpatLoading ? (
+            <div className="flex gap-1.5 items-center">
+              <Skeleton className="h-3.5 w-14 rounded" />
+              <Skeleton className="h-3 w-16 rounded" />
+            </div>
+          ) : xpat ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <WpStatusBadge xpat={xpat} />
+              {xpat.workPermitExpiry && (
+                <span className="text-[10px] text-muted-foreground">
+                  Exp: <span className="font-medium text-foreground/80">{formatXpatDate(xpat.workPermitExpiry)}</span>
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">—</span>
+          )}
+        </div>
       </TableCell>
 
       {/* OCR Status */}
@@ -495,17 +501,15 @@ export default function MasterListPage() {
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead>Candidate</TableHead>
-                  <TableHead className="hidden md:table-cell">Company / Client</TableHead>
-                  <TableHead className="hidden lg:table-cell">WP Status</TableHead>
                   <TableHead>OCR</TableHead>
-                  <TableHead className="w-[120px] text-right">Actions</TableHead>
+                  <TableHead className="w-[100px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 4 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-5 w-20 bg-muted animate-pulse rounded" />
                         </TableCell>
@@ -514,7 +518,7 @@ export default function MasterListPage() {
                   ))
                 ) : filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                       {passports.length === 0
                         ? "No candidates yet — upload a passport from the Process Document page."
                         : "No candidates match your filters."}
