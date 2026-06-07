@@ -80,7 +80,7 @@ function formatXpatDate(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 // Maps stored demonyms (e.g. "bangladeshi") to the canonical country key.
@@ -173,27 +173,33 @@ function PassportRow({
     <TableRow data-testid={`row-master-${passport.id}`}>
       {/* Photo */}
       <TableCell className="w-12 pr-2">
-        {hasXpat && xpatLoading ? (
+        {!hasXpat ? (
+          /* No WP# — show dash placeholder */
+          <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center">
+            <span className="text-[11px] font-medium text-muted-foreground">—</span>
+          </div>
+        ) : xpatLoading ? (
           <Skeleton className="h-9 w-9 rounded-full" />
         ) : photoSrc ? (
-          <img
-            src={photoSrc}
-            alt={passport.fullName ?? ""}
-            className="h-9 w-9 rounded-full object-cover border"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = "none";
-              target.nextElementSibling?.classList.remove("hidden");
-            }}
-          />
+          <>
+            <img
+              src={photoSrc}
+              alt={passport.fullName ?? ""}
+              className="h-9 w-9 rounded-full object-cover border"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                (target.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
+              }}
+            />
+            {/* Fallback shown by onError above */}
+            <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center hidden">
+              <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
+            </div>
+          </>
         ) : (
+          /* WP# present but API returned no photo */
           <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center">
-            <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
-          </div>
-        )}
-        {/* Fallback shown by onError above */}
-        {photoSrc && (
-          <div className="h-9 w-9 rounded-full bg-muted border flex items-center justify-center hidden">
             <span className="text-[10px] font-bold text-muted-foreground">{initials}</span>
           </div>
         )}
@@ -218,7 +224,9 @@ function PassportRow({
 
       {/* Xpat: Status + Expiry */}
       <TableCell className="hidden lg:table-cell">
-        {hasXpat && xpatLoading ? (
+        {!hasXpat ? (
+          <span className="text-[11px] text-muted-foreground">—</span>
+        ) : xpatLoading ? (
           <div className="space-y-1">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-3 w-20" />
@@ -232,10 +240,8 @@ function PassportRow({
               </p>
             )}
           </div>
-        ) : hasXpat ? (
-          <span className="text-[10px] text-muted-foreground">—</span>
         ) : (
-          <span className="text-[10px] text-muted-foreground italic">No WP data</span>
+          <span className="text-[11px] text-muted-foreground">—</span>
         )}
       </TableCell>
 
@@ -704,78 +710,95 @@ function EditCandidateDialog({
           <DialogDescription>Update passport details, company, employment terms, and allocation.</DialogDescription>
         </DialogHeader>
 
-        {/* Xpat photo + status banner */}
-        {hasXpat && (
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 border">
-            {xpatLoading ? (
-              <>
-                <Skeleton className="h-14 w-14 rounded-full flex-shrink-0" />
-                <div className="space-y-1.5 flex-1">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </>
-            ) : (
-              <>
-                {photoSrc ? (
-                  <img
-                    src={photoSrc}
-                    alt={passport.fullName ?? ""}
-                    className="h-14 w-14 rounded-full object-cover border-2 border-background shadow flex-shrink-0"
-                    onError={(e) => {
-                      const t = e.target as HTMLImageElement;
-                      t.style.display = "none";
-                    }}
-                  />
+        {/* Xpat photo + status banner — always shown */}
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 border">
+          {!hasXpat ? (
+            /* No work permit number on record */
+            <>
+              <div className="h-14 w-14 rounded-full bg-muted border-2 flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-medium text-muted-foreground">—</span>
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                <p className="text-[11px] text-muted-foreground">
+                  No work permit number on record — add one above to load Xpat immigration data.
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  WP Status: <span className="font-medium">—</span> · Expiry: <span className="font-medium">—</span>
+                </p>
+              </div>
+            </>
+          ) : xpatLoading ? (
+            <>
+              <Skeleton className="h-14 w-14 rounded-full flex-shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </>
+          ) : (
+            <>
+              {photoSrc ? (
+                <img
+                  src={photoSrc}
+                  alt={passport.fullName ?? ""}
+                  className="h-14 w-14 rounded-full object-cover border-2 border-background shadow flex-shrink-0"
+                  onError={(e) => {
+                    const t = e.target as HTMLImageElement;
+                    t.style.display = "none";
+                    (t.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
+                  }}
+                />
+              ) : null}
+              {/* Fallback when photo fails or no photoUrl */}
+              <div className={`h-14 w-14 rounded-full bg-background border-2 flex items-center justify-center flex-shrink-0 ${photoSrc ? "hidden" : ""}`}>
+                <span className="text-sm font-bold text-muted-foreground">{initials}</span>
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                {xpat ? (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {xpat.isValid === true && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded">
+                          <ShieldCheck className="h-3 w-3" /> {xpat.workPermitStateName ?? "Valid"}
+                        </span>
+                      )}
+                      {xpat.isValid === false && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded">
+                          <ShieldX className="h-3 w-3" /> {xpat.workPermitStateName ?? "Invalid"}
+                        </span>
+                      )}
+                      {xpat.isValid == null && xpat.workPermitStateName && (
+                        <span className="text-[11px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                          {xpat.workPermitStateName}
+                        </span>
+                      )}
+                      {xpat.workPermitExpiry && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Expires: <span className="font-medium text-foreground">{formatXpatDate(xpat.workPermitExpiry)}</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {xpat.occupationName ?? "—"} · {xpat.employerName ?? "—"}
+                    </p>
+                  </>
                 ) : (
-                  <div className="h-14 w-14 rounded-full bg-background border-2 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-muted-foreground">{initials}</span>
-                  </div>
+                  <>
+                    <p className="text-[11px] text-muted-foreground">WP Status: <span className="font-medium">—</span></p>
+                    <p className="text-[11px] text-muted-foreground">Expiry: <span className="font-medium">—</span></p>
+                  </>
                 )}
-                <div className="flex-1 space-y-1 min-w-0">
-                  {xpat ? (
-                    <>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {xpat.isValid === true && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded">
-                            <ShieldCheck className="h-3 w-3" /> {xpat.workPermitStateName ?? "Valid"}
-                          </span>
-                        )}
-                        {xpat.isValid === false && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 rounded">
-                            <ShieldX className="h-3 w-3" /> {xpat.workPermitStateName ?? "Invalid"}
-                          </span>
-                        )}
-                        {xpat.isValid == null && xpat.workPermitStateName && (
-                          <span className="text-[11px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                            {xpat.workPermitStateName}
-                          </span>
-                        )}
-                        {xpat.workPermitExpiry && (
-                          <span className="text-[11px] text-muted-foreground">
-                            Expires: <span className="font-medium text-foreground">{formatXpatDate(xpat.workPermitExpiry)}</span>
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {xpat.occupationName ?? "—"} · {xpat.employerName ?? "—"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">No Xpat data available</p>
-                  )}
-                </div>
-                {xpat?.verifyUrl && (
-                  <a href={xpat.verifyUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </a>
-                )}
-              </>
-            )}
-          </div>
-        )}
+              </div>
+              {xpat?.verifyUrl && (
+                <a href={xpat.verifyUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </a>
+              )}
+            </>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Passport details */}

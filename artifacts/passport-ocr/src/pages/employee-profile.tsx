@@ -36,7 +36,7 @@ function formatXpatDate(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function wpStatusBadge(xpat: XpatWorkPermit | undefined) {
@@ -121,14 +121,14 @@ function XpatSection({
           <Field label="Middle Name" value={xpat.middleName} />
           <Field label="Last Name" value={xpat.lastName} />
           <Field label="Gender" value={xpat.gender} />
-          <Field label="Date of Birth" value={xpat.dateOfBirth} />
+          <Field label="Date of Birth" value={formatXpatDate(xpat.dateOfBirth)} />
           <Field label="Nationality" value={xpat.nationality} />
           <Field label="ISO Country Code" value={xpat.isoAlpha3CountryCode} />
           <Field label="Contact Number" value={xpat.contactNumber} />
           <Field label="Occupation" value={xpat.occupationName} />
           <Field label="WP Status" value={xpat.workPermitStateName} />
-          <Field label="WP Issued Date" value={xpat.workPermitIssuedDate} />
-          <Field label="WP Expiry" value={xpat.workPermitExpiry} />
+          <Field label="WP Issued Date" value={formatXpatDate(xpat.workPermitIssuedDate)} />
+          <Field label="WP Expiry" value={formatXpatDate(xpat.workPermitExpiry)} />
           <Field label="Employer Name" value={xpat.employerName} />
           <Field label="Employer Number" value={xpat.employerNumber} />
           <Field label="Employer Contact" value={xpat.employerContactNumber} />
@@ -223,22 +223,34 @@ export default function EmployeeProfilePage() {
           <div className="flex flex-col sm:flex-row gap-6 items-start">
             {/* Avatar */}
             <div className="flex-shrink-0">
-              {photoSrc ? (
-                <img
-                  src={photoSrc}
-                  alt={passport.fullName ?? "Employee"}
-                  className="h-28 w-28 rounded-full object-cover border-4 border-background shadow-md"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              ) : (
+              {!hasXpat ? (
+                /* No WP# — show dash placeholder */
                 <div className="h-28 w-28 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-md">
-                  {xpatLoading && hasXpat ? (
-                    <Skeleton className="h-full w-full rounded-full" />
-                  ) : (
+                  <span className="text-3xl font-light text-muted-foreground">—</span>
+                </div>
+              ) : xpatLoading ? (
+                <Skeleton className="h-28 w-28 rounded-full" />
+              ) : photoSrc ? (
+                <>
+                  <img
+                    src={photoSrc}
+                    alt={passport.fullName ?? "Employee"}
+                    className="h-28 w-28 rounded-full object-cover border-4 border-background shadow-md"
+                    onError={(e) => {
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = "none";
+                      (t.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
+                    }}
+                  />
+                  {/* Fallback shown by onError above */}
+                  <div className="h-28 w-28 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-md hidden">
                     <span className="text-2xl font-bold text-muted-foreground">{initials}</span>
-                  )}
+                  </div>
+                </>
+              ) : (
+                /* WP# present but API returned no photo */
+                <div className="h-28 w-28 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-md">
+                  <span className="text-2xl font-bold text-muted-foreground">{initials}</span>
                 </div>
               )}
             </div>
@@ -327,10 +339,21 @@ export default function EmployeeProfilePage() {
 
       {!hasXpat && (
         <Card>
-          <CardContent className="pt-5">
+          <CardContent className="pt-5 space-y-4">
             <SectionHeader title="Xpat / Immigration Information" />
-            <p className="text-sm text-muted-foreground">
-              No work permit data available — set both the Passport Number and Work Permit Number to enable Xpat lookup.
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                "First Name", "Middle Name", "Last Name",
+                "Gender", "Date of Birth", "Nationality",
+                "ISO Country Code", "Contact Number", "Occupation",
+                "WP Status", "WP Issued Date", "WP Expiry",
+                "Employer Name", "Employer Number", "Employer Contact",
+              ].map((label) => (
+                <Field key={label} label={label} value={null} />
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground italic pt-1">
+              Add a Work Permit Number to this record to load live Xpat data.
             </p>
           </CardContent>
         </Card>
