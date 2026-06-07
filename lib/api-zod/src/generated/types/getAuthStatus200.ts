@@ -8,4 +8,8 @@
 
 export type GetAuthStatus200 = {
   authenticated: boolean;
+  userId?: number | null;
+  email?: string | null;
+  name?: string | null;
+  role?: string | null;
 };

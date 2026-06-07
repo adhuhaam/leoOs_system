@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminUser";
+export * from "./adminUserUpdate";
 export * from "./billingDocument";
 export * from "./billingDocumentCreated";
 export * from "./billingDocumentInput";
@@ -31,6 +33,8 @@ export * from "./expenseUpdate";
 export * from "./extensionToken";
 export * from "./getAuthStatus200";
 export * from "./getXpatWorkPermitParams";
+export * from "./googleAuthInput";
+export * from "./googleClientIds";
 export * from "./healthStatus";
 export * from "./listBillingDocumentsKind";
 export * from "./listBillingDocumentsParams";
@@ -60,6 +64,7 @@ export * from "./passwordInput";
 export * from "./passwordUpdate";
 export * from "./pushTokenInput";
 export * from "./pushTokenInputPlatform";
+export * from "./registerInput";
 export * from "./systemSettings";
 export * from "./systemSettingsInput";
 export * from "./task";

@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LoginInput {
+export interface RegisterInput {
   /** @minLength 1 */
   email: string;
-  /** @minLength 1 */
+  /** @minLength 6 */
   password: string;
+  /** @minLength 1 */
+  name: string;
 }

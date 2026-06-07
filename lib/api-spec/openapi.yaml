@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: auth
     description: Authentication
+  - name: admin
+    description: Admin user management (superuser + admin only)
   - name: passports
     description: Passport extraction operations
   - name: companies
@@ -51,7 +53,7 @@ paths:
     get:
       operationId: getAuthStatus
       tags: [auth]
-      summary: Returns current auth status
+      summary: Returns current auth status and user info
       responses:
         "200":
           description: Auth status
@@ -63,12 +65,41 @@ paths:
                 properties:
                   authenticated:
                     type: boolean
+                  userId:
+                    type: integer
+                    nullable: true
+                  email:
+                    type: string
+                    nullable: true
+                  name:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    nullable: true
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create a new account (pending admin approval)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "202":
+          description: Account created, pending approval
+        "409":
+          description: Email already registered
 
   /auth/login:
     post:
       operationId: login
       tags: [auth]
-      summary: Log in with the shared password
+      summary: Log in with email and password
       requestBody:
         required: true
         content:
@@ -89,6 +120,25 @@ paths:
       responses:
         "204":
           description: Logged out
+
+  /auth/google:
+    post:
+      operationId: googleAuth
+      tags: [auth]
+      summary: Authenticate with a Google ID token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoogleAuthInput"
+      responses:
+        "204":
+          description: Logged in
+        "401":
+          description: Invalid token or email not registered
+        "403":
+          description: Account pending approval
 
   /auth/change-password:
     post:
@@ -138,6 +188,80 @@ paths:
                 $ref: "#/components/schemas/ExtensionToken"
         "401":
           description: Authentication required
+
+  /settings/google-client-ids:
+    get:
+      operationId: getGoogleClientIds
+      tags: [auth]
+      summary: Get public Google OAuth client IDs (no secret)
+      responses:
+        "200":
+          description: Google client IDs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleClientIds"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users (superuser + admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+
+  /admin/users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Update a user (role, isApproved, name, password reset)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "404":
+          description: User not found
+    delete:
+      operationId: deleteUser
+      tags: [admin]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: User not found
 
   /system/settings:
     get:
@@ -1164,10 +1288,90 @@ components:
         token:
           type: string
 
+    GoogleClientIds:
+      type: object
+      required: []
+      properties:
+        googleClientId:
+          type: string
+          nullable: true
+        googleClientIdIos:
+          type: string
+          nullable: true
+
+    AdminUser:
+      type: object
+      required: [id, email, name, role, isApproved, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        isApproved:
+          type: boolean
+        linkedEntityId:
+          type: string
+          nullable: true
+        hasPassword:
+          type: boolean
+        hasGoogleId:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminUserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        role:
+          type: string
+        isApproved:
+          type: boolean
+        linkedEntityId:
+          type: string
+          nullable: true
+        newPassword:
+          type: string
+          minLength: 6
+          nullable: true
+
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+          minLength: 1
+
+    GoogleAuthInput:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+
     LoginInput:
       type: object
-      required: [password]
+      required: [email, password]
       properties:
+        email:
+          type: string
+          minLength: 1
         password:
           type: string
           minLength: 1
@@ -1186,7 +1390,7 @@ components:
 
     SystemSettings:
       type: object
-      required: [appName, accentHue, hasCustomPassword, hasOpenAiApiKey]
+      required: [appName, accentHue, hasCustomPassword, hasOpenAiApiKey, hasGoogleSignIn]
       properties:
         appName:
           type: string
@@ -1222,6 +1426,9 @@ components:
         hasOpenAiApiKey:
           type: boolean
           description: True if a user-supplied OpenAI API key is stored in the database.
+        hasGoogleSignIn:
+          type: boolean
+          description: True if Google OAuth client ID is configured.
 
     SystemSettingsInput:
       type: object

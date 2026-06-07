@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,36 +14,80 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { useGetGoogleClientIds } from "@workspace/api-client-react";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen() {
   const colors = useColors();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const passwordRef = useRef<TextInput>(null);
 
+  const { data: googleIds } = useGetGoogleClientIds();
+  const googleClientId = googleIds?.googleClientId ?? undefined;
+  const googleClientIdIos = googleIds?.googleClientIdIos ?? undefined;
+  const hasGoogleSignIn = Boolean(googleClientId);
+
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    androidClientId: googleClientId,
+    iosClientId: googleClientIdIos ?? googleClientId,
+    webClientId: googleClientId,
+  });
+
+  const handledResponseRef = useRef<unknown>(null);
+
+  useEffect(() => {
+    if (!googleResponse || googleResponse === handledResponseRef.current) return;
+    handledResponseRef.current = googleResponse;
+
+    if (googleResponse.type === "success") {
+      const idToken = googleResponse.authentication?.idToken;
+      if (!idToken) {
+        Alert.alert("Google Sign-In failed", "Could not retrieve identity token. Please try again.");
+        return;
+      }
+      setGoogleSubmitting(true);
+      loginWithGoogle(idToken)
+        .then(() => router.replace("/"))
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : "Google sign-in failed.";
+          Alert.alert("Sign in failed", msg);
+        })
+        .finally(() => setGoogleSubmitting(false));
+    } else if (googleResponse.type === "error") {
+      Alert.alert("Google Sign-In error", googleResponse.error?.message ?? "Unknown error");
+    }
+  }, [googleResponse]);
+
   async function onSubmit() {
-    if (!password.trim() || submitting) return;
+    if (!email.trim() || !password.trim() || submitting) return;
     setSubmitting(true);
     try {
-      await login(password.trim());
+      await login(email.trim(), password.trim());
       router.replace("/");
     } catch (err) {
-      Alert.alert(
-        "Sign in failed",
-        err instanceof Error ? err.message : "Invalid credentials.",
-      );
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) {
+        Alert.alert("Account pending approval", "Your account has not been approved yet. Please contact an admin.");
+      } else {
+        Alert.alert("Sign in failed", err instanceof Error ? err.message : "Invalid credentials.");
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
-  const canSubmit = password.trim().length > 0 && !submitting;
+  const canSubmit = email.trim().length > 0 && password.trim().length > 0 && !submitting;
 
   return (
     <SafeAreaView
@@ -64,9 +108,7 @@ export default function LoginScreen() {
             <View style={[styles.logoWrap, { backgroundColor: colors.primary }]}>
               <Feather name="shield" size={30} color={colors.primaryForeground} />
             </View>
-            <Text style={[styles.wordmark, { color: colors.foreground }]}>
-              LEO OS
-            </Text>
+            <Text style={[styles.wordmark, { color: colors.foreground }]}>LEO OS</Text>
             <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
               Sign in to your account
             </Text>
@@ -76,14 +118,9 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Email */}
             <View style={styles.fieldWrap}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                Email
-              </Text>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>EMAIL</Text>
               <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
                 <Feather name="mail" size={17} color={colors.mutedForeground} />
                 <TextInput
@@ -103,14 +140,9 @@ export default function LoginScreen() {
 
             {/* Password */}
             <View style={styles.fieldWrap}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                Password
-              </Text>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>PASSWORD</Text>
               <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
                 <Feather name="lock" size={17} color={colors.mutedForeground} />
                 <TextInput
@@ -160,32 +192,39 @@ export default function LoginScreen() {
             {/* Divider */}
             <View style={styles.divider}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>
-                or
-              </Text>
+              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
-            {/* Google button (placeholder — wired in RBAC task) */}
+            {/* Google Sign-In button */}
             <Pressable
+              onPress={() => {
+                if (!hasGoogleSignIn || !googleRequest) {
+                  Alert.alert(
+                    "Not configured",
+                    "Google Sign-In has not been set up by your admin.",
+                  );
+                  return;
+                }
+                googlePromptAsync();
+              }}
+              disabled={googleSubmitting}
               style={({ pressed }) => [
                 styles.googleBtn,
                 {
                   backgroundColor: colors.card,
                   borderColor: colors.border,
-                  opacity: pressed ? 0.82 : 1,
+                  opacity: googleSubmitting ? 0.5 : pressed ? 0.82 : 1,
                 },
               ]}
-              onPress={() =>
-                Alert.alert(
-                  "Coming soon",
-                  "Google Sign-In will be available once roles are configured by your admin.",
-                )
-              }
             >
-              <Text style={[styles.googleBtnText, { color: colors.foreground }]}>
-                Continue with Google
-              </Text>
+              {googleSubmitting ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : (
+                <Text style={[styles.googleBtnText, { color: colors.foreground }]}>
+                  Continue with Google
+                </Text>
+              )}
             </Pressable>
           </View>
 
@@ -195,9 +234,7 @@ export default function LoginScreen() {
               Don't have an account?{" "}
             </Text>
             <Pressable onPress={() => router.push("/signup")}>
-              <Text style={[styles.footerLink, { color: colors.foreground }]}>
-                Create account
-              </Text>
+              <Text style={[styles.footerLink, { color: colors.foreground }]}>Create account</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -235,19 +272,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    padding: 0,
-  },
+  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", padding: 0 },
 
-  primaryBtn: {
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
+  primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 4 },
   primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
 
   divider: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -265,7 +292,12 @@ const styles = StyleSheet.create({
   },
   googleBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 28, flexWrap: "wrap" },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 28,
+    flexWrap: "wrap",
+  },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_700Bold" },
 });

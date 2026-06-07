@@ -32,8 +32,17 @@ const TOOL_ITEMS: Item[] = [
 export default function MoreScreen() {
   const colors = useColors();
   const qc = useQueryClient();
-  const { refresh } = useAuth();
+  const { refresh, user } = useAuth();
   const logoutMutation = useLogout();
+
+  const role = user?.role ?? null;
+  const isAdmin = role === "superuser" || role === "admin";
+  const isSuperuser = role === "superuser";
+
+  const ADMIN_ITEMS: Item[] = [
+    ...(isAdmin ? [{ icon: "users" as const, label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" }] : []),
+    ...(isSuperuser ? [{ icon: "settings" as const, label: "System Settings", detail: "Configure Google OAuth & more", route: "/admin/system-settings" }] : []),
+  ];
 
   function handleLogout() {
     Alert.alert("Sign out?", "You will return to the login screen.", [
@@ -55,6 +64,34 @@ export default function MoreScreen() {
     ]);
   }
 
+  function ItemRow({ item, idx, total }: { item: Item; idx: number; total: number }) {
+    return (
+      <Pressable
+        key={item.label}
+        onPress={() => item.route && router.push(item.route as never)}
+        style={({ pressed }) => [
+          styles.row,
+          {
+            borderTopColor: colors.border,
+            borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
+            opacity: pressed ? 0.82 : 1,
+          },
+        ]}
+      >
+        <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
+          <Feather name={item.icon} size={18} color={colors.foreground} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowLabel, { color: colors.foreground }]}>{item.label}</Text>
+          {item.detail && (
+            <Text style={[styles.rowDetail, { color: colors.mutedForeground }]}>{item.detail}</Text>
+          )}
+        </View>
+        <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+      </Pressable>
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -66,11 +103,7 @@ export default function MoreScreen() {
         onPress={() => router.push("/profile")}
         style={({ pressed }) => [
           styles.profileCard,
-          {
-            backgroundColor: colors.card,
-            opacity: pressed ? 0.85 : 1,
-            shadowColor: "#000",
-          },
+          { backgroundColor: colors.card, opacity: pressed ? 0.85 : 1, shadowColor: "#000" },
         ]}
       >
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
@@ -78,10 +111,10 @@ export default function MoreScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.profileName, { color: colors.foreground }]}>
-            My Profile
+            {user?.name ?? "My Profile"}
           </Text>
           <Text style={[styles.profileSub, { color: colors.mutedForeground }]}>
-            View profile & change password
+            {user?.email ?? "View profile & change password"}
           </Text>
         </View>
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
@@ -89,46 +122,27 @@ export default function MoreScreen() {
 
       {/* Tools group */}
       <View style={styles.groupHeader}>
-        <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>
-          TOOLS
-        </Text>
+        <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>TOOLS</Text>
       </View>
-      <View
-        style={[
-          styles.group,
-          { backgroundColor: colors.card, shadowColor: "#000" },
-        ]}
-      >
+      <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
         {TOOL_ITEMS.map((item, idx) => (
-          <Pressable
-            key={item.label}
-            onPress={() => item.route && router.push(item.route as never)}
-            style={({ pressed }) => [
-              styles.row,
-              {
-                borderTopColor: colors.border,
-                borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
-                opacity: pressed ? 0.82 : 1,
-              },
-            ]}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-              <Feather name={item.icon} size={18} color={colors.foreground} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowLabel, { color: colors.foreground }]}>
-                {item.label}
-              </Text>
-              {item.detail && (
-                <Text style={[styles.rowDetail, { color: colors.mutedForeground }]}>
-                  {item.detail}
-                </Text>
-              )}
-            </View>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-          </Pressable>
+          <ItemRow key={item.label} item={item} idx={idx} total={TOOL_ITEMS.length} />
         ))}
       </View>
+
+      {/* Admin group (superuser + admin only) */}
+      {ADMIN_ITEMS.length > 0 && (
+        <>
+          <View style={styles.groupHeader}>
+            <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>ADMIN</Text>
+          </View>
+          <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+            {ADMIN_ITEMS.map((item, idx) => (
+              <ItemRow key={item.label} item={item} idx={idx} total={ADMIN_ITEMS.length} />
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Sign out */}
       <Pressable
@@ -145,14 +159,10 @@ export default function MoreScreen() {
         ]}
       >
         <Feather name="log-out" size={17} color={colors.destructive} />
-        <Text style={[styles.logoutText, { color: colors.destructive }]}>
-          Sign out
-        </Text>
+        <Text style={[styles.logoutText, { color: colors.destructive }]}>Sign out</Text>
       </Pressable>
 
-      <Text style={[styles.version, { color: colors.mutedForeground }]}>
-        LEO OS · v1.0
-      </Text>
+      <Text style={[styles.version, { color: colors.mutedForeground }]}>LEO OS · v1.0</Text>
     </ScrollView>
   );
 }
@@ -226,5 +236,10 @@ const styles = StyleSheet.create({
   },
   logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 
-  version: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 8 },
+  version: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    marginTop: 8,
+  },
 });

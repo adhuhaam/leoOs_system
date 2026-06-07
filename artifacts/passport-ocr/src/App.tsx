@@ -19,6 +19,7 @@ import BillingPrintPage from "@/pages/billing-print";
 import PasswordsPage from "@/pages/passwords";
 import SettingsPage from "@/pages/settings";
 import EmployeeProfilePage from "@/pages/employee-profile";
+import UsersPage from "@/pages/users";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ function Router() {
               <Route path="/billing" component={BillingPage} />
               <Route path="/passwords" component={PasswordsPage} />
               <Route path="/settings" component={SettingsPage} />
+              <Route path="/users" component={UsersPage} />
               <Route component={NotFound} />
             </Switch>
           </AppLayout>

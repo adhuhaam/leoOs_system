@@ -16,18 +16,43 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Returns current auth status
+ * @summary Returns current auth status and user info
  */
 export const GetAuthStatusResponse = zod.object({
   authenticated: zod.boolean(),
+  userId: zod.number().nullish(),
+  email: zod.string().nullish(),
+  name: zod.string().nullish(),
+  role: zod.string().nullish(),
 });
 
 /**
- * @summary Log in with the shared password
+ * @summary Create a new account (pending admin approval)
+ */
+
+export const registerBodyPasswordMin = 6;
+
+export const RegisterBody = zod.object({
+  email: zod.string().email().min(1),
+  password: zod.string().min(registerBodyPasswordMin),
+  name: zod.string().min(1),
+});
+
+/**
+ * @summary Log in with email and password
  */
 
 export const LoginBody = zod.object({
+  email: zod.string().min(1),
   password: zod.string().min(1),
+});
+
+/**
+ * @summary Authenticate with a Google ID token
+ */
+
+export const GoogleAuthBody = zod.object({
+  idToken: zod.string().min(1),
 });
 
 /**
@@ -57,6 +82,66 @@ export const GetExtensionTokenResponse = zod.object({
  */
 export const RegenerateExtensionTokenResponse = zod.object({
   token: zod.string(),
+});
+
+/**
+ * @summary Get public Google OAuth client IDs (no secret)
+ */
+export const GetGoogleClientIdsResponse = zod.object({
+  googleClientId: zod.string().nullish(),
+  googleClientIdIos: zod.string().nullish(),
+});
+
+/**
+ * @summary List all users (superuser + admin only)
+ */
+export const ListUsersResponseItem = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  role: zod.string(),
+  isApproved: zod.boolean(),
+  linkedEntityId: zod.string().nullish(),
+  hasPassword: zod.boolean().optional(),
+  hasGoogleId: zod.boolean().optional(),
+  createdAt: zod.coerce.date(),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Update a user (role, isApproved, name, password reset)
+ */
+export const UpdateUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateUserBodyNewPasswordMin = 6;
+
+export const UpdateUserBody = zod.object({
+  name: zod.string().min(1).optional(),
+  role: zod.string().optional(),
+  isApproved: zod.boolean().optional(),
+  linkedEntityId: zod.string().nullish(),
+  newPassword: zod.string().min(updateUserBodyNewPasswordMin).nullish(),
+});
+
+export const UpdateUserResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  role: zod.string(),
+  isApproved: zod.boolean(),
+  linkedEntityId: zod.string().nullish(),
+  hasPassword: zod.boolean().optional(),
+  hasGoogleId: zod.boolean().optional(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a user
+ */
+export const DeleteUserParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**

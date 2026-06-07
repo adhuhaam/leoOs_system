@@ -2,11 +2,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   getGetAuthStatusQueryKey,
   useGetAuthStatus,
+  useGoogleAuth,
   useLogin,
+  useRegister,
 } from "@workspace/api-client-react";
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 
 export type AuthUser = {
+  id: number | null;
   name: string | null;
   email: string | null;
   role: string | null;
@@ -16,7 +19,9 @@ type AuthContextValue = {
   isLoading: boolean;
   isAuthed: boolean;
   user: AuthUser | null;
-  login: (password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -33,14 +38,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const loginMutation = useLogin();
+  const registerMutation = useRegister();
+  const googleAuthMutation = useGoogleAuth();
 
   const login = useCallback(
-    async (password: string) => {
-      await loginMutation.mutateAsync({ data: { password } });
+    async (email: string, password: string) => {
+      await loginMutation.mutateAsync({ data: { email, password } });
       await qc.invalidateQueries();
       await refetch();
     },
     [loginMutation, qc, refetch],
+  );
+
+  const register = useCallback(
+    async (email: string, password: string, name: string) => {
+      await registerMutation.mutateAsync({ data: { email, password, name } });
+    },
+    [registerMutation],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      await googleAuthMutation.mutateAsync({ data: { idToken } });
+      await qc.invalidateQueries();
+      await refetch();
+    },
+    [googleAuthMutation, qc, refetch],
   );
 
   const refresh = useCallback(async () => {
@@ -51,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const raw = data as
       | {
           authenticated?: boolean;
+          userId?: number | null;
           name?: string | null;
           email?: string | null;
           role?: string | null;
@@ -61,14 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const user: AuthUser | null = isAuthed
       ? {
+          id: raw?.userId ?? null,
           name: raw?.name ?? null,
           email: raw?.email ?? null,
           role: raw?.role ?? null,
         }
       : null;
 
-    return { isLoading, isAuthed, user, login, refresh };
-  }, [isLoading, data, login, refresh]);
+    return { isLoading, isAuthed, user, login, register, loginWithGoogle, refresh };
+  }, [isLoading, data, login, register, loginWithGoogle, refresh]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

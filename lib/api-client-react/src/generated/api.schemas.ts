@@ -13,7 +13,50 @@ export interface ExtensionToken {
   token: string;
 }
 
+export interface GoogleClientIds {
+  googleClientId?: string | null;
+  googleClientIdIos?: string | null;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  isApproved: boolean;
+  linkedEntityId?: string | null;
+  hasPassword?: boolean;
+  hasGoogleId?: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserUpdate {
+  /** @minLength 1 */
+  name?: string;
+  role?: string;
+  isApproved?: boolean;
+  linkedEntityId?: string | null;
+  /** @minLength 6 */
+  newPassword?: string | null;
+}
+
+export interface RegisterInput {
+  /** @minLength 1 */
+  email: string;
+  /** @minLength 6 */
+  password: string;
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface GoogleAuthInput {
+  /** @minLength 1 */
+  idToken: string;
+}
+
 export interface LoginInput {
+  /** @minLength 1 */
+  email: string;
   /** @minLength 1 */
   password: string;
 }
@@ -808,6 +851,10 @@ export interface XpatWorkPermit {
 
 export type GetAuthStatus200 = {
   authenticated: boolean;
+  userId?: number | null;
+  email?: string | null;
+  name?: string | null;
+  role?: string | null;
 };
 
 export type ListPassportsParams = {

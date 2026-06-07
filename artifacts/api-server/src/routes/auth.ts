@@ -1,72 +1,120 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { scrypt as scryptCb, randomBytes, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
+import {
+  Router,
+  type IRouter,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, appSettingsTable } from "@workspace/db";
+import { db, appSettingsTable, usersTable } from "@workspace/db";
 import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
-
-const scrypt = promisify(scryptCb) as (
-  password: string,
-  salt: Buffer,
-  keylen: number,
-) => Promise<Buffer>;
-
-const APP_PASSWORD = process.env["APP_PASSWORD"];
-if (!APP_PASSWORD) {
-  throw new Error("APP_PASSWORD environment variable is required for authentication");
-}
+import { z } from "zod/v4";
+import { OAuth2Client } from "google-auth-library";
+import { hashPassword, verifyPasswordHash } from "../lib/crypto";
 
 const router: IRouter = Router();
 
-// Format: scrypt$<salt-hex>$<key-hex>
-async function hashPassword(plain: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await scrypt(plain, salt, 64);
-  return `scrypt$${salt.toString("hex")}$${key.toString("hex")}`;
-}
-
-async function verifyPasswordHash(plain: string, stored: string): Promise<boolean> {
-  const parts = stored.split("$");
-  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
-  const salt = Buffer.from(parts[1], "hex");
-  const expected = Buffer.from(parts[2], "hex");
-  const actual = await scrypt(plain, salt, expected.length);
-  if (actual.length !== expected.length) return false;
-  return timingSafeEqual(actual, expected);
-}
-
-// Look up the override hash if one has been set; otherwise fall back to the
-// APP_PASSWORD env var (used for fresh installs).
-async function checkPassword(plain: string): Promise<boolean> {
-  const rows = await db
-    .select({ hash: appSettingsTable.passwordHash })
-    .from(appSettingsTable)
-    .where(eq(appSettingsTable.id, 1))
-    .limit(1);
-  const stored = rows[0]?.hash;
-  if (stored) return verifyPasswordHash(plain, stored);
-  return plain === APP_PASSWORD;
-}
+// ---------------------------------------------------------------------------
+// GET /auth/me
+// ---------------------------------------------------------------------------
 
 router.get("/auth/me", (req, res) => {
-  res.json({ authenticated: Boolean(req.session?.authenticated) });
+  if (!req.session?.authenticated) {
+    res.json({ authenticated: false, userId: null, email: null, name: null, role: null });
+    return;
+  }
+  res.json({
+    authenticated: true,
+    userId: req.session.userId ?? null,
+    email: req.session.userEmail ?? null,
+    name: req.session.userName ?? null,
+    role: req.session.role ?? null,
+  });
 });
+
+// ---------------------------------------------------------------------------
+// POST /auth/register
+// ---------------------------------------------------------------------------
+
+const RegisterBody = z.object({
+  email: z.string().min(1).email(),
+  password: z.string().min(6),
+  name: z.string().min(1),
+});
+
+router.post("/auth/register", async (req, res): Promise<void> => {
+  const parsed = RegisterBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+  const { email, password, name } = parsed.data;
+  const normalEmail = email.toLowerCase().trim();
+
+  const existing = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, normalEmail))
+    .limit(1);
+
+  if (existing.length > 0) {
+    res.status(409).json({ error: "Email already registered" });
+    return;
+  }
+
+  const hash = await hashPassword(password);
+  await db.insert(usersTable).values({
+    email: normalEmail,
+    name: name.trim(),
+    role: "agent",
+    isApproved: false,
+    passwordHash: hash,
+  });
+
+  res.status(202).json({ message: "Account created, pending admin approval" });
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/login
+// ---------------------------------------------------------------------------
 
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(401).json({ error: "Invalid password" });
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
-  const ok = await checkPassword(parsed.data.password);
+
+  const { email, password } = parsed.data as { email: string; password: string };
+  const normalEmail = email.toLowerCase().trim();
+
+  const users = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, normalEmail))
+    .limit(1);
+
+  const user = users[0];
+
+  if (!user || !user.passwordHash) {
+    req.log.warn({ email: normalEmail }, "Login attempt for unknown user");
+    res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  const ok = await verifyPasswordHash(password, user.passwordHash);
   if (!ok) {
-    req.log.warn({ ip: req.ip }, "Failed login attempt");
-    res.status(401).json({ error: "Invalid password" });
+    req.log.warn({ email: normalEmail }, "Failed login attempt");
+    res.status(401).json({ error: "Invalid credentials" });
     return;
   }
-  // Regenerate the session ID on successful login to defeat session fixation:
-  // any pre-existing SID an attacker may have planted is discarded and a fresh
-  // one is issued before we mark the session as authenticated.
+
+  if (!user.isApproved) {
+    res.status(403).json({ error: "Account pending approval" });
+    return;
+  }
+
   req.session.regenerate((regenErr) => {
     if (regenErr) {
       req.log.error({ err: regenErr }, "Failed to regenerate session");
@@ -74,6 +122,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       return;
     }
     req.session.authenticated = true;
+    req.session.userId = user!.id;
+    req.session.role = user!.role;
+    req.session.userEmail = user!.email;
+    req.session.userName = user!.name;
+    req.session.linkedEntityId = user!.linkedEntityId ?? undefined;
     req.session.save((saveErr) => {
       if (saveErr) {
         req.log.error({ err: saveErr }, "Failed to save session");
@@ -85,43 +138,176 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// POST /auth/google
+// ---------------------------------------------------------------------------
+
+const GoogleAuthBody = z.object({
+  idToken: z.string().min(1),
+});
+
+router.post("/auth/google", async (req, res): Promise<void> => {
+  const parsed = GoogleAuthBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+
+  const settings = await db
+    .select({ googleClientId: appSettingsTable.googleClientId })
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.id, 1))
+    .limit(1);
+
+  const clientId = settings[0]?.googleClientId;
+  if (!clientId) {
+    res.status(503).json({ error: "Google Sign-In is not configured" });
+    return;
+  }
+
+  let googleEmail: string | undefined;
+  let googleName: string | undefined;
+  let googleId: string | undefined;
+
+  try {
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
+      idToken: parsed.data.idToken,
+      audience: clientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) throw new Error("Empty payload");
+    googleEmail = payload.email;
+    googleName = payload.name;
+    googleId = payload.sub;
+  } catch (err) {
+    req.log.warn({ err }, "Google ID token verification failed");
+    res.status(401).json({ error: "Invalid Google token" });
+    return;
+  }
+
+  if (!googleEmail) {
+    res.status(401).json({ error: "No email in Google token" });
+    return;
+  }
+
+  const normalEmail = googleEmail.toLowerCase().trim();
+  const users = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, normalEmail))
+    .limit(1);
+
+  let user = users[0];
+
+  if (!user) {
+    res.status(401).json({ error: "Email not registered. Please request an account." });
+    return;
+  }
+
+  if (!user.googleId && googleId) {
+    await db
+      .update(usersTable)
+      .set({ googleId })
+      .where(eq(usersTable.id, user.id));
+    user = { ...user, googleId };
+  }
+
+  if (!user.isApproved) {
+    res.status(403).json({ error: "Account pending approval" });
+    return;
+  }
+
+  req.session.regenerate((regenErr) => {
+    if (regenErr) {
+      req.log.error({ err: regenErr }, "Failed to regenerate session");
+      res.status(500).json({ error: "Failed to log in" });
+      return;
+    }
+    req.session.authenticated = true;
+    req.session.userId = user!.id;
+    req.session.role = user!.role;
+    req.session.userEmail = user!.email;
+    req.session.userName = googleName ?? user!.name;
+    req.session.linkedEntityId = user!.linkedEntityId ?? undefined;
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        req.log.error({ err: saveErr }, "Failed to save session");
+        res.status(500).json({ error: "Failed to log in" });
+        return;
+      }
+      res.sendStatus(204);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/logout
+// ---------------------------------------------------------------------------
+
 router.post("/auth/logout", (req, res) => {
   req.session.destroy((err) => {
-    if (err) {
-      req.log.error({ err }, "Failed to destroy session");
-    }
+    if (err) req.log.error({ err }, "Failed to destroy session");
     res.clearCookie("leo.sid");
     res.sendStatus(204);
   });
 });
+
+// ---------------------------------------------------------------------------
+// POST /auth/change-password
+// ---------------------------------------------------------------------------
 
 router.post("/auth/change-password", async (req, res): Promise<void> => {
   if (!req.session?.authenticated) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
+
   const parsed = ChangePasswordBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
   const { currentPassword, newPassword } = parsed.data;
-  const ok = await checkPassword(currentPassword);
+  const userId = req.session.userId;
+
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const users = await db
+    .select({ passwordHash: usersTable.passwordHash })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  const stored = users[0]?.passwordHash;
+  if (!stored) {
+    res.status(400).json({ error: "No password set. Contact an admin to reset your password." });
+    return;
+  }
+
+  const ok = await verifyPasswordHash(currentPassword, stored);
   if (!ok) {
     res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
+
   const hash = await hashPassword(newPassword);
-  // Make sure the singleton row exists, then update the hash.
-  await db.insert(appSettingsTable).values({ id: 1 }).onConflictDoNothing();
   await db
-    .update(appSettingsTable)
+    .update(usersTable)
     .set({ passwordHash: hash })
-    .where(eq(appSettingsTable.id, 1));
+    .where(eq(usersTable.id, userId));
+
   res.sendStatus(204);
 });
 
-// GET /auth/extension-token — return current token (generate one if none exists yet)
+// ---------------------------------------------------------------------------
+// Extension token routes
+// ---------------------------------------------------------------------------
+
 router.get("/auth/extension-token", async (req, res): Promise<void> => {
   if (!req.session?.authenticated) {
     res.status(401).json({ error: "Authentication required" });
@@ -138,12 +324,14 @@ router.get("/auth/extension-token", async (req, res): Promise<void> => {
     await db
       .insert(appSettingsTable)
       .values({ id: 1, extensionToken: token })
-      .onConflictDoUpdate({ target: appSettingsTable.id, set: { extensionToken: token } });
+      .onConflictDoUpdate({
+        target: appSettingsTable.id,
+        set: { extensionToken: token },
+      });
   }
   res.json({ token });
 });
 
-// POST /auth/extension-token/regenerate — rotate the token (old one immediately invalid)
 router.post("/auth/extension-token/regenerate", async (req, res): Promise<void> => {
   if (!req.session?.authenticated) {
     res.status(401).json({ error: "Authentication required" });
@@ -153,14 +341,37 @@ router.post("/auth/extension-token/regenerate", async (req, res): Promise<void> 
   await db
     .insert(appSettingsTable)
     .values({ id: 1, extensionToken: token })
-    .onConflictDoUpdate({ target: appSettingsTable.id, set: { extensionToken: token } });
+    .onConflictDoUpdate({
+      target: appSettingsTable.id,
+      set: { extensionToken: token },
+    });
   res.json({ token });
 });
 
-/**
- * Middleware that gates protected API routes. Returns 401 (not 302) so the
- * SPA can decide where to redirect.
- */
+// ---------------------------------------------------------------------------
+// Public: GET /settings/google-client-ids
+// ---------------------------------------------------------------------------
+
+router.get("/settings/google-client-ids", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      googleClientId: appSettingsTable.googleClientId,
+      googleClientIdIos: appSettingsTable.googleClientIdIos,
+    })
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.id, 1))
+    .limit(1);
+
+  res.json({
+    googleClientId: rows[0]?.googleClientId ?? null,
+    googleClientIdIos: rows[0]?.googleClientIdIos ?? null,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth middleware
+// ---------------------------------------------------------------------------
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (req.session?.authenticated) {
     next();
@@ -169,10 +380,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   res.status(401).json({ error: "Authentication required" });
 }
 
-/**
- * Like requireAuth but also accepts a valid Authorization: Bearer <token>
- * header. Used for routes that the Chrome extension needs to call.
- */
 export async function requireAuthOrToken(
   req: Request,
   res: Response,
@@ -196,12 +403,29 @@ export async function requireAuthOrToken(
         next();
         return;
       }
-    } catch (err) {
+    } catch {
       res.status(500).json({ error: "Internal server error" });
       return;
     }
   }
   res.status(401).json({ error: "Authentication required" });
+}
+
+export function requireRole(
+  ...roles: string[]
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.session?.authenticated) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    const userRole = req.session.role ?? "";
+    if (!roles.includes(userRole)) {
+      res.status(403).json({ error: "Insufficient permissions" });
+      return;
+    }
+    next();
+  };
 }
 
 export default router;

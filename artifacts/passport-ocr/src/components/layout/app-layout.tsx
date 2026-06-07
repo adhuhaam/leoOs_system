@@ -5,12 +5,14 @@ import {
   UploadCloud,
   FileSignature,
   Users,
+  UserCog,
   Building,
   Building2,
   Wallet,
   Receipt,
   KeyRound,
   Settings,
+  ShieldCheck,
   LogOut,
 } from "lucide-react";
 import {
@@ -30,36 +32,34 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useQueryClient } from "@tanstack/react-query";
-import { logout } from "@workspace/api-client-react";
+import { logout, useGetAuthStatus } from "@workspace/api-client-react";
 import leoLogo from "@assets/image_1778408412841.png";
 import { useSystemSettings } from "@/hooks/use-system-settings";
 
-const navGroups = [
-  {
-    group: "Overview",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    ],
-  },
-  {
-    group: "Operations",
-    items: [
-      { href: "/upload", label: "Process Document", icon: UploadCloud },
-      { href: "/master-list", label: "Master List", icon: Users },
-      { href: "/companies", label: "Companies", icon: Building2 },
-      { href: "/clients", label: "Clients", icon: Building },
-      { href: "/loa", label: "Letter of Appointment", icon: FileSignature },
-      { href: "/expenses", label: "Expenses", icon: Wallet },
-      { href: "/billing", label: "Invoices & Quotes", icon: Receipt },
-      { href: "/passwords", label: "Passwords", icon: KeyRound },
-    ],
-  },
-  {
-    group: "System",
-    items: [
-      { href: "/settings", label: "Settings", icon: Settings },
-    ],
-  },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  roles?: string[]; // undefined = visible to all roles
+};
+
+const ALL_NAV_ITEMS: NavItem[] = [
+  // Overview
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  // Operations
+  { href: "/upload", label: "Process Document", icon: UploadCloud },
+  { href: "/master-list", label: "Master List", icon: Users },
+  { href: "/companies", label: "Companies", icon: Building2 },
+  { href: "/clients", label: "Clients", icon: Building },
+  { href: "/loa", label: "Letter of Appointment", icon: FileSignature },
+  { href: "/expenses", label: "Expenses", icon: Wallet },
+  { href: "/billing", label: "Invoices & Quotes", icon: Receipt },
+  { href: "/passwords", label: "Passwords", icon: KeyRound },
+  // Admin
+  { href: "/users", label: "User Management", icon: UserCog, roles: ["superuser", "admin"] },
+  // System
+  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/system-settings", label: "System Settings", icon: ShieldCheck, roles: ["superuser"] },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {
@@ -97,6 +97,8 @@ function AppSidebar() {
   const [location] = useLocation();
   const qc = useQueryClient();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { data: authData } = useGetAuthStatus({ query: { queryKey: ["/auth/me"], staleTime: 60_000 } });
+  const role = (authData as { role?: string | null } | undefined)?.role ?? null;
 
   const handleNavClick = () => {
     if (isMobile) setOpenMobile(false);
@@ -112,6 +114,28 @@ function AppSidebar() {
     qc.clear();
   }
 
+  const visibleItems = ALL_NAV_ITEMS.filter(
+    (item) => !item.roles || (role && item.roles.includes(role)),
+  );
+
+  // Group items
+  const overviewItems = visibleItems.filter((i) => i.href === "/");
+  const operationsItems = visibleItems.filter(
+    (i) =>
+      ["/upload", "/master-list", "/companies", "/clients", "/loa", "/expenses", "/billing", "/passwords"].includes(i.href),
+  );
+  const adminItems = visibleItems.filter((i) => i.href === "/users");
+  const systemItems = visibleItems.filter(
+    (i) => i.href === "/settings" || i.href === "/system-settings",
+  );
+
+  const groups = [
+    { group: "Overview", items: overviewItems },
+    { group: "Operations", items: operationsItems },
+    ...(adminItems.length > 0 ? [{ group: "Admin", items: adminItems }] : []),
+    { group: "System", items: systemItems },
+  ].filter((g) => g.items.length > 0);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4 border-b border-sidebar-border">
@@ -119,7 +143,7 @@ function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {navGroups.map(({ group, items }) => (
+        {groups.map(({ group, items }) => (
           <SidebarGroup key={group}>
             <SidebarGroupLabel className="text-[10px] font-mono uppercase tracking-[0.15em]">
               {group}
@@ -162,6 +186,13 @@ function AppSidebar() {
             className="w-full h-auto max-h-12 object-contain"
           />
         </div>
+        {role && (
+          <div className="px-2 py-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-sidebar-foreground/50">
+              {role}
+            </span>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition"

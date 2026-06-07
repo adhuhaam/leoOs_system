@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
 import { ensureAppSettingsTable } from "./lib/bootstrap-app-settings";
+import { ensureUsersTable, seedSuperuser } from "./lib/bootstrap-users";
 
 const rawPort = process.env["PORT"];
 
@@ -21,7 +22,11 @@ async function main() {
   // Bootstrap the session table before accepting traffic so the very first
   // login request can't race the schema migration. Same applies to the
   // app_settings singleton row — auth reads from it on every login.
-  await Promise.all([ensureSessionTable(), ensureAppSettingsTable()]);
+  await Promise.all([
+    ensureSessionTable(),
+    ensureAppSettingsTable(),
+    ensureUsersTable().then(seedSuperuser),
+  ]);
 
   app.listen(port, (err) => {
     if (err) {

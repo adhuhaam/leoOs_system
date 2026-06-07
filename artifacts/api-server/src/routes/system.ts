@@ -2,11 +2,10 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, appSettingsTable } from "@workspace/db";
 import { UpdateSystemSettingsBody } from "@workspace/api-zod";
+import { z } from "zod/v4";
 
 const router: IRouter = Router();
 
-// Hard cap on the inline base64 logo. Matches the cap used for company
-// letterhead/signature uploads to keep payloads bounded.
 const MAX_IMAGE_BYTES = 600 * 1024;
 const DATA_URL_RE = /^data:image\/(png|jpe?g|svg\+xml|webp);base64,([A-Za-z0-9+/=]+)$/;
 
@@ -15,8 +14,8 @@ function validateImageDataUrl(value: unknown, label: string): string | null {
   if (typeof value !== "string") return `${label} must be a string`;
   const m = value.match(DATA_URL_RE);
   if (!m) return `${label} must be a data:image/(png|jpeg|webp|svg+xml);base64 URL`;
-  const base64Len = m[2].length;
-  const padding = m[2].endsWith("==") ? 2 : m[2].endsWith("=") ? 1 : 0;
+  const base64Len = m[2]!.length;
+  const padding = m[2]!.endsWith("==") ? 2 : m[2]!.endsWith("=") ? 1 : 0;
   const decodedBytes = Math.floor((base64Len * 3) / 4) - padding;
   if (decodedBytes > MAX_IMAGE_BYTES) {
     return `${label} exceeds ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB limit`;
@@ -24,7 +23,6 @@ function validateImageDataUrl(value: unknown, label: string): string | null {
   return null;
 }
 
-// Ensure the singleton row exists, then return it.
 async function readSettings() {
   const rows = await db
     .select()
@@ -54,12 +52,19 @@ function publicShape(row: typeof appSettingsTable.$inferSelect) {
     logoImage: row.logoImage,
     hasCustomPassword: row.passwordHash != null,
     hasOpenAiApiKey: row.openaiApiKey != null,
+    hasGoogleSignIn: row.googleClientId != null,
   };
 }
 
+const GoogleKeysInput = z.object({
+  googleClientId: z.string().nullable().optional(),
+  googleClientSecret: z.string().nullable().optional(),
+  googleClientIdIos: z.string().nullable().optional(),
+});
+
 router.get("/system/settings", async (_req, res) => {
   const row = await readSettings();
-  res.json(publicShape(row));
+  res.json(publicShape(row!));
 });
 
 router.patch("/system/settings", async (req, res): Promise<void> => {
@@ -67,12 +72,14 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
+
   const parsed = UpdateSystemSettingsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const data = parsed.data;
+
   const logoErr = validateImageDataUrl(data.logoImage, "logoImage");
   if (logoErr) {
     res.status(400).json({ error: logoErr });
@@ -96,11 +103,30 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
   if (data.openaiApiKey !== undefined)
     patch.openaiApiKey = data.openaiApiKey === null ? null : (data.openaiApiKey?.trim() || null);
 
-  await readSettings(); // make sure row exists
+  // Google OAuth keys — superuser only
+  if (
+    req.body.googleClientId !== undefined ||
+    req.body.googleClientSecret !== undefined ||
+    req.body.googleClientIdIos !== undefined
+  ) {
+    if (req.session.role !== "superuser") {
+      res.status(403).json({ error: "Only superusers can update Google OAuth credentials" });
+      return;
+    }
+    const googleParsed = GoogleKeysInput.safeParse(req.body);
+    if (googleParsed.success) {
+      const gd = googleParsed.data;
+      if (gd.googleClientId !== undefined) patch.googleClientId = gd.googleClientId ?? null;
+      if (gd.googleClientSecret !== undefined) patch.googleClientSecret = gd.googleClientSecret ?? null;
+      if (gd.googleClientIdIos !== undefined) patch.googleClientIdIos = gd.googleClientIdIos ?? null;
+    }
+  }
+
+  await readSettings(); // ensure row exists
 
   if (Object.keys(patch).length === 0) {
     const row = await readSettings();
-    res.json(publicShape(row));
+    res.json(publicShape(row!));
     return;
   }
 
@@ -109,7 +135,7 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
     .set(patch)
     .where(eq(appSettingsTable.id, 1))
     .returning();
-  res.json(publicShape(updated[0]));
+  res.json(publicShape(updated[0]!));
 });
 
 export default router;

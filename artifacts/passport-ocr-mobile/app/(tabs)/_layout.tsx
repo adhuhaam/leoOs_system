@@ -4,10 +4,34 @@ import React from "react";
 import { Platform, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 export default function TabLayout() {
   const colors = useColors();
+  const { user } = useAuth();
   const isWeb = Platform.OS === "web";
+
+  const role = user?.role ?? null;
+
+  // Determine which tabs each role can see
+  const canSeeMaster = role === "superuser" || role === "admin" || role === "company" || role === "agent";
+  const canSeeCapture = role === "superuser" || role === "admin" || role === "agent";
+  const canSeeBilling = role === "superuser" || role === "admin" || role === "client" || role === "company";
+
+  const dot = (color: string, focused: boolean) =>
+    focused ? (
+      <View
+        style={{
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: color,
+          marginTop: 2,
+          position: "absolute",
+          bottom: -6,
+        }}
+      />
+    ) : null;
 
   return (
     <Tabs
@@ -47,19 +71,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="home" size={22} color={color} />
-              {focused && (
-                <View
-                  style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: 2,
-                    backgroundColor: color,
-                    marginTop: 2,
-                    position: "absolute",
-                    bottom: -6,
-                  }}
-                />
-              )}
+              {dot(color, focused)}
             </View>
           ),
         }}
@@ -68,22 +80,11 @@ export default function TabLayout() {
         name="master"
         options={{
           title: "Master",
+          href: canSeeMaster ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="users" size={22} color={color} />
-              {focused && (
-                <View
-                  style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: 2,
-                    backgroundColor: color,
-                    marginTop: 2,
-                    position: "absolute",
-                    bottom: -6,
-                  }}
-                />
-              )}
+              {dot(color, focused)}
             </View>
           ),
         }}
@@ -92,6 +93,7 @@ export default function TabLayout() {
         name="upload"
         options={{
           title: "Capture",
+          href: canSeeCapture ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
@@ -123,22 +125,11 @@ export default function TabLayout() {
         name="billing"
         options={{
           title: "Billing",
+          href: canSeeBilling ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="file-text" size={22} color={color} />
-              {focused && (
-                <View
-                  style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: 2,
-                    backgroundColor: color,
-                    marginTop: 2,
-                    position: "absolute",
-                    bottom: -6,
-                  }}
-                />
-              )}
+              {dot(color, focused)}
             </View>
           ),
         }}
@@ -150,19 +141,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="grid" size={22} color={color} />
-              {focused && (
-                <View
-                  style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: 2,
-                    backgroundColor: color,
-                    marginTop: 2,
-                    position: "absolute",
-                    bottom: -6,
-                  }}
-                />
-              )}
+              {dot(color, focused)}
             </View>
           ),
         }}

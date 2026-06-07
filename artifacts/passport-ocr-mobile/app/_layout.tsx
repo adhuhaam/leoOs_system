@@ -44,10 +44,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
-    const onLogin = segments[0] === "login";
-    if (!isAuthed && !onLogin) {
+    const isAuthPage = segments[0] === "login" || segments[0] === "signup";
+    if (!isAuthed && !isAuthPage) {
       router.replace("/login");
-    } else if (isAuthed && onLogin) {
+    } else if (isAuthed && isAuthPage) {
       router.replace("/");
     }
   }, [isLoading, isAuthed, segments, router]);
@@ -115,6 +115,14 @@ function RootLayoutNav() {
       <Stack.Screen
         name="passwords"
         options={{ title: "Passwords", headerBackTitle: "Back" }}
+      />
+      <Stack.Screen
+        name="admin/users"
+        options={{ title: "User Management", headerBackTitle: "More" }}
+      />
+      <Stack.Screen
+        name="admin/system-settings"
+        options={{ title: "System Settings", headerBackTitle: "More" }}
       />
     </Stack>
   );

@@ -7,6 +7,11 @@ import { logger } from "./logger";
 declare module "express-session" {
   interface SessionData {
     authenticated?: boolean;
+    userId?: number;
+    role?: string;
+    userEmail?: string;
+    userName?: string;
+    linkedEntityId?: string;
   }
 }
 

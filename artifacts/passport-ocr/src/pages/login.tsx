@@ -11,23 +11,29 @@ import leoLogo from "@assets/image_1778408412841.png";
 export default function LoginPage() {
   const [, navigate] = useLocation();
   const qc = useQueryClient();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!password) return;
+    if (!email || !password) return;
     setLoading(true);
     setError(null);
     try {
-      await login({ password });
-      // Refresh auth status so AuthGate stops rendering the login page.
+      await login({ email, password });
       await qc.invalidateQueries({ queryKey: ["/auth/me"] });
       navigate("/");
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      setError(status === 401 ? "Incorrect password. Try again." : "Login failed. Please try again.");
+      if (status === 403) {
+        setError("Your account is pending admin approval.");
+      } else if (status === 401) {
+        setError("Incorrect email or password. Try again.");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -52,11 +58,28 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Sign in</h1>
-              <p className="text-xs text-muted-foreground">Enter the access password to continue.</p>
+              <p className="text-xs text-muted-foreground">Sign in with your email and password.</p>
             </div>
           </div>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4" data-testid="form-login">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoFocus
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                disabled={loading}
+                data-testid="input-email"
+              />
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Password
@@ -64,7 +87,6 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                autoFocus
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -86,7 +108,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !password}
+              disabled={loading || !email || !password}
               data-testid="button-submit-login"
             >
               {loading ? (

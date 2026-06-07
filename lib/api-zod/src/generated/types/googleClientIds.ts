@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LoginInput {
-  /** @minLength 1 */
-  email: string;
-  /** @minLength 1 */
-  password: string;
+export interface GoogleClientIds {
+  googleClientId?: string | null;
+  googleClientIdIos?: string | null;
 }

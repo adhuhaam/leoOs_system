@@ -15,11 +15,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 type Step = "form" | "pending";
 
 export default function SignupScreen() {
   const colors = useColors();
+  const { register } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,10 +49,15 @@ export default function SignupScreen() {
     if (msg) { setError(msg); return; }
     setSubmitting(true);
     try {
-      // The register API endpoint is added in the RBAC task.
-      // For now, simulate submission and show the pending state.
-      await new Promise((r) => setTimeout(r, 600));
+      await register(email.trim(), password, name.trim());
       setStep("pending");
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        setError("This email address is already registered.");
+      } else {
+        setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -77,9 +84,8 @@ export default function SignupScreen() {
             Request submitted
           </Text>
           <Text style={[styles.pendingBody, { color: colors.mutedForeground }]}>
-            Your account request has been sent for approval. A superuser or admin will
-            review it and activate your account. You'll be able to sign in once
-            it's approved.
+            Your account request has been sent for approval. A superuser or admin will review it and
+            activate your account. You'll be able to sign in once it's approved.
           </Text>
           <Pressable
             onPress={() => router.replace("/login")}
@@ -112,19 +118,13 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Back */}
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            hitSlop={10}
-          >
+          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </Pressable>
 
           {/* Header */}
           <View style={styles.headerWrap}>
-            <Text style={[styles.title, { color: colors.foreground }]}>
-              Create account
-            </Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>Create account</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
               Sign up and wait for admin approval before accessing the app.
             </Text>
@@ -133,24 +133,14 @@ export default function SignupScreen() {
           {/* Form */}
           <View style={styles.form}>
             {error && (
-              <View
-                style={[
-                  styles.errorBox,
-                  { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
-                ]}
-              >
+              <View style={[styles.errorBox, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
                 <Feather name="alert-circle" size={15} color="#EF4444" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
 
             <Field label="Full name">
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="user" size={17} color={colors.mutedForeground} />
                 <TextInput
                   value={name}
@@ -166,12 +156,7 @@ export default function SignupScreen() {
             </Field>
 
             <Field label="Email">
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="mail" size={17} color={colors.mutedForeground} />
                 <TextInput
                   ref={emailRef}
@@ -190,12 +175,7 @@ export default function SignupScreen() {
             </Field>
 
             <Field label="Password">
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="lock" size={17} color={colors.mutedForeground} />
                 <TextInput
                   ref={passwordRef}
@@ -220,12 +200,7 @@ export default function SignupScreen() {
             </Field>
 
             <Field label="Confirm password">
-              <View
-                style={[
-                  styles.inputRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="lock" size={17} color={colors.mutedForeground} />
                 <TextInput
                   ref={confirmRef}
@@ -268,9 +243,7 @@ export default function SignupScreen() {
               Already have an account?{" "}
             </Text>
             <Pressable onPress={() => router.replace("/login")}>
-              <Text style={[styles.footerLink, { color: colors.foreground }]}>
-                Sign in
-              </Text>
+              <Text style={[styles.footerLink, { color: colors.foreground }]}>Sign in</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -279,17 +252,18 @@ export default function SignupScreen() {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   const colors = useColors();
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, letterSpacing: 0.3 }}>
+      <Text
+        style={{
+          fontSize: 12,
+          fontFamily: "Inter_600SemiBold",
+          color: colors.mutedForeground,
+          letterSpacing: 0.3,
+        }}
+      >
         {label.toUpperCase()}
       </Text>
       {children}
@@ -327,26 +301,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    padding: 0,
-  },
+  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", padding: 0 },
 
-  primaryBtn: {
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
+  primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 4 },
   primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
 
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 24, flexWrap: "wrap" },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_700Bold" },
 
-  pendingWrap: { flex: 1, padding: 36, justifyContent: "center", alignItems: "center", gap: 16 },
+  pendingWrap: {
+    flex: 1,
+    padding: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
   pendingIcon: {
     width: 96,
     height: 96,
