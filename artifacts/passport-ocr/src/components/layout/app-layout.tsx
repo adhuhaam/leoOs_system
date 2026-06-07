@@ -136,7 +136,9 @@ function AppSidebar() {
     (i) =>
       ["/upload", "/master-list", "/companies", "/clients", "/loa", "/expenses", "/billing", "/passwords"].includes(i.href),
   );
-  const adminItems = visibleItems.filter((i) => i.href === "/users");
+  const adminItems = visibleItems.filter((i) =>
+    i.href === "/users" || i.href === "/permissions"
+  );
   const systemItems = visibleItems.filter(
     (i) => i.href === "/settings" || i.href === "/system-settings",
   );
