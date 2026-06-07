@@ -220,6 +220,31 @@ paths:
           description: Authentication required
         "403":
           description: Insufficient permissions
+    post:
+      operationId: createUser
+      tags: [admin]
+      summary: Create a new user (superuser + admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "400":
+          description: Validation error
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "409":
+          description: Email already registered
 
   /admin/users/{id}:
     patch:
@@ -1340,6 +1365,27 @@ components:
         newPassword:
           type: string
           minLength: 6
+          nullable: true
+
+    CreateUserInput:
+      type: object
+      required: [email, name, role, password, isApproved]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+        role:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        isApproved:
+          type: boolean
+        linkedEntityId:
+          type: string
           nullable: true
 
     RegisterInput:

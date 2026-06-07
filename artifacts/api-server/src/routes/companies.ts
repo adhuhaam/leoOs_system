@@ -38,25 +38,27 @@ function validateImageDataUrl(value: unknown, label: string): string | null {
 router.get("/companies", async (req, res): Promise<void> => {
   const withBranding = req.query.withBranding === "true";
 
-  // Role-scoped: company users only see their own record
+  // Role-scoped — explicit allowlist; company with missing linkage is hard-denied
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
-  if (sessionRole === "company" && linkedEntityId) {
+  if (sessionRole === "company") {
     const eid = Number(linkedEntityId);
-    if (!Number.isNaN(eid)) {
-      const single = await db
-        .select()
-        .from(companiesTable)
-        .where(eq(companiesTable.id, eid))
-        .limit(1);
-      const result = single.map((r) => ({
-        ...r,
-        letterheadImage: withBranding ? r.letterheadImage : null,
-        signatureImage: withBranding ? r.signatureImage : null,
-      }));
-      res.json(result);
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
       return;
     }
+    const single = await db
+      .select()
+      .from(companiesTable)
+      .where(eq(companiesTable.id, eid))
+      .limit(1);
+    const result = single.map((r) => ({
+      ...r,
+      letterheadImage: withBranding ? r.letterheadImage : null,
+      signatureImage: withBranding ? r.signatureImage : null,
+    }));
+    res.json(result);
+    return;
   }
 
   // Default list omits the heavy base64 image fields. Set ?withBranding=true on

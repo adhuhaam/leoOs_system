@@ -113,15 +113,30 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
   if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
   if (clientId != null) conds.push(eq(billingDocumentsTable.clientId, clientId));
 
-  // Role-scoped filtering: company users see their own billing docs; client users see theirs
+  // Role-scoped filtering — explicit allowlist, hard-deny on missing linkage
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
-  if (sessionRole === "company" && linkedEntityId) {
+  if (sessionRole === "superuser" || sessionRole === "admin") {
+    // unrestricted list
+  } else if (sessionRole === "company") {
     const eid = Number(linkedEntityId);
-    if (!Number.isNaN(eid)) conds.push(eq(billingDocumentsTable.companyId, eid));
-  } else if (sessionRole === "client" && linkedEntityId) {
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conds.push(eq(billingDocumentsTable.companyId, eid));
+  } else if (sessionRole === "client") {
     const eid = Number(linkedEntityId);
-    if (!Number.isNaN(eid)) conds.push(eq(billingDocumentsTable.clientId, eid));
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked client on session" });
+      return;
+    }
+    conds.push(eq(billingDocumentsTable.clientId, eid));
+  } else if (sessionRole === "employee" || sessionRole === "agent") {
+    // read-only, no entity scoping
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
   }
 
   const where = conds.length ? and(...conds) : undefined;
@@ -197,6 +212,7 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
       kind: billingDocumentsTable.kind,
       number: billingDocumentsTable.number,
       companyId: billingDocumentsTable.companyId,
+      clientId: billingDocumentsTable.clientId,
       companyName: companiesTable.name,
       customerName: billingDocumentsTable.customerName,
       customerAddress: billingDocumentsTable.customerAddress,
@@ -219,6 +235,30 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Document not found" });
     return;
   }
+  // Ownership check: company/client users can only read their own billing docs
+  const docSessionRole = req.session?.role;
+  const docLinkedId = req.session?.linkedEntityId;
+  if (docSessionRole === "superuser" || docSessionRole === "admin") {
+    // unrestricted
+  } else if (docSessionRole === "company") {
+    const eid = Number(docLinkedId);
+    if (!docLinkedId || Number.isNaN(eid) || docRows[0]!.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (docSessionRole === "client") {
+    const eid = Number(docLinkedId);
+    if (!docLinkedId || Number.isNaN(eid) || docRows[0]!.clientId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (docSessionRole === "employee" || docSessionRole === "agent") {
+    // read-only, no entity scoping
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   const items = await db
     .select()
     .from(billingItemsTable)

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
-import { db, clientsTable } from "@workspace/db";
+import { db, clientsTable, type Client } from "@workspace/db";
 import {
   CreateClientBody,
   UpdateClientParams,
@@ -20,17 +20,26 @@ router.get("/clients", async (req, res): Promise<void> => {
   }
   const { search } = parsed.data;
 
-  // Role-scoped: client users only see their own record
+  // Role-scoped — explicit allowlist
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
-  let rows;
-  if (sessionRole === "client" && linkedEntityId) {
-    const eid = Number(linkedEntityId);
-    rows = !Number.isNaN(eid)
-      ? await db.select().from(clientsTable).where(eq(clientsTable.id, eid)).orderBy(asc(clientsTable.name))
-      : [];
-  } else {
+  let rows: Client[];
+  if (sessionRole === "superuser" || sessionRole === "admin" || sessionRole === "employee" || sessionRole === "agent") {
     rows = await db.select().from(clientsTable).orderBy(asc(clientsTable.name));
+  } else if (sessionRole === "client") {
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked client on session" });
+      return;
+    }
+    rows = await db.select().from(clientsTable).where(eq(clientsTable.id, eid)).orderBy(asc(clientsTable.name));
+  } else if (sessionRole === "company") {
+    // company users have no reason to browse clients; hard-deny (linkage irrelevant)
+    res.status(403).json({ error: "Access denied" });
+    return;
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
   }
   const filtered = search
     ? rows.filter((c) => {

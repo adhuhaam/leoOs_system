@@ -40,6 +40,17 @@ export interface AdminUserUpdate {
   newPassword?: string | null;
 }
 
+export interface CreateUserInput {
+  email: string;
+  /** @minLength 1 */
+  name: string;
+  role: string;
+  /** @minLength 6 */
+  password: string;
+  isApproved: boolean;
+  linkedEntityId?: string | null;
+}
+
 export interface RegisterInput {
   /** @minLength 1 */
   email: string;

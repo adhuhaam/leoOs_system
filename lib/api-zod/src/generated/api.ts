@@ -109,6 +109,21 @@ export const ListUsersResponseItem = zod.object({
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
 /**
+ * @summary Create a new user (superuser + admin only)
+ */
+
+export const createUserBodyPasswordMin = 6;
+
+export const CreateUserBody = zod.object({
+  email: zod.string().email(),
+  name: zod.string().min(1),
+  role: zod.string(),
+  password: zod.string().min(createUserBodyPasswordMin),
+  isApproved: zod.boolean(),
+  linkedEntityId: zod.string().nullish(),
+});
+
+/**
  * @summary Update a user (role, isApproved, name, password reset)
  */
 export const UpdateUserParams = zod.object({

@@ -24,6 +24,7 @@ export * from "./clientUpdate";
 export * from "./company";
 export * from "./companyInput";
 export * from "./companyUpdate";
+export * from "./createUserInput";
 export * from "./expense";
 export * from "./expenseCategory";
 export * from "./expenseCategoryInput";
