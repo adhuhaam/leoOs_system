@@ -86,7 +86,22 @@ function normalizeNationality(raw: string | null | undefined): string {
   return DEMONYM_MAP[lower] ?? lower;
 }
 
-type StatusFilter = "all" | "completed" | "processing" | "failed";
+type StatusFilter =
+  | "all"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "applied"
+  | "approved"
+  | "ticket_issued"
+  | "arrived"
+  | "handedover"
+  | "return_back_from_worksite"
+  | "incomplete"
+  | "cancelled"
+  | "terminated"
+  | "lost"
+  | "employed";
 type NationalityFilter = "all" | "bangladesh" | "india" | "nepal";
 type AllocationFilter = string;
 
@@ -98,6 +113,35 @@ interface Row {
 }
 
 /** The Xpat API returns isValid as a string e.g. "Valid" or "Invalid". */
+const STATUS_META: Record<
+  string,
+  { label: string; cls: string }
+> = {
+  processing:                { label: "Processing",      cls: "text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300" },
+  completed:                 { label: "OCR Done",        cls: "text-teal-700 bg-teal-100 dark:bg-teal-900/40 dark:text-teal-300" },
+  failed:                    { label: "Failed",          cls: "text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300" },
+  applied:                   { label: "Applied",         cls: "text-purple-700 bg-purple-100 dark:bg-purple-900/40 dark:text-purple-300" },
+  approved:                  { label: "Approved",        cls: "text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300" },
+  ticket_issued:             { label: "Ticket Issued",   cls: "text-cyan-700 bg-cyan-100 dark:bg-cyan-900/40 dark:text-cyan-300" },
+  arrived:                   { label: "Arrived",         cls: "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  handedover:                { label: "Handed Over",     cls: "text-indigo-700 bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300" },
+  return_back_from_worksite: { label: "Returned",        cls: "text-orange-700 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-300" },
+  incomplete:                { label: "Incomplete",      cls: "text-yellow-700 bg-yellow-100 dark:bg-yellow-900/40 dark:text-yellow-300" },
+  cancelled:                 { label: "Cancelled",       cls: "text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400" },
+  terminated:                { label: "Terminated",      cls: "text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300" },
+  lost:                      { label: "Lost",            cls: "text-red-800 bg-red-100 dark:bg-red-900/40 dark:text-red-400" },
+  employed:                  { label: "Employed",        cls: "text-green-800 bg-green-200 dark:bg-green-900/50 dark:text-green-200" },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const m = STATUS_META[status] ?? { label: status, cls: "text-muted-foreground bg-muted" };
+  return (
+    <span className={`text-[10px] font-semibold px-2 py-1 rounded whitespace-nowrap ${m.cls}`}>
+      {m.label.toUpperCase()}
+    </span>
+  );
+}
+
 function isWpValid(v: string | null | undefined) {
   return v != null && v.toLowerCase() === "valid";
 }
@@ -244,23 +288,9 @@ function PassportRow({
         </div>
       </TableCell>
 
-      {/* OCR Status */}
+      {/* Status */}
       <TableCell>
-        {passport.status === "completed" && (
-          <span className="text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/40 dark:text-green-300 px-2 py-1 rounded">
-            DONE
-          </span>
-        )}
-        {passport.status === "processing" && (
-          <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-1 rounded">
-            OCR
-          </span>
-        )}
-        {passport.status === "failed" && (
-          <span className="text-[10px] font-semibold text-red-700 bg-red-100 dark:bg-red-900/40 dark:text-red-300 px-2 py-1 rounded">
-            FAIL
-          </span>
-        )}
+        <StatusBadge status={passport.status} />
       </TableCell>
 
       {/* Actions: View + Edit */}
@@ -473,9 +503,20 @@ export default function MasterListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="processing">Processing</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="completed">OCR Done</SelectItem>
+                    <SelectItem value="applied">Applied</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="ticket_issued">Ticket Issued</SelectItem>
+                    <SelectItem value="arrived">Arrived</SelectItem>
+                    <SelectItem value="handedover">Handed Over</SelectItem>
+                    <SelectItem value="return_back_from_worksite">Returned</SelectItem>
+                    <SelectItem value="employed">Employed</SelectItem>
+                    <SelectItem value="incomplete">Incomplete</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="terminated">Terminated</SelectItem>
+                    <SelectItem value="lost">Lost</SelectItem>
                   </SelectContent>
                 </Select>
 

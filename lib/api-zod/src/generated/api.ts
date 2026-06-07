@@ -218,7 +218,22 @@ export const ListPassportsResponseItem = zod.object({
   dateOfExpiry: zod.string().nullish(),
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
-  status: zod.enum(["processing", "completed", "failed"]),
+  status: zod.enum([
+    "processing",
+    "completed",
+    "failed",
+    "applied",
+    "approved",
+    "ticket_issued",
+    "arrived",
+    "handedover",
+    "return_back_from_worksite",
+    "incomplete",
+    "cancelled",
+    "terminated",
+    "lost",
+    "employed",
+  ]),
   submitted: zod
     .boolean()
     .describe(
@@ -280,7 +295,22 @@ export const GetPassportStatsResponse = zod.object({
       dateOfExpiry: zod.string().nullish(),
       address: zod.string().nullish(),
       nationality: zod.string().nullish().describe("bangladesh or india"),
-      status: zod.enum(["processing", "completed", "failed"]),
+      status: zod.enum([
+        "processing",
+        "completed",
+        "failed",
+        "applied",
+        "approved",
+        "ticket_issued",
+        "arrived",
+        "handedover",
+        "return_back_from_worksite",
+        "incomplete",
+        "cancelled",
+        "terminated",
+        "lost",
+        "employed",
+      ]),
       submitted: zod
         .boolean()
         .describe(
@@ -332,7 +362,22 @@ export const GetPassportResponse = zod.object({
   dateOfExpiry: zod.string().nullish(),
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
-  status: zod.enum(["processing", "completed", "failed"]),
+  status: zod.enum([
+    "processing",
+    "completed",
+    "failed",
+    "applied",
+    "approved",
+    "ticket_issued",
+    "arrived",
+    "handedover",
+    "return_back_from_worksite",
+    "incomplete",
+    "cancelled",
+    "terminated",
+    "lost",
+    "employed",
+  ]),
   submitted: zod
     .boolean()
     .describe(
@@ -377,6 +422,7 @@ export const UpdatePassportBody = zod.object({
   dateOfExpiry: zod.string().optional(),
   address: zod.string().optional(),
   nationality: zod.string().optional(),
+  status: zod.string().optional(),
   submitted: zod.boolean().optional(),
   companyId: zod.number().nullish(),
   clientId: zod.number().nullish(),
@@ -393,7 +439,22 @@ export const UpdatePassportResponse = zod.object({
   dateOfExpiry: zod.string().nullish(),
   address: zod.string().nullish(),
   nationality: zod.string().nullish().describe("bangladesh or india"),
-  status: zod.enum(["processing", "completed", "failed"]),
+  status: zod.enum([
+    "processing",
+    "completed",
+    "failed",
+    "applied",
+    "approved",
+    "ticket_issued",
+    "arrived",
+    "handedover",
+    "return_back_from_worksite",
+    "incomplete",
+    "cancelled",
+    "terminated",
+    "lost",
+    "employed",
+  ]),
   submitted: zod
     .boolean()
     .describe(

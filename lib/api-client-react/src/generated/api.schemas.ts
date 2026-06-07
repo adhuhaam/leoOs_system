@@ -232,6 +232,17 @@ export const PassportStatus = {
   processing: "processing",
   completed: "completed",
   failed: "failed",
+  applied: "applied",
+  approved: "approved",
+  ticket_issued: "ticket_issued",
+  arrived: "arrived",
+  handedover: "handedover",
+  return_back_from_worksite: "return_back_from_worksite",
+  incomplete: "incomplete",
+  cancelled: "cancelled",
+  terminated: "terminated",
+  lost: "lost",
+  employed: "employed",
 } as const;
 
 export interface Passport {
@@ -302,6 +313,7 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  status?: string;
   submitted?: boolean;
   /** @nullable */
   companyId?: number | null;

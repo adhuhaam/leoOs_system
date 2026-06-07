@@ -14,6 +14,7 @@ export interface PassportUpdate {
   dateOfExpiry?: string;
   address?: string;
   nationality?: string;
+  status?: string;
   submitted?: boolean;
   /** @nullable */
   companyId?: number | null;
