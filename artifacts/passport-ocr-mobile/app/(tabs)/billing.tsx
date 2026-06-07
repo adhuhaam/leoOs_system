@@ -9,11 +9,13 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -71,6 +73,7 @@ export default function BillingScreen() {
   const [search, setSearch] = useState("");
   const [statusDoc, setStatusDoc] = useState<BillingDocumentSummary | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
 
   const updateMutation = useUpdateBillingDocument();
 
@@ -220,6 +223,22 @@ export default function BillingScreen() {
           )}
         />
       )}
+
+      {/* Create FAB */}
+      <Pressable
+        onPress={async () => {
+          if (Platform.OS !== "web") {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+          router.push("/billing/new");
+        }}
+        style={({ pressed }) => [
+          styles.fab,
+          { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        <Feather name="plus" size={26} color={colors.primaryForeground} />
+      </Pressable>
 
       {/* Status picker modal — triggered by long-press on a card */}
       <Modal
@@ -463,6 +482,21 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+  },
   // modal
   modalOverlay: {
     flex: 1,

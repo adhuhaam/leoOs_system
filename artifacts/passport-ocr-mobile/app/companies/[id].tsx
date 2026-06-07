@@ -7,11 +7,13 @@ import {
   useUpdateCompany,
 } from "@workspace/api-client-react";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -80,12 +82,23 @@ export default function CompanyEditScreen() {
     query: { queryKey: getListCompaniesQueryKey() },
   });
 
+  const { data: brandedCompanies = [] } = useListCompanies(
+    { withBranding: true },
+    { query: { enabled: !isLoading, queryKey: getListCompaniesQueryKey({ withBranding: true }) } },
+  );
+
   const company = useMemo(
     () => (companies as Company[]).find((c) => c.id === companyId) ?? null,
     [companies, companyId],
   );
 
+  const brandingData = useMemo(
+    () => (brandedCompanies as Company[]).find((c) => c.id === companyId) ?? null,
+    [brandedCompanies, companyId],
+  );
+
   const updateMutation = useUpdateCompany();
+  const brandingMutation = useUpdateCompany();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [dirty, setDirty] = useState(false);
 
@@ -96,6 +109,59 @@ export default function CompanyEditScreen() {
   function setField(key: EditableField, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setDirty(true);
+  }
+
+  async function handlePickImage(kind: "letterheadImage" | "signatureImage") {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission required", "Allow access to your photo library to upload images.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      base64: true,
+      quality: 0.6,
+      allowsEditing: false,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType ?? "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${asset.base64}`;
+    try {
+      await brandingMutation.mutateAsync({
+        id: companyId,
+        data: { [kind]: dataUrl } as Parameters<typeof brandingMutation.mutateAsync>[0]["data"],
+      });
+      await queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+      Alert.alert("Saved", kind === "letterheadImage" ? "Letterhead saved." : "Signature saved.");
+    } catch (err) {
+      Alert.alert("Upload failed", err instanceof Error ? err.message : "Please try again.");
+    }
+  }
+
+  function handleClearImage(kind: "letterheadImage" | "signatureImage") {
+    Alert.alert(
+      "Remove image",
+      `Remove ${kind === "letterheadImage" ? "letterhead" : "signature"} image?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await brandingMutation.mutateAsync({
+                id: companyId,
+                data: { [kind]: null } as Parameters<typeof brandingMutation.mutateAsync>[0]["data"],
+              });
+              await queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+            } catch (err) {
+              Alert.alert("Failed", err instanceof Error ? err.message : "Please try again.");
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function handleSave() {
@@ -192,6 +258,100 @@ export default function CompanyEditScreen() {
         </View>
       ))}
 
+      {/* ─── Branding section ─── */}
+      <View style={[styles.brandingCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.brandingHeader}>
+          <Feather name="image" size={16} color={colors.mutedForeground} />
+          <Text style={[styles.brandingSectionTitle, { color: colors.foreground }]}>
+            Branding
+          </Text>
+          {brandingMutation.isPending && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
+          )}
+        </View>
+        <Text style={[styles.brandingHint, { color: colors.mutedForeground }]}>
+          Images save immediately when selected. Used on LOA prints.
+        </Text>
+
+        {(["letterheadImage", "signatureImage"] as const).map((kind) => {
+          const label = kind === "letterheadImage" ? "Letterhead" : "Signature";
+          const hint =
+            kind === "letterheadImage"
+              ? "Appears at top of LOA prints"
+              : "Printed above signatory name";
+          const current = brandingData?.[kind] ?? null;
+          return (
+            <View key={kind} style={styles.imageSlot}>
+              <View style={styles.imageSlotHeader}>
+                <Text style={[styles.imageSlotLabel, { color: colors.mutedForeground }]}>
+                  {label.toUpperCase()}
+                </Text>
+                <Text style={[styles.imageSlotHint, { color: colors.mutedForeground }]}>
+                  {hint}
+                </Text>
+              </View>
+              {current ? (
+                <View style={[styles.imagePreviewWrap, { borderColor: colors.border }]}>
+                  <Image
+                    source={{ uri: current }}
+                    style={styles.imagePreview}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.imagePlaceholder,
+                    { backgroundColor: colors.secondary, borderColor: colors.border },
+                  ]}
+                >
+                  <Feather name="image" size={24} color={colors.mutedForeground} />
+                  <Text style={[styles.imagePlaceholderText, { color: colors.mutedForeground }]}>
+                    No image
+                  </Text>
+                </View>
+              )}
+              <View style={styles.imageActions}>
+                <Pressable
+                  onPress={() => handlePickImage(kind)}
+                  disabled={brandingMutation.isPending}
+                  style={({ pressed }) => [
+                    styles.imageBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: brandingMutation.isPending ? 0.5 : pressed ? 0.8 : 1,
+                      flex: 1,
+                    },
+                  ]}
+                >
+                  <Feather name="upload" size={14} color={colors.primaryForeground} />
+                  <Text style={[styles.imageBtnText, { color: colors.primaryForeground }]}>
+                    {current ? "Replace" : "Upload"}
+                  </Text>
+                </Pressable>
+                {current && (
+                  <Pressable
+                    onPress={() => handleClearImage(kind)}
+                    disabled={brandingMutation.isPending}
+                    style={({ pressed }) => [
+                      styles.imageBtn,
+                      {
+                        backgroundColor: colors.destructive + "18",
+                        borderColor: colors.destructive + "40",
+                        borderWidth: 1,
+                        opacity: brandingMutation.isPending ? 0.5 : pressed ? 0.8 : 1,
+                      },
+                    ]}
+                  >
+                    <Feather name="trash-2" size={14} color={colors.destructive} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
       <Pressable
         onPress={handleSave}
         disabled={!dirty || updateMutation.isPending}
@@ -244,4 +404,53 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  // branding
+  brandingCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    marginTop: 4,
+  },
+  brandingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  brandingSectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  brandingHint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: -4 },
+  imageSlot: { gap: 8 },
+  imageSlotHeader: { gap: 2 },
+  imageSlotLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  imageSlotHint: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  imagePreviewWrap: {
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+    height: 110,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imagePreview: { width: "100%", height: 110 },
+  imagePlaceholder: {
+    height: 110,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  imagePlaceholderText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  imageActions: { flexDirection: "row", gap: 8 },
+  imageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  imageBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 });

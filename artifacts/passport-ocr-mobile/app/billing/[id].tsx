@@ -7,7 +7,7 @@ import {
   useGetBillingDocument,
   useUpdateBillingDocument,
 } from "@workspace/api-client-react";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -151,7 +151,18 @@ export default function BillingDetailScreen() {
         contentContainerStyle={styles.container}
       >
         <Stack.Screen
-          options={{ title: `${isInvoice ? "Invoice" : "Quote"} ${doc.number}` }}
+          options={{
+            title: `${isInvoice ? "Invoice" : "Quote"} ${doc.number}`,
+            headerRight: () => (
+              <Pressable
+                onPress={() => router.push(`/billing/edit/${id}`)}
+                hitSlop={10}
+                style={{ marginRight: 4 }}
+              >
+                <Feather name="edit-2" size={20} color={colors.primary} />
+              </Pressable>
+            ),
+          }}
         />
 
         <View
