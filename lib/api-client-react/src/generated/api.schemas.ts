@@ -230,19 +230,8 @@ export type PassportStatus =
 
 export const PassportStatus = {
   processing: "processing",
-  failed: "failed",
   completed: "completed",
-  applied: "applied",
-  approved: "approved",
-  ticket_issued: "ticket_issued",
-  arrived: "arrived",
-  handed_over: "handed_over",
-  returned_from_worksite: "returned_from_worksite",
-  incomplete: "incomplete",
-  cancelled: "cancelled",
-  terminated: "terminated",
-  lost: "lost",
-  employed: "employed",
+  failed: "failed",
 } as const;
 
 export interface Passport {
@@ -305,26 +294,6 @@ export interface PassportUpload {
   companyId?: number;
 }
 
-export type PassportUpdateStatus =
-  (typeof PassportUpdateStatus)[keyof typeof PassportUpdateStatus];
-
-export const PassportUpdateStatus = {
-  processing: "processing",
-  failed: "failed",
-  completed: "completed",
-  applied: "applied",
-  approved: "approved",
-  ticket_issued: "ticket_issued",
-  arrived: "arrived",
-  handed_over: "handed_over",
-  returned_from_worksite: "returned_from_worksite",
-  incomplete: "incomplete",
-  cancelled: "cancelled",
-  terminated: "terminated",
-  lost: "lost",
-  employed: "employed",
-} as const;
-
 export interface PassportUpdate {
   fullName?: string;
   passportNumber?: string;
@@ -342,7 +311,6 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
-  status?: PassportUpdateStatus;
 }
 
 export interface PassportStats {

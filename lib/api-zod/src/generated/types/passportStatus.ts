@@ -11,17 +11,6 @@ export type PassportStatus =
 
 export const PassportStatus = {
   processing: "processing",
-  failed: "failed",
   completed: "completed",
-  applied: "applied",
-  approved: "approved",
-  ticket_issued: "ticket_issued",
-  arrived: "arrived",
-  handed_over: "handed_over",
-  returned_from_worksite: "returned_from_worksite",
-  incomplete: "incomplete",
-  cancelled: "cancelled",
-  terminated: "terminated",
-  lost: "lost",
-  employed: "employed",
+  failed: "failed",
 } as const;

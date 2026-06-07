@@ -5,7 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { PassportUpdateStatus } from "./passportUpdateStatus";
 
 export interface PassportUpdate {
   fullName?: string;
@@ -24,5 +23,4 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
-  status?: PassportUpdateStatus;
 }

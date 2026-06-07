@@ -54,7 +54,6 @@ export * from "./passport";
 export * from "./passportStats";
 export * from "./passportStatus";
 export * from "./passportUpdate";
-export * from "./passportUpdateStatus";
 export * from "./passportUpload";
 export * from "./password";
 export * from "./passwordInput";

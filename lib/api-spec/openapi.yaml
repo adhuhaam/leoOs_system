@@ -1480,21 +1480,7 @@ components:
           description: "bangladesh or india"
         status:
           type: string
-          enum:
-            - processing
-            - failed
-            - completed
-            - applied
-            - approved
-            - ticket_issued
-            - arrived
-            - handed_over
-            - returned_from_worksite
-            - incomplete
-            - cancelled
-            - terminated
-            - lost
-            - employed
+          enum: [processing, completed, failed]
         submitted:
           type: boolean
           description: "True only after the wizard is completed and an LOA has been created. Draft records (submitted=false) are excluded from list/stats."
@@ -1561,23 +1547,6 @@ components:
           type: ["string", "null"]
         agent:
           type: ["string", "null"]
-        status:
-          type: string
-          enum:
-            - processing
-            - failed
-            - completed
-            - applied
-            - approved
-            - ticket_issued
-            - arrived
-            - handed_over
-            - returned_from_worksite
-            - incomplete
-            - cancelled
-            - terminated
-            - lost
-            - employed
 
     PassportStats:
       type: object
