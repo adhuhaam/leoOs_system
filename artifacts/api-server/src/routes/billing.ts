@@ -15,6 +15,7 @@ import {
   GetBillingDocumentParams,
   ListBillingDocumentsQueryParams,
 } from "@workspace/api-zod";
+import { requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -226,7 +227,7 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
   res.json({ ...docRows[0], items });
 });
 
-router.post("/billing/documents", async (req, res): Promise<void> => {
+router.post("/billing/documents", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const parsed = CreateBillingDocumentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -335,7 +336,7 @@ router.post("/billing/documents", async (req, res): Promise<void> => {
   res.status(500).json({ error: "Failed to create document" });
 });
 
-router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
+router.patch("/billing/documents/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const paramsParsed = UpdateBillingDocumentParams.safeParse(req.params);
   if (!paramsParsed.success) {
     res.status(400).json({ error: paramsParsed.error.message });
@@ -457,7 +458,7 @@ router.patch("/billing/documents/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/billing/documents/:id", async (req, res): Promise<void> => {
+router.delete("/billing/documents/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const parsed = DeleteBillingDocumentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

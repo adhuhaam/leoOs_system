@@ -77,8 +77,8 @@ async function preprocessImageBuffer(
   return { imgBuffer, mime: "image/jpeg" };
 }
 
-// GET /passports — list all (open)
-router.get("/passports", async (req, res): Promise<void> => {
+// GET /passports — list (requires auth)
+router.get("/passports", requireAuth, async (req, res): Promise<void> => {
   const parsed = ListPassportsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -233,7 +233,7 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 });
 
 // GET /passports/stats — dashboard stats
-router.get("/passports/stats", async (_req, res): Promise<void> => {
+router.get("/passports/stats", requireAuth, async (_req, res): Promise<void> => {
   const all = await db
     .select()
     .from(passportsTable)
@@ -252,8 +252,8 @@ router.get("/passports/stats", async (_req, res): Promise<void> => {
   res.json(stats);
 });
 
-// GET /passports/:id — get single (open)
-router.get("/passports/:id", async (req, res): Promise<void> => {
+// GET /passports/:id — get single (requires auth)
+router.get("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

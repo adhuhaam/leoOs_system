@@ -8,6 +8,7 @@ import {
   DeleteClientParams,
   ListClientsQueryParams,
 } from "@workspace/api-zod";
+import { requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -45,7 +46,7 @@ router.get("/clients", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-router.post("/clients", async (req, res): Promise<void> => {
+router.post("/clients", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const parsed = CreateClientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -63,7 +64,7 @@ router.post("/clients", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/clients/:id", async (req, res): Promise<void> => {
+router.patch("/clients/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = UpdateClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -95,7 +96,7 @@ router.patch("/clients/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/clients/:id", async (req, res): Promise<void> => {
+router.delete("/clients/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = DeleteClientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

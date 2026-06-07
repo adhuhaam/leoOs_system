@@ -7,6 +7,7 @@ import {
   UpdateCompanyBody,
   DeleteCompanyParams,
 } from "@workspace/api-zod";
+import { requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -87,7 +88,7 @@ router.get("/companies", async (req, res): Promise<void> => {
   res.json(out);
 });
 
-router.post("/companies", async (req, res): Promise<void> => {
+router.post("/companies", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const parsed = CreateCompanyBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -103,7 +104,7 @@ router.post("/companies", async (req, res): Promise<void> => {
   res.status(201).json(company);
 });
 
-router.patch("/companies/:id", async (req, res): Promise<void> => {
+router.patch("/companies/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = UpdateCompanyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -132,7 +133,7 @@ router.patch("/companies/:id", async (req, res): Promise<void> => {
   res.json(company);
 });
 
-router.delete("/companies/:id", async (req, res): Promise<void> => {
+router.delete("/companies/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = DeleteCompanyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

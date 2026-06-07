@@ -72,10 +72,10 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
-  // Only admin and superuser may change system settings
+  // All system settings writes are superuser-only
   const role = req.session.role ?? "";
-  if (role !== "superuser" && role !== "admin") {
-    res.status(403).json({ error: "Insufficient permissions" });
+  if (role !== "superuser") {
+    res.status(403).json({ error: "Only superusers may change system settings" });
     return;
   }
 
@@ -109,23 +109,13 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
   if (data.openaiApiKey !== undefined)
     patch.openaiApiKey = data.openaiApiKey === null ? null : (data.openaiApiKey?.trim() || null);
 
-  // Google OAuth keys — superuser only
-  if (
-    req.body.googleClientId !== undefined ||
-    req.body.googleClientSecret !== undefined ||
-    req.body.googleClientIdIos !== undefined
-  ) {
-    if (req.session.role !== "superuser") {
-      res.status(403).json({ error: "Only superusers can update Google OAuth credentials" });
-      return;
-    }
-    const googleParsed = GoogleKeysInput.safeParse(req.body);
-    if (googleParsed.success) {
-      const gd = googleParsed.data;
-      if (gd.googleClientId !== undefined) patch.googleClientId = gd.googleClientId ?? null;
-      if (gd.googleClientSecret !== undefined) patch.googleClientSecret = gd.googleClientSecret ?? null;
-      if (gd.googleClientIdIos !== undefined) patch.googleClientIdIos = gd.googleClientIdIos ?? null;
-    }
+  // Google OAuth keys (already superuser-only from the outer check above)
+  const googleParsed = GoogleKeysInput.safeParse(req.body);
+  if (googleParsed.success) {
+    const gd = googleParsed.data;
+    if (gd.googleClientId !== undefined) patch.googleClientId = gd.googleClientId ?? null;
+    if (gd.googleClientSecret !== undefined) patch.googleClientSecret = gd.googleClientSecret ?? null;
+    if (gd.googleClientIdIos !== undefined) patch.googleClientIdIos = gd.googleClientIdIos ?? null;
   }
 
   await readSettings(); // ensure row exists

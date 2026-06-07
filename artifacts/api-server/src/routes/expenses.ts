@@ -8,6 +8,7 @@ import {
   DeleteExpenseParams,
   ListExpensesQueryParams,
 } from "@workspace/api-zod";
+import { requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -93,7 +94,7 @@ router.get("/expenses", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-router.post("/expenses", async (req, res): Promise<void> => {
+router.post("/expenses", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const parsed = CreateExpenseBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -162,7 +163,7 @@ router.post("/expenses", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/expenses/:id", async (req, res): Promise<void> => {
+router.patch("/expenses/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = UpdateExpenseParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -251,7 +252,7 @@ router.patch("/expenses/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/expenses/:id", async (req, res): Promise<void> => {
+router.delete("/expenses/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = DeleteExpenseParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
