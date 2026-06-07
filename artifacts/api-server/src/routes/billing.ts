@@ -111,6 +111,18 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
   const conds: SQL[] = [];
   if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
   if (clientId != null) conds.push(eq(billingDocumentsTable.clientId, clientId));
+
+  // Role-scoped filtering: company users see their own billing docs; client users see theirs
+  const sessionRole = req.session?.role;
+  const linkedEntityId = req.session?.linkedEntityId;
+  if (sessionRole === "company" && linkedEntityId) {
+    const eid = Number(linkedEntityId);
+    if (!Number.isNaN(eid)) conds.push(eq(billingDocumentsTable.companyId, eid));
+  } else if (sessionRole === "client" && linkedEntityId) {
+    const eid = Number(linkedEntityId);
+    if (!Number.isNaN(eid)) conds.push(eq(billingDocumentsTable.clientId, eid));
+  }
+
   const where = conds.length ? and(...conds) : undefined;
 
   const rows = await db

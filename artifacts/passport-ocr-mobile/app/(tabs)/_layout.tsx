@@ -11,8 +11,8 @@ import { useAuth } from "@/lib/auth";
  *
  * Tab         | superuser | admin | client | company | employee | agent
  * Dashboard   |     ✓     |   ✓   |   ✓    |    ✓    |    ✓     |   ✓
- * Master      |     ✓     |   ✓   |        |    ✓    |    ✓     |   ✓
- * Capture     |     ✓     |   ✓   |        |    ✓    |    ✓     |   ✓
+ * Master      |     ✓     |   ✓   |   ✓    |    ✓    |          |   ✓
+ * Capture     |     ✓     |   ✓   |        |    ✓    |          |
  * Billing     |     ✓     |   ✓   |   ✓    |    ✓    |          |
  * More        |     ✓     |   ✓   |   ✓    |    ✓    |    ✓     |   ✓
  */
@@ -24,23 +24,21 @@ export default function TabLayout() {
 
   const role = user?.role ?? null;
 
-  // Master: all roles except client
+  // Master: superuser, admin, client, company, agent (NOT employee)
   const canSeeMaster =
     role === "superuser" ||
     role === "admin" ||
+    role === "client" ||
     role === "company" ||
-    role === "employee" ||
     role === "agent";
 
-  // Capture: all roles except client
+  // Capture: superuser, admin, company only
   const canSeeCapture =
     role === "superuser" ||
     role === "admin" ||
-    role === "company" ||
-    role === "employee" ||
-    role === "agent";
+    role === "company";
 
-  // Billing: superuser, admin, client, company
+  // Billing: superuser, admin, client, company (NOT employee, NOT agent)
   const canSeeBilling =
     role === "superuser" ||
     role === "admin" ||

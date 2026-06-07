@@ -113,6 +113,17 @@ router.get("/passports", async (req, res): Promise<void> => {
     if (!Number.isNaN(n)) conditions.push(eq(passportsTable.companyId, n));
   }
 
+  // Role-scoped filtering: company/client users only see their own records
+  const sessionRole = req.session?.role;
+  const linkedEntityId = req.session?.linkedEntityId;
+  if (sessionRole === "company" && linkedEntityId) {
+    const eid = Number(linkedEntityId);
+    if (!Number.isNaN(eid)) conditions.push(eq(passportsTable.companyId, eid));
+  } else if (sessionRole === "client" && linkedEntityId) {
+    const eid = Number(linkedEntityId);
+    if (!Number.isNaN(eid)) conditions.push(eq(passportsTable.clientId, eid));
+  }
+
   // Left-join clients and companies so each row carries names for display.
   const results = await db
     .select({

@@ -18,7 +18,19 @@ router.get("/clients", async (req, res): Promise<void> => {
     return;
   }
   const { search } = parsed.data;
-  const rows = await db.select().from(clientsTable).orderBy(asc(clientsTable.name));
+
+  // Role-scoped: client users only see their own record
+  const sessionRole = req.session?.role;
+  const linkedEntityId = req.session?.linkedEntityId;
+  let rows;
+  if (sessionRole === "client" && linkedEntityId) {
+    const eid = Number(linkedEntityId);
+    rows = !Number.isNaN(eid)
+      ? await db.select().from(clientsTable).where(eq(clientsTable.id, eid)).orderBy(asc(clientsTable.name))
+      : [];
+  } else {
+    rows = await db.select().from(clientsTable).orderBy(asc(clientsTable.name));
+  }
   const filtered = search
     ? rows.filter((c) => {
         const q = search.toLowerCase();
