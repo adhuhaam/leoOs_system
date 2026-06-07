@@ -307,43 +307,55 @@ export default function CompaniesPage() {
                         {c.registrationNumber || <span className="font-sans">—</span>}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              data-testid={`button-actions-company-${c.id}`}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => setViewCompany(c)}
-                              data-testid={`menu-view-company-${c.id}`}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setEditCompany(c)}
-                              data-testid={`menu-edit-company-${c.id}`}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeleteTarget(c)}
-                              data-testid={`menu-delete-company-${c.id}`}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1"
+                            onClick={() => setEditCompany(c)}
+                            data-testid={`button-edit-company-${c.id}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                data-testid={`button-actions-company-${c.id}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onClick={() => setViewCompany(c)}
+                                data-testid={`menu-view-company-${c.id}`}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View details
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setEditCompany(c)}
+                                data-testid={`menu-edit-company-${c.id}`}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteTarget(c)}
+                                data-testid={`menu-delete-company-${c.id}`}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -404,6 +416,11 @@ function CompanyFormDialog(
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: allCompanies = [] } = useListCompanies();
+  const liveCompany = mode === "edit"
+    ? (allCompanies.find((c) => c.id === props.company.id) ?? props.company)
+    : null;
   const createMutation = useCreateCompany();
   const updateMutation = useUpdateCompany();
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -500,8 +517,7 @@ function CompanyFormDialog(
             </div>
           </div>
 
-          {mode === "edit" && (() => {
-            const company = props.company;
+          {mode === "edit" && liveCompany && (() => {
             const handleImageUpload = async (kind: "letterheadImage" | "signatureImage", file: File | null) => {
               if (!file) return;
               if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
@@ -515,7 +531,7 @@ function CompanyFormDialog(
               try {
                 const dataUrl = await readFileAsDataUrl(file);
                 updateMutation.mutate(
-                  { id: company.id, data: { [kind]: dataUrl } as Parameters<typeof updateMutation.mutate>[0]["data"] },
+                  { id: liveCompany.id, data: { [kind]: dataUrl } as Parameters<typeof updateMutation.mutate>[0]["data"] },
                   {
                     onSuccess: () => {
                       queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
@@ -530,7 +546,7 @@ function CompanyFormDialog(
             };
             const handleImageClear = (kind: "letterheadImage" | "signatureImage") => {
               updateMutation.mutate(
-                { id: company.id, data: { [kind]: null } as Parameters<typeof updateMutation.mutate>[0]["data"] },
+                { id: liveCompany.id, data: { [kind]: null } as Parameters<typeof updateMutation.mutate>[0]["data"] },
                 {
                   onSuccess: () => {
                     queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
@@ -541,29 +557,29 @@ function CompanyFormDialog(
               );
             };
             return (
-              <div className="space-y-3 pt-1">
-                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <div className="space-y-3 pt-2 border-t">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5 pt-1">
                   <ImageIcon className="h-4 w-4 text-muted-foreground" /> Branding
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <ImageSlot
                     label="Letterhead"
                     hint="PNG/JPG · max 500 KB · appears at top of LOA prints"
-                    dataUrl={company.letterheadImage ?? null}
+                    dataUrl={liveCompany.letterheadImage ?? null}
                     onPick={(f) => handleImageUpload("letterheadImage", f)}
                     onClear={() => handleImageClear("letterheadImage")}
                     previewClass="h-28"
-                    testId={`edit-letterhead-${company.id}`}
+                    testId={`edit-letterhead-${liveCompany.id}`}
                     disabled={isPending}
                   />
                   <ImageSlot
                     label="Signature"
                     hint="PNG/JPG · max 500 KB · printed above signatory name"
-                    dataUrl={company.signatureImage ?? null}
+                    dataUrl={liveCompany.signatureImage ?? null}
                     onPick={(f) => handleImageUpload("signatureImage", f)}
                     onClear={() => handleImageClear("signatureImage")}
                     previewClass="h-28"
-                    testId={`edit-signature-${company.id}`}
+                    testId={`edit-signature-${liveCompany.id}`}
                     disabled={isPending}
                   />
                 </div>
@@ -655,6 +671,8 @@ function CompanyDetailDialog({
   onEdit: (c: Company) => void;
 }) {
   const [tab, setTab] = useState("info");
+  const { data: allCompanies = [] } = useListCompanies();
+  const liveCompany = allCompanies.find((c) => c.id === company.id) ?? company;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -665,12 +683,12 @@ function CompanyDetailDialog({
             <Building2 className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-lg font-semibold leading-tight">{company.name}</DialogTitle>
+            <DialogTitle className="text-lg font-semibold leading-tight">{liveCompany.name}</DialogTitle>
             <DialogDescription className="mt-0.5 text-xs">
-              {[company.address, company.country].filter(Boolean).join(" · ") || "No address on record"}
+              {[liveCompany.address, liveCompany.country].filter(Boolean).join(" · ") || "No address on record"}
             </DialogDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => onEdit(company)}>
+          <Button variant="outline" size="sm" onClick={() => onEdit(liveCompany)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
         </div>
@@ -685,7 +703,7 @@ function CompanyDetailDialog({
 
           <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
             <TabsContent value="info" className="mt-0 space-y-6">
-              <CompanyInfoPanel company={company} />
+              <CompanyInfoPanel company={liveCompany} />
             </TabsContent>
 
             {(["job_title", "work_type", "work_site"] as const).map((cat) => {
