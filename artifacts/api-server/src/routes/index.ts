@@ -31,14 +31,17 @@ router.use(systemRouter);
 // writes: session only) — see routes/passports.ts for details.
 router.use(passportsRouter);
 
-// Admin-only: user management (superuser + admin)
-router.use(requireRole("superuser", "admin"), adminUsersRouter);
-
-// Superuser-only: permissions matrix management
-router.use(requireRole("superuser"), adminPermissionsRouter);
-
 // Everything below requires a valid session
 router.use(requireAuth);
+
+// Admin-only guard scoped to /admin/* — does NOT affect any other routes
+router.use("/admin", requireRole("superuser", "admin"));
+// Tighter guard for permissions endpoint (superuser only)
+router.use("/admin/permissions", requireRole("superuser"));
+
+// Mount admin routers (their paths already include /admin/…)
+router.use(adminUsersRouter);
+router.use(adminPermissionsRouter);
 // Module-level permission check (skips superuser/admin — handled by existing RBAC)
 router.use(permissionsMiddleware);
 router.use(companiesRouter);
