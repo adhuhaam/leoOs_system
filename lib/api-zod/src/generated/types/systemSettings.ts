@@ -25,4 +25,6 @@ export interface SystemSettings {
   hasCustomPassword: boolean;
   /** True if a user-supplied OpenAI API key is stored in the database. */
   hasOpenAiApiKey: boolean;
+  /** True if Google OAuth client ID is configured. */
+  hasGoogleSignIn: boolean;
 }

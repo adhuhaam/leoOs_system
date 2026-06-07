@@ -176,6 +176,9 @@ export const GetSystemSettingsResponse = zod.object({
     .describe(
       "True if a user-supplied OpenAI API key is stored in the database.",
     ),
+  hasGoogleSignIn: zod
+    .boolean()
+    .describe("True if Google OAuth client ID is configured."),
 });
 
 /**
@@ -271,6 +274,9 @@ export const UpdateSystemSettingsResponse = zod.object({
     .describe(
       "True if a user-supplied OpenAI API key is stored in the database.",
     ),
+  hasGoogleSignIn: zod
+    .boolean()
+    .describe("True if Google OAuth client ID is configured."),
 });
 
 /**

@@ -13,6 +13,8 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 - Required env: `AI_INTEGRATIONS_OPENAI_BASE_URL` + `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI via Replit AI Integrations
+- Required secret: `SUPERUSER_EMAIL` — email for the auto-seeded superuser account (first boot)
+- Required secret: `SUPERUSER_PASSWORD` — password for the auto-seeded superuser account (first boot)
 
 ## Stack
 
@@ -35,7 +37,23 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - `artifacts/api-server/src/lib/ocr.ts` — OpenAI vision OCR extraction logic
 - `artifacts/passport-ocr/src/` — React frontend (pages, components)
 - `artifacts/passport-ocr-mobile/app/` — Expo mobile app (file-based routes; tabs: Dashboard, Master, Capture, Billing, More)
-- `artifacts/passport-ocr-mobile/lib/auth.tsx` — shared-password auth provider (cookie session, native persistence)
+- `artifacts/passport-ocr-mobile/lib/auth.tsx` — RBAC auth provider (login, register, loginWithGoogle, exposes user.role)
+- `lib/db/src/schema/users.ts` — users table (id, email, name, role, googleId, isApproved, passwordHash, linkedEntityId)
+- `artifacts/api-server/src/routes/auth.ts` — email+password login, Google OAuth, register, requireAuth/requireRole
+- `artifacts/api-server/src/routes/admin-users.ts` — admin user CRUD (superuser+admin only)
+- `artifacts/api-server/src/lib/bootstrap-users.ts` — ensures users table exists, seeds superuser on first boot
+- `artifacts/passport-ocr-mobile/app/admin/users.tsx` — User Management screen (mobile)
+- `artifacts/passport-ocr-mobile/app/admin/system-settings.tsx` — System Settings / Google OAuth screen (mobile, superuser)
+- `artifacts/passport-ocr/src/pages/users.tsx` — User Management page (web, admin+superuser)
+
+## Auth & RBAC
+
+- **Roles**: superuser > admin > client > company > employee > agent
+- **Self-registration**: `POST /auth/register` creates an unapproved account; admin/superuser approves via User Management
+- **Login**: `POST /auth/login` with `{email, password}`; returns 403 if account not yet approved
+- **Google Sign-In** (mobile): configure Web/Android + iOS client IDs in System Settings → backend verifies the ID token via `google-auth-library`
+- **Superuser seed**: on first boot the server reads `SUPERUSER_EMAIL` + `SUPERUSER_PASSWORD` env secrets and inserts the superuser row (idempotent; skipped if a superuser already exists)
+- **Role-aware nav**: web sidebar hides User Management unless role is admin/superuser; mobile tabs hide based on role
 
 ## Architecture decisions
 
@@ -141,6 +159,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 ## Gotchas
 
 - Re-run `pnpm --filter @workspace/api-spec run codegen` after any OpenAPI spec change
+- After adding new users or changing roles, the session is already role-aware — no server restart needed
+- Google OAuth client IDs are stored in the `app_settings` table (via System Settings screen), NOT in env vars
 - `sharp` requires native build approval: run `pnpm approve-builds` and select sharp if PDF conversion fails
 - Always run `pnpm --filter @workspace/db run push` after schema changes
 - OCR uses `gpt-5.4` model with vision — requires `AI_INTEGRATIONS_OPENAI_BASE_URL` env var
