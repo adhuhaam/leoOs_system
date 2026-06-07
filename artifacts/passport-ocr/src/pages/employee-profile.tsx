@@ -13,6 +13,32 @@ import { ArrowLeft, ExternalLink, UserCircle2, ShieldCheck, ShieldX } from "luci
 
 const XPAT_15_MIN = 15 * 60 * 1000;
 
+function parseXpatPhotoParams(photoUrl: string | null | undefined): { photoId: string; serviceId: string } | null {
+  if (!photoUrl) return null;
+  try {
+    const url = new URL(photoUrl, "https://mobile-xpat.egov.mv");
+    const photoId = url.searchParams.get("photoId");
+    const serviceId = url.searchParams.get("serviceId");
+    if (!photoId || !serviceId) return null;
+    return { photoId, serviceId };
+  } catch {
+    return null;
+  }
+}
+
+function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
+  const p = parseXpatPhotoParams(photoUrl);
+  if (!p) return null;
+  return `/api/xpat/photo?photoId=${encodeURIComponent(p.photoId)}&serviceId=${encodeURIComponent(p.serviceId)}`;
+}
+
+function formatXpatDate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function wpStatusBadge(xpat: XpatWorkPermit | undefined) {
   if (!xpat) return null;
   if (xpat.isValid === true) {
@@ -156,10 +182,7 @@ export default function EmployeeProfilePage() {
     },
   });
 
-  const photoSrc =
-    xpat?.photoUrl
-      ? `/api/xpat/photo?photoUrl=${encodeURIComponent(xpat.photoUrl)}`
-      : null;
+  const photoSrc = buildPhotoSrc(xpat?.photoUrl);
 
   if (passportLoading) {
     return (
@@ -233,8 +256,16 @@ export default function EmployeeProfilePage() {
                   {wpStatusBadge(xpat)}
                   {xpat.workPermitExpiry && (
                     <span className="text-xs text-muted-foreground">
-                      Expires: <span className="font-medium text-foreground">{xpat.workPermitExpiry}</span>
+                      Expires: <span className="font-medium text-foreground">{formatXpatDate(xpat.workPermitExpiry)}</span>
                     </span>
+                  )}
+                  {xpat.verifyUrl && (
+                    <a href={xpat.verifyUrl} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Verify on eGov
+                      </Button>
+                    </a>
                   )}
                 </div>
               )}

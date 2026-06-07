@@ -42,17 +42,24 @@ router.get("/xpat/work-permit", requireAuth, async (req, res): Promise<void> => 
 });
 
 /**
- * GET /xpat/photo?photoUrl=<relative-or-absolute-url>
- * Proxies the employee photo (JPEG) from Xpat, so the API key never reaches the browser.
- * The photoUrl value comes from the XpatWorkPermit JSON response.
+ * GET /xpat/photo?photoId=<id>&serviceId=<id>
+ * Proxies the employee photo (JPEG) from the Xpat GetImage endpoint.
+ * Accepts only the two opaque IDs (not a caller-supplied URL) so the
+ * backend constructs the target URL itself — eliminating any SSRF risk.
+ * Both params are validated to contain only safe word characters.
  */
 router.get("/xpat/photo", requireAuth, async (req, res): Promise<void> => {
-  const raw = req.query.photoUrl;
-  if (!raw || typeof raw !== "string") {
-    res.status(400).json({ error: "photoUrl required" });
+  const { photoId, serviceId } = req.query;
+  if (!photoId || !serviceId || typeof photoId !== "string" || typeof serviceId !== "string") {
+    res.status(400).json({ error: "photoId and serviceId are required" });
     return;
   }
-  const url = raw.startsWith("http") ? raw : `${XPAT_BASE}${raw.startsWith("/") ? "" : "/"}${raw}`;
+  // Allow only alphanumeric / dash / underscore to prevent injection.
+  if (!/^[\w-]+$/.test(photoId) || !/^[\w-]+$/.test(serviceId)) {
+    res.status(400).json({ error: "Invalid photoId or serviceId" });
+    return;
+  }
+  const url = `${XPAT_BASE}/WorkPermit/GetImage?photoId=${encodeURIComponent(photoId)}&serviceId=${encodeURIComponent(serviceId)}`;
   let upstream: Response;
   try {
     upstream = await fetch(url, {

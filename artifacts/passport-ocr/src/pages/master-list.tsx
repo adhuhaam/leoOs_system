@@ -51,6 +51,38 @@ import {
 
 const XPAT_STALE = 15 * 60 * 1000;
 
+/**
+ * Parse the photoId and serviceId from the Xpat photoUrl field.
+ * The field looks like "/WorkPermit/GetImage?photoId=xxx&serviceId=yyy".
+ * We extract the IDs and pass them to our own proxy — never the raw URL —
+ * so the backend always constructs the target URL itself (no SSRF risk).
+ */
+function parseXpatPhotoParams(photoUrl: string | null | undefined): { photoId: string; serviceId: string } | null {
+  if (!photoUrl) return null;
+  try {
+    const url = new URL(photoUrl, "https://mobile-xpat.egov.mv");
+    const photoId = url.searchParams.get("photoId");
+    const serviceId = url.searchParams.get("serviceId");
+    if (!photoId || !serviceId) return null;
+    return { photoId, serviceId };
+  } catch {
+    return null;
+  }
+}
+
+function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
+  const p = parseXpatPhotoParams(photoUrl);
+  if (!p) return null;
+  return `/api/xpat/photo?photoId=${encodeURIComponent(p.photoId)}&serviceId=${encodeURIComponent(p.serviceId)}`;
+}
+
+function formatXpatDate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 // Maps stored demonyms (e.g. "bangladeshi") to the canonical country key.
 const DEMONYM_MAP: Record<string, string> = {
   bangladeshi: "bangladesh",
@@ -108,11 +140,9 @@ function WpStatusBadge({ xpat }: { xpat: XpatWorkPermit }) {
 function PassportRow({
   row,
   onEdit,
-  onDelete,
 }: {
   row: Row;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
   const { passport, companyName, loaCount } = row;
   const [, navigate] = useLocation();
@@ -130,9 +160,7 @@ function PassportRow({
     },
   });
 
-  const photoSrc = xpat?.photoUrl
-    ? `/api/xpat/photo?photoUrl=${encodeURIComponent(xpat.photoUrl)}`
-    : null;
+  const photoSrc = buildPhotoSrc(xpat?.photoUrl);
 
   const initials = (passport.fullName ?? "?")
     .split(" ")
@@ -200,7 +228,7 @@ function PassportRow({
             <WpStatusBadge xpat={xpat} />
             {xpat.workPermitExpiry && (
               <p className="text-[10px] text-muted-foreground">
-                Exp: {xpat.workPermitExpiry}
+                Exp: {formatXpatDate(xpat.workPermitExpiry)}
               </p>
             )}
           </div>
@@ -499,7 +527,6 @@ export default function MasterListPage() {
                       key={row.passport.id}
                       row={row}
                       onEdit={() => setEditPassport(row.passport)}
-                      onDelete={() => setDeletePassportId(row.passport.id)}
                     />
                   ))
                 )}
@@ -574,9 +601,7 @@ function EditCandidateDialog({
     },
   });
 
-  const photoSrc = xpat?.photoUrl
-    ? `/api/xpat/photo?photoUrl=${encodeURIComponent(xpat.photoUrl)}`
-    : null;
+  const photoSrc = buildPhotoSrc(xpat?.photoUrl);
 
   const cardSrc =
     hasXpat && wp && pp
@@ -728,7 +753,7 @@ function EditCandidateDialog({
                         )}
                         {xpat.workPermitExpiry && (
                           <span className="text-[11px] text-muted-foreground">
-                            Expires: <span className="font-medium text-foreground">{xpat.workPermitExpiry}</span>
+                            Expires: <span className="font-medium text-foreground">{formatXpatDate(xpat.workPermitExpiry)}</span>
                           </span>
                         )}
                       </div>
