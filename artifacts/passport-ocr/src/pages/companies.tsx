@@ -472,6 +472,10 @@ function CompanyFormDialog(
 
   const createMutation = useCreateCompany();
   const updateMutation = useUpdateCompany();
+  // Branding uploads get their own mutation so they don't share isPending state
+  // with the form save — avoids disabling upload buttons while the form saves
+  // and stops the "Save changes" spinner from appearing on image upload.
+  const brandingMutation = useUpdateCompany();
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const f = (key: keyof CompanyFormState) => (v: string) =>
@@ -579,38 +583,35 @@ function CompanyFormDialog(
               }
               try {
                 const dataUrl = await compressImageToDataUrl(file);
-                updateMutation.mutate(
-                  { id: liveCompany.id, data: { [kind]: dataUrl } as Parameters<typeof updateMutation.mutate>[0]["data"] },
-                  {
-                    onSuccess: () => {
-                      queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
-                      queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
-                      toast({ title: "Image saved" });
-                    },
-                    onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
-                  },
-                );
+                brandingMutation.mutateAsync(
+                  { id: liveCompany.id, data: { [kind]: dataUrl } as Parameters<typeof brandingMutation.mutate>[0]["data"] },
+                ).then(() => {
+                  queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                  queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+                  toast({ title: kind === "letterheadImage" ? "Letterhead saved" : "Signature saved" });
+                }).catch((err: unknown) => {
+                  toast({ title: err instanceof Error ? err.message : "Failed to save image", variant: "destructive" });
+                });
               } catch {
                 toast({ title: "Failed to read file", variant: "destructive" });
               }
             };
             const handleImageClear = (kind: "letterheadImage" | "signatureImage") => {
-              updateMutation.mutate(
-                { id: liveCompany.id, data: { [kind]: null } as Parameters<typeof updateMutation.mutate>[0]["data"] },
-                {
-                  onSuccess: () => {
-                    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
-                    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
-                    toast({ title: "Image removed" });
-                  },
-                  onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
-                },
-              );
+              brandingMutation.mutateAsync(
+                { id: liveCompany.id, data: { [kind]: null } as Parameters<typeof brandingMutation.mutate>[0]["data"] },
+              ).then(() => {
+                queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+                toast({ title: "Image removed" });
+              }).catch(() => toast({ title: "Failed to remove", variant: "destructive" }));
             };
             return (
               <div className="space-y-3 pt-2 border-t">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5 pt-1">
                   <ImageIcon className="h-4 w-4 text-muted-foreground" /> Branding
+                  {brandingMutation.isPending && (
+                    <span className="text-[10px] text-muted-foreground animate-pulse ml-1">Saving…</span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <ImageSlot
@@ -621,7 +622,7 @@ function CompanyFormDialog(
                     onClear={() => handleImageClear("letterheadImage")}
                     previewClass="h-28"
                     testId={`edit-letterhead-${liveCompany.id}`}
-                    disabled={isPending}
+                    disabled={brandingMutation.isPending}
                   />
                   <ImageSlot
                     label="Signature"
@@ -631,7 +632,7 @@ function CompanyFormDialog(
                     onClear={() => handleImageClear("signatureImage")}
                     previewClass="h-28"
                     testId={`edit-signature-${liveCompany.id}`}
-                    disabled={isPending}
+                    disabled={brandingMutation.isPending}
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">Images save immediately when selected.</p>
