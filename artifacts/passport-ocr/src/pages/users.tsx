@@ -353,6 +353,8 @@ export default function UsersPage() {
                 const isMe = u.id === myId;
                 const isBusy = busy === u.id;
                 const isBlocked = u.isBlocked ?? false;
+                // Admins may not touch superuser accounts at all — superuser is god-level
+                const isLockedForAdmin = u.role === "superuser" && myRole !== "superuser";
 
                 return (
                   <tr
@@ -377,15 +379,15 @@ export default function UsersPage() {
                     {/* Role badge + quick-picker dropdown */}
                     <td className="px-4 py-3">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={isMe || isBusy}>
+                        <DropdownMenuTrigger asChild disabled={isMe || isBusy || isLockedForAdmin}>
                           <button
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
                               ROLE_VARIANT[u.role as Role] ??
                               "bg-secondary text-secondary-foreground border-secondary"
-                            } ${isMe ? "opacity-50 cursor-not-allowed" : "hover:opacity-80 transition-opacity"}`}
+                            } ${isMe || isLockedForAdmin ? "opacity-50 cursor-not-allowed" : "hover:opacity-80 transition-opacity"}`}
                           >
                             {u.role}
-                            {!isMe && (
+                            {!isMe && !isLockedForAdmin && (
                               <ChevronDown className="h-3 w-3 opacity-60" />
                             )}
                           </button>
@@ -476,6 +478,10 @@ export default function UsersPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         {isBusy ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : isLockedForAdmin ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground opacity-60">
+                            <Shield className="h-3 w-3" /> Superuser only
+                          </span>
                         ) : (
                           <>
                             {/* Edit details */}
