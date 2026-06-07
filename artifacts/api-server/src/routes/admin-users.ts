@@ -139,23 +139,32 @@ router.patch("/admin/users/:id", async (req: Request, res: Response): Promise<vo
   const actorRole = req.session?.role ?? "";
   const actorId = req.session?.userId;
 
+  // Always load target first — enforce that only superusers may modify ANY field
+  // on a superuser account, regardless of which fields are being patched.
+  const targetRows = await db
+    .select({ role: usersTable.role })
+    .from(usersTable)
+    .where(eq(usersTable.id, id))
+    .limit(1);
+
+  if (targetRows.length === 0) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const targetRole = targetRows[0]!.role;
+
+  // Non-superusers may not touch superuser accounts at all
+  if (targetRole === "superuser" && actorRole !== "superuser") {
+    res.status(403).json({ error: "Only superusers may modify another superuser's account" });
+    return;
+  }
+
   // Enforce role-transition policy if role is being changed
   if (role !== undefined) {
     const policyErr = canAssignRole(actorRole, id, actorId, role);
     if (policyErr) {
       res.status(403).json({ error: policyErr });
-      return;
-    }
-
-    // Also verify current role of target — only superuser may touch a current superuser
-    const target = await db
-      .select({ role: usersTable.role })
-      .from(usersTable)
-      .where(eq(usersTable.id, id))
-      .limit(1);
-
-    if (target.length > 0 && target[0]!.role === "superuser" && actorRole !== "superuser") {
-      res.status(403).json({ error: "Only superusers may modify another superuser's account" });
       return;
     }
   }

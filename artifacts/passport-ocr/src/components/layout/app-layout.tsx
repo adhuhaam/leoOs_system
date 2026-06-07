@@ -59,7 +59,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/users", label: "User Management", icon: UserCog, roles: ["superuser", "admin"] },
   // System
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/system-settings", label: "System Settings", icon: ShieldCheck, roles: ["superuser"] },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {

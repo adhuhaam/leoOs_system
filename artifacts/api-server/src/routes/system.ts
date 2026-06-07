@@ -72,6 +72,12 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
+  // Only admin and superuser may change system settings
+  const role = req.session.role ?? "";
+  if (role !== "superuser" && role !== "admin") {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
 
   const parsed = UpdateSystemSettingsBody.safeParse(req.body);
   if (!parsed.success) {
