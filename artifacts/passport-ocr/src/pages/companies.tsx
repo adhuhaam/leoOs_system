@@ -461,6 +461,15 @@ function CompanyFormDialog(
   const liveCompany = mode === "edit"
     ? (allCompanies.find((c) => c.id === props.company.id) ?? props.company)
     : null;
+
+  const { data: brandedCompanies = [] } = useListCompanies(
+    { withBranding: true },
+    { query: { enabled: mode === "edit", queryKey: getListCompaniesQueryKey({ withBranding: true }) } },
+  );
+  const brandingData = mode === "edit"
+    ? (brandedCompanies.find((c) => c.id === props.company.id) ?? null)
+    : null;
+
   const createMutation = useCreateCompany();
   const updateMutation = useUpdateCompany();
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -575,6 +584,7 @@ function CompanyFormDialog(
                   {
                     onSuccess: () => {
                       queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                      queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
                       toast({ title: "Image saved" });
                     },
                     onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
@@ -590,6 +600,7 @@ function CompanyFormDialog(
                 {
                   onSuccess: () => {
                     queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
                     toast({ title: "Image removed" });
                   },
                   onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
@@ -605,7 +616,7 @@ function CompanyFormDialog(
                   <ImageSlot
                     label="Letterhead"
                     hint="PNG/JPG · auto-compressed · appears at top of LOA prints"
-                    dataUrl={liveCompany.letterheadImage ?? null}
+                    dataUrl={brandingData?.letterheadImage ?? null}
                     onPick={(f) => handleImageUpload("letterheadImage", f)}
                     onClear={() => handleImageClear("letterheadImage")}
                     previewClass="h-28"
@@ -615,7 +626,7 @@ function CompanyFormDialog(
                   <ImageSlot
                     label="Signature"
                     hint="PNG/JPG · auto-compressed · printed above signatory name"
-                    dataUrl={liveCompany.signatureImage ?? null}
+                    dataUrl={brandingData?.signatureImage ?? null}
                     onPick={(f) => handleImageUpload("signatureImage", f)}
                     onClear={() => handleImageClear("signatureImage")}
                     previewClass="h-28"
@@ -768,8 +779,16 @@ function CompanyInfoPanel({ company }: { company: Company }) {
   const queryClient = useQueryClient();
   const updateCompany = useUpdateCompany();
 
-  const invalidate = () =>
+  const { data: brandedCompanies = [] } = useListCompanies(
+    { withBranding: true },
+    { query: { queryKey: getListCompaniesQueryKey({ withBranding: true }) } },
+  );
+  const brandingData = brandedCompanies.find((c) => c.id === company.id) ?? null;
+
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+  };
 
   const handleBrandingUpload = async (
     kind: "letterheadImage" | "signatureImage",
@@ -844,7 +863,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
           <ImageSlot
             label="Letterhead"
             hint="PNG/JPG · auto-compressed · used at top of LOA PDF"
-            dataUrl={company.letterheadImage ?? null}
+            dataUrl={brandingData?.letterheadImage ?? null}
             onPick={(f) => handleBrandingUpload("letterheadImage", f)}
             onClear={() => handleBrandingClear("letterheadImage")}
             previewClass="h-28"
@@ -854,7 +873,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
           <ImageSlot
             label="Signature"
             hint="PNG/JPG · auto-compressed · printed above signatory name"
-            dataUrl={company.signatureImage ?? null}
+            dataUrl={brandingData?.signatureImage ?? null}
             onPick={(f) => handleBrandingUpload("signatureImage", f)}
             onClear={() => handleBrandingClear("signatureImage")}
             previewClass="h-28"

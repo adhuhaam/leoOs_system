@@ -206,6 +206,7 @@ export default function MasterListScreen() {
               passport={item}
               companyName={companyByPassport.get(item.id) ?? null}
               onPress={() => router.push(`/passport/${item.id}`)}
+              onEdit={() => router.push(`/passport/${item.id}`)}
             />
           )}
         />
@@ -295,10 +296,12 @@ function PassportCard({
   passport,
   companyName,
   onPress,
+  onEdit,
 }: {
   passport: Passport;
   companyName: string | null;
   onPress: () => void;
+  onEdit: () => void;
 }) {
   const colors = useColors();
   const status = passport.status ?? "processing";
@@ -433,8 +436,14 @@ function PassportCard({
           </View>
         </View>
 
-        {/* Chevron */}
-        <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ alignSelf: "center" }} />
+        {/* Edit button */}
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); onEdit(); }}
+          hitSlop={10}
+          style={[styles.editBtn, { backgroundColor: colors.secondary }]}
+        >
+          <Feather name="edit-2" size={14} color={colors.primary} />
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -535,6 +544,15 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  editBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    flexShrink: 0,
+  },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
 });
