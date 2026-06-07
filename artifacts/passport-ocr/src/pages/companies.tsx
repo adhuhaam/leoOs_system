@@ -81,7 +81,8 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_IMAGE_BYTES = 500 * 1024;
+const MAX_RAW_FILE_BYTES = 10 * 1024 * 1024; // 10 MB raw input cap (before compression)
+const MAX_IMAGE_BYTES = 500 * 1024;           // 500 KB target for the compressed output
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg"];
 
 const LOA_CATEGORIES = [
@@ -115,13 +116,52 @@ type LoaCategory = "job_title" | "work_type" | "work_site";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+/**
+ * Compresses an image file to a base64 data URL that fits within MAX_IMAGE_BYTES.
+ * Uses a canvas to resize (max 1200×800) and re-encode as JPEG, stepping down
+ * quality until the output is small enough.  This ensures even large mobile
+ * camera photos are safe to send as JSON to the API — production proxies have
+ * hard body-size limits that a raw base64 blob can silently exceed.
+ */
+async function compressImageToDataUrl(file: File): Promise<string> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const el = new Image();
+      el.onload = () => res(el);
+      el.onerror = () => rej(new Error("Could not load image"));
+      el.src = objectUrl;
+    });
+
+    const MAX_W = 1200;
+    const MAX_H = 800;
+    let { naturalWidth: w, naturalHeight: h } = img;
+    if (w > MAX_W || h > MAX_H) {
+      const scale = Math.min(MAX_W / w, MAX_H / h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, w, h);
+
+    // Step quality down until output fits within MAX_IMAGE_BYTES.
+    for (const quality of [0.85, 0.75, 0.65, 0.55]) {
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      // Base64 payload length → approximate byte size
+      const b64 = dataUrl.split(",")[1] ?? "";
+      const approxBytes = Math.ceil((b64.length * 3) / 4);
+      if (approxBytes <= MAX_IMAGE_BYTES) return dataUrl;
+    }
+
+    // Last resort: lowest quality
+    return canvas.toDataURL("image/jpeg", 0.4);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 // ─── Form state ───────────────────────────────────────────────────────────────
@@ -524,12 +564,12 @@ function CompanyFormDialog(
                 toast({ title: "PNG or JPG only", variant: "destructive" });
                 return;
               }
-              if (file.size > MAX_IMAGE_BYTES) {
-                toast({ title: `Max ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB`, variant: "destructive" });
+              if (file.size > MAX_RAW_FILE_BYTES) {
+                toast({ title: "Image must be under 10 MB", variant: "destructive" });
                 return;
               }
               try {
-                const dataUrl = await readFileAsDataUrl(file);
+                const dataUrl = await compressImageToDataUrl(file);
                 updateMutation.mutate(
                   { id: liveCompany.id, data: { [kind]: dataUrl } as Parameters<typeof updateMutation.mutate>[0]["data"] },
                   {
@@ -564,7 +604,7 @@ function CompanyFormDialog(
                 <div className="grid grid-cols-2 gap-4">
                   <ImageSlot
                     label="Letterhead"
-                    hint="PNG/JPG · max 500 KB · appears at top of LOA prints"
+                    hint="PNG/JPG · auto-compressed · appears at top of LOA prints"
                     dataUrl={liveCompany.letterheadImage ?? null}
                     onPick={(f) => handleImageUpload("letterheadImage", f)}
                     onClear={() => handleImageClear("letterheadImage")}
@@ -574,7 +614,7 @@ function CompanyFormDialog(
                   />
                   <ImageSlot
                     label="Signature"
-                    hint="PNG/JPG · max 500 KB · printed above signatory name"
+                    hint="PNG/JPG · auto-compressed · printed above signatory name"
                     dataUrl={liveCompany.signatureImage ?? null}
                     onPick={(f) => handleImageUpload("signatureImage", f)}
                     onClear={() => handleImageClear("signatureImage")}
@@ -740,12 +780,12 @@ function CompanyInfoPanel({ company }: { company: Company }) {
       toast({ title: "PNG or JPG only", variant: "destructive" });
       return;
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast({ title: `Max ${(MAX_IMAGE_BYTES / 1024).toFixed(0)} KB`, variant: "destructive" });
+    if (file.size > MAX_RAW_FILE_BYTES) {
+      toast({ title: "Image must be under 10 MB", variant: "destructive" });
       return;
     }
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await compressImageToDataUrl(file);
       updateCompany.mutate(
         { id: company.id, data: { [kind]: dataUrl } },
         {
@@ -803,7 +843,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ImageSlot
             label="Letterhead"
-            hint="PNG/JPG · max 500 KB · used at top of LOA PDF"
+            hint="PNG/JPG · auto-compressed · used at top of LOA PDF"
             dataUrl={company.letterheadImage ?? null}
             onPick={(f) => handleBrandingUpload("letterheadImage", f)}
             onClear={() => handleBrandingClear("letterheadImage")}
@@ -813,7 +853,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
           />
           <ImageSlot
             label="Signature"
-            hint="PNG/JPG · max 500 KB · printed above signatory name"
+            hint="PNG/JPG · auto-compressed · printed above signatory name"
             dataUrl={company.signatureImage ?? null}
             onPick={(f) => handleBrandingUpload("signatureImage", f)}
             onClear={() => handleBrandingClear("signatureImage")}
