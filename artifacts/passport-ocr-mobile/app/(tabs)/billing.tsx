@@ -354,7 +354,7 @@ function DocCard({
         styles.card,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          shadowColor: "#000",
           opacity: pressed ? 0.85 : 1,
         },
       ]}
@@ -443,7 +443,16 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   listContent: { padding: 16, gap: 12 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
-  card: { padding: 16, borderRadius: 14, borderWidth: 1, marginBottom: 12, gap: 4 },
+  card: {
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 12,
+    gap: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",

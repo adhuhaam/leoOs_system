@@ -5,6 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { useColors } from "@/hooks/useColors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -55,8 +56,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function RootLayoutNav() {
+  const colors = useColors();
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
+    <Stack
+      screenOptions={{
+        headerBackTitle: "Back",
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: {
+          fontFamily: "Inter_700Bold",
+          fontSize: 17,
+          color: colors.foreground,
+        },
+        headerTintColor: colors.foreground,
+        headerShadowVisible: false,
+        headerBackTitleStyle: { fontFamily: "Inter_500Medium" },
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="signup" options={{ headerShown: false }} />

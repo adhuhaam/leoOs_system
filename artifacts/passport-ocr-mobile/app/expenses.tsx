@@ -231,7 +231,7 @@ function ExpenseRow({
         styles.row,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          shadowColor: "#000",
           opacity: pressed ? 0.85 : 1,
         },
       ]}
@@ -319,9 +319,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: 12,
-    borderWidth: 1,
     marginBottom: 10,
     gap: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   rowCategory: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   rowRemarks: { fontSize: 12, fontFamily: "Inter_400Regular" },

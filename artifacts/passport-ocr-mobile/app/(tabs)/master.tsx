@@ -342,7 +342,7 @@ function PassportCard({
         styles.card,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          shadowColor: "#000",
           opacity: pressed ? 0.85 : 1,
         },
       ]}
@@ -489,9 +489,12 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: 16,
-    borderWidth: 1,
     marginBottom: 10,
     padding: 14,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardInner: {
     flexDirection: "row",

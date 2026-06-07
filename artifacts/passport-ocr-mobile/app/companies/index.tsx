@@ -142,7 +142,7 @@ function CompanyRow({
         styles.row,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          shadowColor: "#000",
           opacity: pressed ? 0.85 : 1,
         },
       ]}
@@ -189,9 +189,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: 14,
-    borderWidth: 1,
     marginBottom: 10,
     gap: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   avatar: {
     width: 42,

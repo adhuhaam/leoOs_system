@@ -17,9 +17,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 export default function ProfileScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -101,16 +103,31 @@ export default function ProfileScreen() {
             ]}
           >
             <View style={[styles.avatarCircle, { backgroundColor: colors.secondary }]}>
-              <Feather name="user" size={36} color={colors.foreground} />
+              {user?.name ? (
+                <Text style={[styles.avatarInitials, { color: colors.foreground }]}>
+                  {user.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((w) => w[0] ?? "")
+                    .join("")
+                    .toUpperCase()}
+                </Text>
+              ) : (
+                <Feather name="user" size={36} color={colors.foreground} />
+              )}
             </View>
-            <View style={{ flex: 1 }}>
-              {/* Name and role will be populated by the RBAC task once users table exists */}
+            <View style={{ flex: 1, gap: 2 }}>
               <Text style={[styles.userName, { color: colors.foreground }]}>
-                LEO OS User
+                {user?.name ?? "LEO OS User"}
               </Text>
+              {user?.email ? (
+                <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>
+                  {user.email}
+                </Text>
+              ) : null}
               <View style={[styles.rolePill, { backgroundColor: colors.secondary }]}>
                 <Text style={[styles.roleText, { color: colors.mutedForeground }]}>
-                  Authenticated
+                  {user?.role ?? "Authenticated"}
                 </Text>
               </View>
             </View>
@@ -285,7 +302,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  userName: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 6 },
+  avatarInitials: { fontSize: 24, fontFamily: "Inter_700Bold" },
+  userName: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  userEmail: { fontSize: 12, fontFamily: "Inter_400Regular" },
   rolePill: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
