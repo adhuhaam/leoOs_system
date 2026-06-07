@@ -22,18 +22,18 @@ type Item = {
   route?: string;
 };
 
+const TOOL_ITEMS: Item[] = [
+  { icon: "briefcase", label: "Companies", detail: "Manage employer companies", route: "/companies" },
+  { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
+  { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
+  { icon: "key", label: "Passwords", detail: "Shared password vault", route: "/passwords" },
+];
+
 export default function MoreScreen() {
   const colors = useColors();
   const qc = useQueryClient();
   const { refresh } = useAuth();
   const logoutMutation = useLogout();
-
-  const items: Item[] = [
-    { icon: "briefcase", label: "Companies", detail: "Manage employer companies", route: "/companies" },
-    { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
-    { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
-    { icon: "key", label: "Passwords", detail: "Shared password vault", route: "/passwords" },
-  ];
 
   function handleLogout() {
     Alert.alert("Sign out?", "You will return to the login screen.", [
@@ -59,11 +59,47 @@ export default function MoreScreen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.heading, { color: colors.foreground }]}>More</Text>
+      {/* Profile card */}
+      <Pressable
+        onPress={() => router.push("/profile")}
+        style={({ pressed }) => [
+          styles.profileCard,
+          {
+            backgroundColor: colors.card,
+            opacity: pressed ? 0.85 : 1,
+            shadowColor: "#000",
+          },
+        ]}
+      >
+        <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+          <Feather name="user" size={22} color={colors.foreground} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.profileName, { color: colors.foreground }]}>
+            My Profile
+          </Text>
+          <Text style={[styles.profileSub, { color: colors.mutedForeground }]}>
+            View profile & change password
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+      </Pressable>
 
-      <View style={[styles.group, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {items.map((item, idx) => (
+      {/* Tools group */}
+      <View style={styles.groupHeader}>
+        <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>
+          TOOLS
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.group,
+          { backgroundColor: colors.card, shadowColor: "#000" },
+        ]}
+      >
+        {TOOL_ITEMS.map((item, idx) => (
           <Pressable
             key={item.label}
             onPress={() => item.route && router.push(item.route as never)}
@@ -71,13 +107,13 @@ export default function MoreScreen() {
               styles.row,
               {
                 borderTopColor: colors.border,
-                borderTopWidth: idx === 0 ? 0 : 1,
-                opacity: pressed ? 0.85 : 1,
+                borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
+                opacity: pressed ? 0.82 : 1,
               },
             ]}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-              <Feather name={item.icon} size={18} color={colors.primary} />
+              <Feather name={item.icon} size={18} color={colors.foreground} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: colors.foreground }]}>
@@ -89,11 +125,12 @@ export default function MoreScreen() {
                 </Text>
               )}
             </View>
-            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
           </Pressable>
         ))}
       </View>
 
+      {/* Sign out */}
       <Pressable
         onPress={handleLogout}
         disabled={logoutMutation.isPending}
@@ -101,29 +138,67 @@ export default function MoreScreen() {
           styles.logoutBtn,
           {
             backgroundColor: colors.card,
-            borderColor: colors.destructive,
-            opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.85 : 1,
+            borderColor: "#FCA5A5",
+            opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.82 : 1,
+            shadowColor: "#000",
           },
         ]}
       >
-        <Feather name="log-out" size={18} color={colors.destructive} />
+        <Feather name="log-out" size={17} color={colors.destructive} />
         <Text style={[styles.logoutText, { color: colors.destructive }]}>
           Sign out
         </Text>
       </Pressable>
+
+      <Text style={[styles.version, { color: colors.mutedForeground }]}>
+        LEO OS · v1.0
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, gap: 16 },
-  heading: { fontSize: 24, fontFamily: "Inter_700Bold" },
-  group: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  container: { padding: 20, gap: 10, paddingBottom: 32 },
+
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileName: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  profileSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+
+  groupHeader: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
+  groupLabel: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
+
+  group: {
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   iconWrap: {
     width: 36,
@@ -133,16 +208,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rowLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  rowDetail: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  rowDetail: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: 14,
     borderWidth: 1,
-    marginTop: 6,
+    marginTop: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  logoutText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  version: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 8 },
 });
