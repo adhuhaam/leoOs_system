@@ -9,7 +9,6 @@ import { useApplySystemSettings } from "@/hooks/use-system-settings";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import MasterListPage from "@/pages/master-list";
-import CompaniesPage from "@/pages/companies";
 import ClientsPage from "@/pages/clients";
 import LoaPage from "@/pages/loa";
 import LoaPrintPage from "@/pages/loa-print";
@@ -39,7 +38,6 @@ function Router() {
               <Route path="/passports" component={MasterListPage} />
               <Route path="/master-list" component={MasterListPage} />
               <Route path="/employees/:id" component={EmployeeProfilePage} />
-              <Route path="/companies" component={CompaniesPage} />
               <Route path="/clients" component={ClientsPage} />
               <Route path="/loa" component={LoaPage} />
               <Route path="/expenses" component={ExpensesPage} />

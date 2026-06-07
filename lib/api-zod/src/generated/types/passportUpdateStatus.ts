@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PassportStatus =
-  (typeof PassportStatus)[keyof typeof PassportStatus];
+export type PassportUpdateStatus =
+  (typeof PassportUpdateStatus)[keyof typeof PassportUpdateStatus];
 
-export const PassportStatus = {
+export const PassportUpdateStatus = {
   processing: "processing",
   failed: "failed",
   completed: "completed",

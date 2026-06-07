@@ -6,7 +6,6 @@ import {
   FileSignature,
   Users,
   Building,
-  Building2,
   Wallet,
   Receipt,
   KeyRound,
@@ -46,7 +45,6 @@ const navGroups = [
     items: [
       { href: "/upload", label: "Process Document", icon: UploadCloud },
       { href: "/master-list", label: "Master List", icon: Users },
-      { href: "/companies", label: "Companies", icon: Building2 },
       { href: "/clients", label: "Clients", icon: Building },
       { href: "/loa", label: "Letter of Appointment", icon: FileSignature },
       { href: "/expenses", label: "Expenses", icon: Wallet },

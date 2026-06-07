@@ -29,7 +29,6 @@ export default function MoreScreen() {
   const logoutMutation = useLogout();
 
   const items: Item[] = [
-    { icon: "briefcase", label: "Companies", detail: "Manage employer companies", route: "/companies" },
     { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
     { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
     { icon: "key", label: "Passwords", detail: "Shared password vault", route: "/passwords" },
