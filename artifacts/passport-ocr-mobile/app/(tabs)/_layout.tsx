@@ -6,6 +6,17 @@ import { Platform, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
 
+/**
+ * Tab visibility matrix by role:
+ *
+ * Tab         | superuser | admin | client | company | employee | agent
+ * Dashboard   |     ✓     |   ✓   |   ✓    |    ✓    |    ✓     |   ✓
+ * Master      |     ✓     |   ✓   |        |    ✓    |    ✓     |   ✓
+ * Capture     |     ✓     |   ✓   |        |    ✓    |    ✓     |   ✓
+ * Billing     |     ✓     |   ✓   |   ✓    |    ✓    |          |
+ * More        |     ✓     |   ✓   |   ✓    |    ✓    |    ✓     |   ✓
+ */
+
 export default function TabLayout() {
   const colors = useColors();
   const { user } = useAuth();
@@ -13,10 +24,28 @@ export default function TabLayout() {
 
   const role = user?.role ?? null;
 
-  // Determine which tabs each role can see
-  const canSeeMaster = role === "superuser" || role === "admin" || role === "company" || role === "agent";
-  const canSeeCapture = role === "superuser" || role === "admin" || role === "agent";
-  const canSeeBilling = role === "superuser" || role === "admin" || role === "client" || role === "company";
+  // Master: all roles except client
+  const canSeeMaster =
+    role === "superuser" ||
+    role === "admin" ||
+    role === "company" ||
+    role === "employee" ||
+    role === "agent";
+
+  // Capture: all roles except client
+  const canSeeCapture =
+    role === "superuser" ||
+    role === "admin" ||
+    role === "company" ||
+    role === "employee" ||
+    role === "agent";
+
+  // Billing: superuser, admin, client, company
+  const canSeeBilling =
+    role === "superuser" ||
+    role === "admin" ||
+    role === "client" ||
+    role === "company";
 
   const dot = (color: string, focused: boolean) =>
     focused ? (

@@ -154,26 +154,33 @@ router.post("/auth/google", async (req, res): Promise<void> => {
   }
 
   const settings = await db
-    .select({ googleClientId: appSettingsTable.googleClientId })
+    .select({
+      googleClientId: appSettingsTable.googleClientId,
+      googleClientIdIos: appSettingsTable.googleClientIdIos,
+    })
     .from(appSettingsTable)
     .where(eq(appSettingsTable.id, 1))
     .limit(1);
 
   const clientId = settings[0]?.googleClientId;
+  const clientIdIos = settings[0]?.googleClientIdIos;
   if (!clientId) {
     res.status(503).json({ error: "Google Sign-In is not configured" });
     return;
   }
+
+  // Accept tokens issued for either the web/Android client ID or the iOS client ID
+  const audiences = [clientId, ...(clientIdIos ? [clientIdIos] : [])];
 
   let googleEmail: string | undefined;
   let googleName: string | undefined;
   let googleId: string | undefined;
 
   try {
-    const client = new OAuth2Client(clientId);
+    const client = new OAuth2Client();
     const ticket = await client.verifyIdToken({
       idToken: parsed.data.idToken,
-      audience: clientId,
+      audience: audiences,
     });
     const payload = ticket.getPayload();
     if (!payload) throw new Error("Empty payload");
