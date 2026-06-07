@@ -133,12 +133,9 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
     }
     conds.push(eq(billingDocumentsTable.clientId, eid));
   } else if (sessionRole === "employee" || sessionRole === "agent") {
-    const eid = Number(linkedEntityId);
-    if (!linkedEntityId || Number.isNaN(eid)) {
-      res.status(403).json({ error: "Access denied — no linked company on session" });
-      return;
-    }
-    conds.push(eq(billingDocumentsTable.companyId, eid));
+    // employee/agent have no billing access (no billing tab in UI)
+    res.status(403).json({ error: "Access denied" });
+    return;
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -258,11 +255,9 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       return;
     }
   } else if (docSessionRole === "employee" || docSessionRole === "agent") {
-    const eid = Number(docLinkedId);
-    if (!docLinkedId || Number.isNaN(eid) || docRows[0]!.companyId !== eid) {
-      res.status(403).json({ error: "Access denied" });
-      return;
-    }
+    // employee/agent have no billing access (no billing tab in UI)
+    res.status(403).json({ error: "Access denied" });
+    return;
   } else {
     res.status(403).json({ error: "Access denied" });
     return;

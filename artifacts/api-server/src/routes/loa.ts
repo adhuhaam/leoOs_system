@@ -28,13 +28,17 @@ router.get("/loa", requireAuth, async (req, res): Promise<void> => {
 
   if (loaRole === "superuser" || loaRole === "admin") {
     // unrestricted read
-  } else if (loaRole === "company" || loaRole === "employee" || loaRole === "agent") {
+  } else if (loaRole === "company") {
     const eid = Number(linkedEntityId);
     if (!linkedEntityId || Number.isNaN(eid)) {
       res.status(403).json({ error: "Access denied — no linked company on session" });
       return;
     }
     conditions.push(eq(loaTable.companyId, eid));
+  } else if (loaRole === "employee" || loaRole === "agent") {
+    // employee/agent have no LOA access (not in their nav)
+    res.status(403).json({ error: "Access denied" });
+    return;
   } else if (loaRole === "client") {
     // clients don't have LOAs directly — deny
     res.status(403).json({ error: "Access denied" });
@@ -103,12 +107,16 @@ router.get("/loa/:id", requireAuth, async (req, res): Promise<void> => {
   const detailLinkedId = req.session?.linkedEntityId;
   if (detailRole === "superuser" || detailRole === "admin") {
     // unrestricted
-  } else if (detailRole === "company" || detailRole === "employee" || detailRole === "agent") {
+  } else if (detailRole === "company") {
     const eid = Number(detailLinkedId);
     if (!detailLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
+  } else if (detailRole === "employee" || detailRole === "agent") {
+    // employee/agent have no LOA access
+    res.status(403).json({ error: "Access denied" });
+    return;
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -217,12 +225,16 @@ router.get("/loa/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   const pdfLinkedId = req.session?.linkedEntityId;
   if (pdfRole === "superuser" || pdfRole === "admin") {
     // unrestricted
-  } else if (pdfRole === "company" || pdfRole === "employee" || pdfRole === "agent") {
+  } else if (pdfRole === "company") {
     const eid = Number(pdfLinkedId);
     if (!pdfLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
+  } else if (pdfRole === "employee" || pdfRole === "agent") {
+    // employee/agent have no LOA access
+    res.status(403).json({ error: "Access denied" });
+    return;
   } else {
     res.status(403).json({ error: "Access denied" });
     return;

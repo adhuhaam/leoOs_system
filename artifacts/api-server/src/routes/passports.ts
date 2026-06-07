@@ -132,13 +132,21 @@ router.get("/passports", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     conditions.push(eq(passportsTable.clientId, eid));
-  } else if (sessionRole === "employee" || sessionRole === "agent") {
-    const eid = Number(linkedEntityId);
-    if (!linkedEntityId || Number.isNaN(eid)) {
-      res.status(403).json({ error: "Access denied — no linked company on session" });
+  } else if (sessionRole === "employee") {
+    // employee is linked to a single passport by ID
+    const pid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(pid)) {
+      res.status(403).json({ error: "Access denied — no linked passport on session" });
       return;
     }
-    conditions.push(eq(passportsTable.companyId, eid));
+    conditions.push(eq(passportsTable.id, pid));
+  } else if (sessionRole === "agent") {
+    // agent is linked by their name stored in passports.agent
+    if (!linkedEntityId) {
+      res.status(403).json({ error: "Access denied — no linked agent name on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.agent, String(linkedEntityId)));
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -272,7 +280,9 @@ router.get("/passports/stats", requireAuth, async (req, res): Promise<void> => {
   const statsLinkedId = req.session?.linkedEntityId;
 
   const conditions: SQL[] = [];
-  if (statsRole === "company") {
+  if (statsRole === "superuser" || statsRole === "admin") {
+    // unrestricted — all passports
+  } else if (statsRole === "company") {
     const eid = Number(statsLinkedId);
     if (!statsLinkedId || Number.isNaN(eid)) {
       res.status(403).json({ error: "Access denied — no linked company on session" });
@@ -286,13 +296,19 @@ router.get("/passports/stats", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     conditions.push(eq(passportsTable.clientId, eid));
-  } else if (statsRole === "employee" || statsRole === "agent") {
-    const eid = Number(statsLinkedId);
-    if (!statsLinkedId || Number.isNaN(eid)) {
-      res.status(403).json({ error: "Access denied — no linked company on session" });
+  } else if (statsRole === "employee") {
+    const pid = Number(statsLinkedId);
+    if (!statsLinkedId || Number.isNaN(pid)) {
+      res.status(403).json({ error: "Access denied — no linked passport on session" });
       return;
     }
-    conditions.push(eq(passportsTable.companyId, eid));
+    conditions.push(eq(passportsTable.id, pid));
+  } else if (statsRole === "agent") {
+    if (!statsLinkedId) {
+      res.status(403).json({ error: "Access denied — no linked agent name on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.agent, String(statsLinkedId)));
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -377,9 +393,14 @@ router.get("/passports/:id", requireAuth, async (req, res): Promise<void> => {
       res.status(403).json({ error: "Access denied" });
       return;
     }
-  } else if (sessionRole === "employee" || sessionRole === "agent") {
-    const eid = Number(linkedEntityId);
-    if (!linkedEntityId || Number.isNaN(eid) || passport.companyId !== eid) {
+  } else if (sessionRole === "employee") {
+    const pid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(pid) || passport.id !== pid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (sessionRole === "agent") {
+    if (!linkedEntityId || passport.agent !== String(linkedEntityId)) {
       res.status(403).json({ error: "Access denied" });
       return;
     }
