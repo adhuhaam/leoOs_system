@@ -10,7 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
-import { requireAuth } from "./auth";
+import { requireAuth, requireRole } from "./auth";
 import { fromPath } from "pdf2pic";
 import sharp from "sharp";
 import path from "path";
@@ -113,15 +113,30 @@ router.get("/passports", requireAuth, async (req, res): Promise<void> => {
     if (!Number.isNaN(n)) conditions.push(eq(passportsTable.companyId, n));
   }
 
-  // Role-scoped filtering: company/client users only see their own records
+  // Role-scoped filtering — explicit allowlist, hard-deny on missing linkage
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
-  if (sessionRole === "company" && linkedEntityId) {
+  if (sessionRole === "superuser" || sessionRole === "admin") {
+    // unrestricted list
+  } else if (sessionRole === "company") {
     const eid = Number(linkedEntityId);
-    if (!Number.isNaN(eid)) conditions.push(eq(passportsTable.companyId, eid));
-  } else if (sessionRole === "client" && linkedEntityId) {
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.companyId, eid));
+  } else if (sessionRole === "client") {
     const eid = Number(linkedEntityId);
-    if (!Number.isNaN(eid)) conditions.push(eq(passportsTable.clientId, eid));
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked client on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.clientId, eid));
+  } else if (sessionRole === "employee" || sessionRole === "agent") {
+    // read-only, no entity scoping — they see all records (dashboard use)
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
   }
 
   // Left-join clients and companies so each row carries names for display.
@@ -293,10 +308,36 @@ router.get("/passports/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Ownership check: company/client users can only read their own records.
+  // Explicit allowlist — any gap defaults to deny.
+  const sessionRole = req.session?.role;
+  const linkedEntityId = req.session?.linkedEntityId;
+  if (sessionRole === "superuser" || sessionRole === "admin") {
+    // unrestricted read
+  } else if (sessionRole === "company") {
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid) || passport.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (sessionRole === "client") {
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid) || passport.clientId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (sessionRole === "employee" || sessionRole === "agent") {
+    // read-only detail access — no entity scoping required for these roles
+  } else {
+    // unknown or unexpected role: deny
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   res.json(passport);
 });
 
-// PATCH /passports/:id — update (session only)
+// PATCH /passports/:id — update (admin+superuser, or company within own scope)
 router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   const params = UpdatePassportParams.safeParse(req.params);
   if (!params.success) {
@@ -307,6 +348,32 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   const body = UpdatePassportBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  // Explicit allowlist — superuser/admin unrestricted; company scoped to own; all others denied.
+  const patchRole = req.session?.role ?? "";
+  const patchLinkedId = req.session?.linkedEntityId;
+  if (patchRole === "superuser" || patchRole === "admin") {
+    // unrestricted update
+  } else if (patchRole === "company") {
+    const eid = Number(patchLinkedId);
+    if (!patchLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    const [target] = await db
+      .select({ companyId: passportsTable.companyId })
+      .from(passportsTable)
+      .where(eq(passportsTable.id, params.data.id))
+      .limit(1);
+    if (!target || target.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — passport not linked to your company" });
+      return;
+    }
+  } else {
+    // client, employee, agent, and any other role: no mutations allowed
+    res.status(403).json({ error: "Insufficient permissions to update passports" });
     return;
   }
 
@@ -379,8 +446,8 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(passport);
 });
 
-// DELETE /passports/:id — delete (session only)
-router.delete("/passports/:id", requireAuth, async (req, res): Promise<void> => {
+// DELETE /passports/:id — delete (superuser/admin only)
+router.delete("/passports/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = GetPassportParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -104,12 +104,30 @@ router.post("/companies", requireRole("superuser", "admin"), async (req, res): P
   res.status(201).json(company);
 });
 
-router.patch("/companies/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
+router.patch("/companies/:id", async (req, res): Promise<void> => {
   const params = UpdateCompanyParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
+
+  // Role-scoped: superuser/admin can update any company; company users can only
+  // update their own linked company (for branding/profile edits within scope).
+  const actorRole = req.session?.role ?? "";
+  const actorLinkedId = req.session?.linkedEntityId;
+  if (actorRole !== "superuser" && actorRole !== "admin") {
+    if (actorRole === "company" && actorLinkedId) {
+      const eid = Number(actorLinkedId);
+      if (Number.isNaN(eid) || params.data.id !== eid) {
+        res.status(403).json({ error: "Access denied — you may only edit your own company" });
+        return;
+      }
+    } else {
+      res.status(403).json({ error: "Insufficient permissions" });
+      return;
+    }
+  }
+
   const body = UpdateCompanyBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });

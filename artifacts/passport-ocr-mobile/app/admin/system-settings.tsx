@@ -41,12 +41,15 @@ export default function SystemSettingsScreen() {
   async function onSave() {
     setSaving(true);
     try {
+      // Only send fields that have values — empty strings are NOT sent so
+      // existing keys on the server are preserved rather than overwritten with null.
+      const payload: Record<string, string | null> = {};
+      if (googleClientId.trim()) payload.googleClientId = googleClientId.trim();
+      if (googleClientSecret.trim()) payload.googleClientSecret = googleClientSecret.trim();
+      if (googleClientIdIos.trim()) payload.googleClientIdIos = googleClientIdIos.trim();
+
       await updateMutation.mutateAsync({
-        data: {
-          googleClientId: googleClientId.trim() || null,
-          googleClientSecret: googleClientSecret.trim() || null,
-          googleClientIdIos: googleClientIdIos.trim() || null,
-        } as Record<string, unknown>,
+        data: payload as Record<string, unknown>,
       });
       Alert.alert("Saved", "Google OAuth credentials have been updated.");
       setGoogleClientSecret("");

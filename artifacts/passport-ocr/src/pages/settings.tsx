@@ -8,6 +8,7 @@ import {
   useGetSystemSettings,
   useUpdateSystemSettings,
   useChangePassword,
+  useGetAuthStatus,
   getListExpenseCategoriesQueryKey,
   getGetSystemSettingsQueryKey,
 } from "@workspace/api-client-react";
@@ -31,13 +32,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, Wallet, Cog, Palette, KeyRound, Eye, EyeOff, BrainCircuit } from "lucide-react";
+import { Plus, Trash2, Settings as SettingsIcon, Building2, Image as ImageIcon, Upload, X, Save, Loader2, Pencil, Check, Wallet, Cog, Palette, KeyRound, Eye, EyeOff, BrainCircuit, ShieldCheck } from "lucide-react";
 
 export default function SettingsPage() {
+  const { data: authData } = useGetAuthStatus({ query: { queryKey: ["/auth/me"], staleTime: 60_000 } });
+  const role = (authData as { role?: string | null } | undefined)?.role ?? null;
+  const isSuperuser = role === "superuser";
+
+  const allowedTabs = ["system", "expenses", ...(isSuperuser ? ["google"] : [])];
   const initialTab = (() => {
     if (typeof window === "undefined") return "system";
     const h = window.location.hash.replace("#", "");
-    return ["system", "expenses"].includes(h) ? h : "system";
+    return allowedTabs.includes(h) ? h : "system";
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -72,7 +78,7 @@ export default function SettingsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="sticky top-0 z-10 -mx-2 px-2 py-2 bg-background/80 backdrop-blur-sm rounded-lg">
-          <TabsList className="w-full h-auto p-1 bg-muted/60 grid grid-cols-2 gap-1 max-w-sm">
+          <TabsList className={`w-full h-auto p-1 bg-muted/60 grid gap-1 max-w-lg ${isSuperuser ? "grid-cols-3" : "grid-cols-2"}`}>
             <TabsTrigger
               value="system"
               className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
@@ -89,6 +95,16 @@ export default function SettingsPage() {
               <Wallet className="h-4 w-4" />
               Expense Categories
             </TabsTrigger>
+            {isSuperuser && (
+              <TabsTrigger
+                value="google"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm gap-2 py-2"
+                data-testid="tab-google"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Google OAuth
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -99,8 +115,121 @@ export default function SettingsPage() {
         <TabsContent value="expenses" className="mt-0 focus-visible:outline-none">
           <ExpenseCategoriesSection />
         </TabsContent>
+
+        {isSuperuser && (
+          <TabsContent value="google" className="mt-0 focus-visible:outline-none">
+            <GoogleOAuthSection />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
+  );
+}
+
+// ============================================================================
+// Google OAuth (superuser only)
+// ============================================================================
+
+function GoogleOAuthSection() {
+  const { toast } = useToast();
+  const { data: settings } = useGetSystemSettings();
+  const updateMutation = useUpdateSystemSettings();
+
+  const [webClientId, setWebClientId] = useState("");
+  const [iosClientId, setIosClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      // Only send fields that have values — blank means "keep existing"
+      const payload: Record<string, string> = {};
+      if (webClientId.trim()) payload.googleClientId = webClientId.trim();
+      if (iosClientId.trim()) payload.googleClientIdIos = iosClientId.trim();
+      if (clientSecret.trim()) payload.googleClientSecret = clientSecret.trim();
+
+      if (Object.keys(payload).length === 0) {
+        toast({ title: "No changes", description: "Enter at least one value to save." });
+        return;
+      }
+
+      await updateMutation.mutateAsync({ data: payload as Record<string, unknown> });
+      toast({ title: "Saved", description: "Google OAuth credentials updated." });
+      setClientSecret("");
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to save credentials.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Google OAuth 2.0</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure Google Sign-In for mobile apps. Leave a field blank to keep the existing value.
+            </p>
+          </div>
+          <div className="ml-auto">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${settings?.hasGoogleSignIn ? "bg-green-100 text-green-700" : "bg-red-50 text-red-600"}`}>
+              {settings?.hasGoogleSignIn ? "Configured" : "Not configured"}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="web-client-id">Web / Android Client ID</Label>
+            <Input
+              id="web-client-id"
+              value={webClientId}
+              onChange={(e) => setWebClientId(e.target.value)}
+              placeholder="xxxx.apps.googleusercontent.com"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ios-client-id">iOS Client ID</Label>
+            <Input
+              id="ios-client-id"
+              value={iosClientId}
+              onChange={(e) => setIosClientId(e.target.value)}
+              placeholder="xxxx.apps.googleusercontent.com"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="client-secret">Client Secret <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input
+              id="client-secret"
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder="Leave blank to keep existing"
+              autoComplete="off"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+            Save OAuth Credentials
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
