@@ -8,6 +8,7 @@ import {
   UpdatePassportBody,
   ListPassportsQueryParams,
 } from "@workspace/api-zod";
+import { sendPushToPassportStakeholders } from "../lib/push";
 import { extractPassportData } from "../lib/ocr";
 import { logger } from "../lib/logger";
 import { requireAuth, requireRole } from "./auth";
@@ -263,6 +264,13 @@ router.post("/passports/upload", requireRole("superuser", "admin", "company"), u
         .where(eq(passportsTable.id, passport.id));
 
       logger.info({ passportId: passport.id }, "OCR extraction completed — file data fully released");
+
+      // Notify agent/company/client when OCR completes
+      void sendPushToPassportStakeholders(
+        passport.id,
+        "completed",
+        extracted.fullName ?? null,
+      );
     } catch (err) {
       logger.error({ err, passportId: passport.id }, "OCR extraction failed — deleting draft record");
       // Delete the draft so a failed extraction leaves no trace in the DB.
@@ -491,6 +499,15 @@ router.patch("/passports/:id", requireAuth, async (req, res): Promise<void> => {
   if (!passport) {
     res.status(404).json({ error: "Passport not found" });
     return;
+  }
+
+  // Notify stakeholders when status is explicitly changed via PATCH
+  if ("status" in body.data && body.data.status != null) {
+    void sendPushToPassportStakeholders(
+      passport.id,
+      body.data.status,
+      passport.fullName ?? null,
+    );
   }
 
   // Cascade company change to linked LOA entries so the print view reflects the new company.

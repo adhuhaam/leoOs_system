@@ -14,7 +14,7 @@ import { useAuth } from "@/lib/auth";
  * Master      |     ✓     |   ✓   |   ✓    |    ✓    |          |   ✓
  * Capture     |     ✓     |   ✓   |        |    ✓    |          |
  * Billing     |     ✓     |   ✓   |   ✓    |    ✓    |          |
- * More        |     ✓     |   ✓   |   ✓    |    ✓    |    ✓     |   ✓
+ * More        |     ✓     |   ✓   |   ✓    |    ✓    |          |   ✓
  */
 
 export default function TabLayout() {
@@ -44,6 +44,9 @@ export default function TabLayout() {
     role === "admin" ||
     role === "client" ||
     role === "company";
+
+  // More: all roles except employee (employee sees Dashboard only)
+  const canSeeMore = role !== "employee";
 
   const dot = (color: string, focused: boolean) =>
     focused ? (
@@ -165,6 +168,7 @@ export default function TabLayout() {
         name="more"
         options={{
           title: "More",
+          href: canSeeMore ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="grid" size={22} color={color} />

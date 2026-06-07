@@ -1,4 +1,5 @@
-import { db, pushTokensTable } from "@workspace/db";
+import { eq, inArray, or, and } from "drizzle-orm";
+import { db, passportsTable, pushTokensTable, usersTable } from "@workspace/db";
 import { logger } from "./logger";
 
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
@@ -10,20 +11,14 @@ export interface PushPayload {
 }
 
 /**
- * Send the same notification to every registered device. Fire-and-forget so
- * push delivery never blocks an HTTP response. Tokens that come back as
- * "DeviceNotRegistered" are pruned so they stop showing up in the next batch.
+ * Internal: send a push notification to an explicit list of Expo push tokens.
+ * Prunes tokens that Expo reports as no longer valid.
  */
-export async function broadcastPush(payload: PushPayload): Promise<void> {
-  const rows = await db
-    .select({ token: pushTokensTable.token })
-    .from(pushTokensTable);
-  if (rows.length === 0) return;
+async function sendToTokens(tokens: string[], payload: PushPayload): Promise<void> {
+  if (tokens.length === 0) return;
 
-  // Expo's push API accepts a single object or an array; we always send an
-  // array so the response is uniformly shaped.
-  const messages = rows.map((r) => ({
-    to: r.token,
+  const messages = tokens.map((token) => ({
+    to: token,
     sound: "default" as const,
     title: payload.title,
     body: payload.body,
@@ -57,15 +52,125 @@ export async function broadcastPush(payload: PushPayload): Promise<void> {
         ticket.status === "error" &&
         ticket.details?.error === "DeviceNotRegistered"
       ) {
-        dead.push(rows[idx].token);
+        if (tokens[idx]) dead.push(tokens[idx]);
       }
     });
     if (dead.length > 0) {
-      const { inArray } = await import("drizzle-orm");
       await db.delete(pushTokensTable).where(inArray(pushTokensTable.token, dead));
       logger.info({ pruned: dead.length }, "removed dead push tokens");
     }
   } catch (err) {
     logger.warn({ err }, "expo push delivery threw");
+  }
+}
+
+/**
+ * Send the same notification to every registered device. Fire-and-forget so
+ * push delivery never blocks an HTTP response.
+ */
+export async function broadcastPush(payload: PushPayload): Promise<void> {
+  const rows = await db
+    .select({ token: pushTokensTable.token })
+    .from(pushTokensTable);
+  void sendToTokens(
+    rows.map((r) => r.token),
+    payload,
+  );
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  processing: "Processing",
+  completed: "Ready",
+  active: "Active",
+  attention: "Needs Attention",
+  expired: "Expired",
+};
+
+/**
+ * Send a targeted push to the agent, company user, and client user linked to
+ * a passport when its status changes. Fire-and-forget — never awaited by callers.
+ */
+export async function sendPushToPassportStakeholders(
+  passportId: number,
+  newStatus: string,
+  candidateName: string | null | undefined,
+): Promise<void> {
+  try {
+    // 1. Fetch passport linkage fields
+    const [passport] = await db
+      .select({
+        companyId: passportsTable.companyId,
+        clientId: passportsTable.clientId,
+        agent: passportsTable.agent,
+      })
+      .from(passportsTable)
+      .where(eq(passportsTable.id, passportId))
+      .limit(1);
+    if (!passport) return;
+
+    // 2. Build OR conditions: one clause per stakeholder type present
+    type DrizzleCondition = ReturnType<typeof and>;
+    const conditions: DrizzleCondition[] = [];
+
+    if (passport.companyId != null) {
+      conditions.push(
+        and(
+          eq(usersTable.role, "company"),
+          eq(usersTable.linkedEntityId, String(passport.companyId)),
+        ),
+      );
+    }
+    if (passport.clientId != null) {
+      conditions.push(
+        and(
+          eq(usersTable.role, "client"),
+          eq(usersTable.linkedEntityId, String(passport.clientId)),
+        ),
+      );
+    }
+    if (passport.agent) {
+      conditions.push(
+        and(
+          eq(usersTable.role, "agent"),
+          eq(usersTable.linkedEntityId, passport.agent),
+        ),
+      );
+    }
+    if (conditions.length === 0) return;
+
+    // 3. Find matching user ids
+    const stakeholders = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(or(...conditions));
+    if (stakeholders.length === 0) return;
+
+    const stakeholderIds = stakeholders.map((s) => s.id);
+
+    // 4. Get their push tokens
+    const tokenRows = await db
+      .select({ token: pushTokensTable.token })
+      .from(pushTokensTable)
+      .where(inArray(pushTokensTable.userId, stakeholderIds));
+    if (tokenRows.length === 0) return;
+
+    // 5. Build and send notification
+    const statusLabel = STATUS_LABELS[newStatus] ?? newStatus;
+    const name = candidateName?.trim() || "Candidate";
+    const title = `Passport status: ${statusLabel}`;
+    const body = `${name}'s passport is now ${statusLabel.toLowerCase()}.`;
+
+    await sendToTokens(tokenRows.map((r) => r.token), {
+      title,
+      body,
+      data: { passportId, status: newStatus, screen: "passport" },
+    });
+
+    logger.info(
+      { passportId, newStatus, recipients: stakeholderIds.length, tokens: tokenRows.length },
+      "targeted push sent to passport stakeholders",
+    );
+  } catch (err) {
+    logger.warn({ err, passportId }, "sendPushToPassportStakeholders threw");
   }
 }

@@ -25,6 +25,7 @@
     },
     "android": {
       "package": "com.leo.os",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0d2e28"
@@ -33,7 +34,10 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -58,6 +62,15 @@
         "expo-document-picker",
         {
           "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0d2e28",
+          "defaultChannel": "passport-updates",
+          "sounds": []
         }
       ]
     ],

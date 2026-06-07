@@ -16,15 +16,18 @@ router.post("/push-tokens", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Token required" });
     return;
   }
-  // Upsert: keep one row per token, refresh updated_at on every register.
+  // Capture the authenticated user so targeted notifications reach the right device.
+  const userId = req.session?.userId ?? null;
+
+  // Upsert: keep one row per token, refresh userId + updated_at on every register.
   await db
     .insert(pushTokensTable)
-    .values({ token, platform: parsed.data.platform })
+    .values({ token, platform: parsed.data.platform, userId })
     .onConflictDoUpdate({
       target: pushTokensTable.token,
-      set: { platform: parsed.data.platform, updatedAt: sql`now()` },
+      set: { platform: parsed.data.platform, userId, updatedAt: sql`now()` },
     });
-  req.log.info({ platform: parsed.data.platform }, "push token registered");
+  req.log.info({ platform: parsed.data.platform, userId }, "push token registered");
   res.sendStatus(204);
 });
 

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { useRegisterPushToken } from "@workspace/api-client-react";
 
 // Foreground behaviour: still show the banner + play sound when a push lands
@@ -17,10 +18,11 @@ Notifications.setNotificationHandler({
 
 async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync("default", {
-    name: "Task updates",
-    importance: Notifications.AndroidImportance.DEFAULT,
-    lightColor: "#6366f1",
+  await Notifications.setNotificationChannelAsync("passport-updates", {
+    name: "Passport updates",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#3C8C78",
   });
 }
 
@@ -39,9 +41,14 @@ async function getExpoPushToken(): Promise<string | null> {
   await ensureAndroidChannel();
 
   try {
-    // Without a projectId Expo will fall back to legacy tokens, which is fine
-    // for Expo Go but we still try to read the configured one if present.
-    const tokenResponse = await Notifications.getExpoPushTokenAsync();
+    // Read the EAS projectId from app config so the token is properly linked
+    // to this project in both Expo Go and production builds.
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+    const tokenResponse = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
     return tokenResponse.data;
   } catch {
     return null;
@@ -51,8 +58,8 @@ async function getExpoPushToken(): Promise<string | null> {
 /**
  * Hook used by the root layout: when the user is authenticated, request
  * notification permissions, fetch the device's Expo push token, and register
- * it with the backend. On sign-out the caller can pass `enabled: false` to
- * unregister.
+ * it with the backend (which stores it against the current user's id).
+ * On sign-out the caller can pass `enabled: false` to skip registration.
  */
 export function usePushRegistration(enabled: boolean) {
   const registerMut = useRegisterPushToken();
