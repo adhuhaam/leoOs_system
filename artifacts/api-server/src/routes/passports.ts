@@ -185,8 +185,8 @@ router.get("/passports", requireAuth, async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-// POST /passports/upload — upload and extract (session only)
-router.post("/passports/upload", requireAuth, upload.single("file"), async (req, res): Promise<void> => {
+// POST /passports/upload — upload and extract (superuser/admin/company only)
+router.post("/passports/upload", requireRole("superuser", "admin", "company"), upload.single("file"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -195,7 +195,20 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
   // Parse optional companyId from multipart body (sent as string field)
   const rawCompanyId = req.body?.companyId;
   const parsedCompanyId = rawCompanyId ? parseInt(String(rawCompanyId), 10) : null;
-  const companyId = parsedCompanyId && !isNaN(parsedCompanyId) ? parsedCompanyId : null;
+  let companyId = parsedCompanyId && !isNaN(parsedCompanyId) ? parsedCompanyId : null;
+
+  // Company users: enforce their linked entity — must supply their own companyId
+  const uploadRole = req.session?.role ?? "";
+  const uploadLinkedId = req.session?.linkedEntityId;
+  if (uploadRole === "company") {
+    const eid = Number(uploadLinkedId);
+    if (!uploadLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    // Force the companyId to the actor's own entity regardless of what was posted
+    companyId = eid;
+  }
 
   // Create a pending passport record
   const [passport] = await db
@@ -248,10 +261,41 @@ router.post("/passports/upload", requireAuth, upload.single("file"), async (req,
 });
 
 // GET /passports/stats — dashboard stats
-router.get("/passports/stats", requireAuth, async (_req, res): Promise<void> => {
+router.get("/passports/stats", requireAuth, async (req, res): Promise<void> => {
+  // Build a scoped WHERE so company/client only see their own stats
+  const statsRole = req.session?.role;
+  const statsLinkedId = req.session?.linkedEntityId;
+
+  const conditions: SQL[] = [];
+  if (statsRole === "company") {
+    const eid = Number(statsLinkedId);
+    if (!statsLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.companyId, eid));
+  } else if (statsRole === "client") {
+    const eid = Number(statsLinkedId);
+    if (!statsLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked client on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.clientId, eid));
+  } else if (
+    statsRole !== "superuser" &&
+    statsRole !== "admin" &&
+    statsRole !== "employee" &&
+    statsRole !== "agent"
+  ) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
   const all = await db
     .select()
     .from(passportsTable)
+    .where(where)
     .orderBy(desc(passportsTable.createdAt));
 
   const stats = {

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, asc } from "drizzle-orm";
 import { db, loaOptionsTable, LOA_OPTION_CATEGORIES } from "@workspace/db";
 import { z } from "zod";
+import { requireAuth, requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -23,13 +24,34 @@ const UpdateBody = z.object({
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 
-router.get("/loa-options", async (req, res): Promise<void> => {
+// GET /loa-options — read (requireAuth; company role scoped to own companyId)
+router.get("/loa-options", requireAuth, async (req, res): Promise<void> => {
   const parsed = ListQuery.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "companyId is required and must be a positive integer" });
     return;
   }
   const { companyId, category } = parsed.data;
+
+  // Company role: enforce that the requested companyId matches their linked entity
+  const optRole = req.session?.role ?? "";
+  const optLinkedId = req.session?.linkedEntityId;
+  if (optRole === "company") {
+    const eid = Number(optLinkedId);
+    if (!optLinkedId || Number.isNaN(eid) || companyId !== eid) {
+      res.status(403).json({ error: "Access denied — you may only view options for your own company" });
+      return;
+    }
+  } else if (
+    optRole !== "superuser" &&
+    optRole !== "admin" &&
+    optRole !== "employee" &&
+    optRole !== "agent"
+  ) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   const rows = await db
     .select()
     .from(loaOptionsTable)
@@ -43,7 +65,8 @@ router.get("/loa-options", async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/loa-options", async (req, res): Promise<void> => {
+// POST /loa-options — create (superuser/admin/company; company scoped to own)
+router.post("/loa-options", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const parsed = CreateBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -54,6 +77,17 @@ router.post("/loa-options", async (req, res): Promise<void> => {
   if (!value) {
     res.status(400).json({ error: "Value cannot be empty" });
     return;
+  }
+
+  // Company role: enforce own company
+  const createRole = req.session?.role ?? "";
+  const createLinkedId = req.session?.linkedEntityId;
+  if (createRole === "company") {
+    const eid = Number(createLinkedId);
+    if (!createLinkedId || Number.isNaN(eid) || companyId !== eid) {
+      res.status(403).json({ error: "Access denied — you may only create options for your own company" });
+      return;
+    }
   }
 
   try {
@@ -72,7 +106,8 @@ router.post("/loa-options", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/loa-options/:id", async (req, res): Promise<void> => {
+// PATCH /loa-options/:id — update (superuser/admin/company; company scoped)
+router.patch("/loa-options/:id", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Invalid ID" });
@@ -98,7 +133,18 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  // Ownership check: if caller supplied companyId, it must match the stored row.
+  // Ownership check: company users may only update options for their own company
+  const patchRole = req.session?.role ?? "";
+  const patchLinkedId = req.session?.linkedEntityId;
+  if (patchRole === "company") {
+    const eid = Number(patchLinkedId);
+    if (!patchLinkedId || Number.isNaN(eid) || current.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — option does not belong to your company" });
+      return;
+    }
+  }
+
+  // If caller supplied companyId, it must match the stored row.
   if (body.data.companyId != null && body.data.companyId !== current.companyId) {
     res.status(403).json({ error: "Option does not belong to the specified company" });
     return;
@@ -121,12 +167,34 @@ router.patch("/loa-options/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/loa-options/:id", async (req, res): Promise<void> => {
+// DELETE /loa-options/:id — delete (superuser/admin/company; company scoped)
+router.delete("/loa-options/:id", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
+
+  const [current] = await db
+    .select()
+    .from(loaOptionsTable)
+    .where(eq(loaOptionsTable.id, params.data.id));
+  if (!current) {
+    res.status(404).json({ error: "Option not found" });
+    return;
+  }
+
+  // Company role: enforce own company
+  const delRole = req.session?.role ?? "";
+  const delLinkedId = req.session?.linkedEntityId;
+  if (delRole === "company") {
+    const eid = Number(delLinkedId);
+    if (!delLinkedId || Number.isNaN(eid) || current.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — option does not belong to your company" });
+      return;
+    }
+  }
+
   const [row] = await db
     .delete(loaOptionsTable)
     .where(eq(loaOptionsTable.id, params.data.id))

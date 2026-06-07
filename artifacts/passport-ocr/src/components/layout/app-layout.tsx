@@ -43,22 +43,33 @@ type NavItem = {
   roles?: string[]; // undefined = visible to all roles
 };
 
+// Role visibility matrix (undefined = all roles; array = restricted to listed roles)
+// superuser/admin: see everything
+// company: their candidates, their company record, their billing, upload
+// client: their candidates, their client record, their billing
+// employee/agent: dashboard + master list (read-only internal staff)
+// Web sidebar matrix (mirrors mobile tab visibility):
+//   employee  → Dashboard only
+//   agent     → Dashboard + Master List
+//   client    → Dashboard + Master List + Billing
+//   company   → Dashboard + Upload + Master List + Companies + LOA + Billing
+//   admin/superuser → everything; Settings restricted to admin/superuser
 const ALL_NAV_ITEMS: NavItem[] = [
-  // Overview
+  // Overview — all authenticated roles
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   // Operations
-  { href: "/upload", label: "Process Document", icon: UploadCloud },
-  { href: "/master-list", label: "Master List", icon: Users },
-  { href: "/companies", label: "Companies", icon: Building2 },
-  { href: "/clients", label: "Clients", icon: Building },
-  { href: "/loa", label: "Letter of Appointment", icon: FileSignature },
-  { href: "/expenses", label: "Expenses", icon: Wallet },
-  { href: "/billing", label: "Invoices & Quotes", icon: Receipt },
-  { href: "/passwords", label: "Passwords", icon: KeyRound },
+  { href: "/upload", label: "Process Document", icon: UploadCloud, roles: ["superuser", "admin", "company"] },
+  { href: "/master-list", label: "Master List", icon: Users, roles: ["superuser", "admin", "company", "client", "agent"] },
+  { href: "/companies", label: "Companies", icon: Building2, roles: ["superuser", "admin", "company"] },
+  { href: "/clients", label: "Clients", icon: Building, roles: ["superuser", "admin"] },
+  { href: "/loa", label: "Letter of Appointment", icon: FileSignature, roles: ["superuser", "admin", "company"] },
+  { href: "/expenses", label: "Expenses", icon: Wallet, roles: ["superuser", "admin"] },
+  { href: "/billing", label: "Invoices & Quotes", icon: Receipt, roles: ["superuser", "admin", "company", "client"] },
+  { href: "/passwords", label: "Passwords", icon: KeyRound, roles: ["superuser", "admin"] },
   // Admin
   { href: "/users", label: "User Management", icon: UserCog, roles: ["superuser", "admin"] },
-  // System
-  { href: "/settings", label: "Settings", icon: Settings },
+  // System — admin/superuser only
+  { href: "/settings", label: "Settings", icon: Settings, roles: ["superuser", "admin"] },
 ];
 
 function BrandMark({ size = "default" }: { size?: "default" | "small" }) {

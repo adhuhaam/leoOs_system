@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { db, loaTable, companiesTable, passportsTable } from "@workspace/db";
 import {
@@ -9,25 +9,69 @@ import {
   UpdateLoaBody,
   DeleteLoaParams,
 } from "@workspace/api-zod";
+import { requireAuth, requireRole } from "./auth";
 
 const router: IRouter = Router();
 
-router.get("/loa", async (req, res): Promise<void> => {
+// GET /loa — list (scoped by role)
+router.get("/loa", requireAuth, async (req, res): Promise<void> => {
   const rawPassportId = req.query.passportId;
   const passportId = rawPassportId ? parseInt(String(rawPassportId), 10) : null;
-  const entries =
-    passportId && !isNaN(passportId)
-      ? await db.select().from(loaTable).where(eq(loaTable.passportId, passportId)).orderBy(desc(loaTable.createdAt))
-      : await db.select().from(loaTable).orderBy(desc(loaTable.createdAt));
+  const loaRole = req.session?.role;
+  const linkedEntityId = req.session?.linkedEntityId;
+
+  // Build scope conditions
+  const conditions = [];
+  if (passportId && !isNaN(passportId)) {
+    conditions.push(eq(loaTable.passportId, passportId));
+  }
+
+  if (loaRole === "superuser" || loaRole === "admin" || loaRole === "employee" || loaRole === "agent") {
+    // unrestricted read
+  } else if (loaRole === "company") {
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conditions.push(eq(loaTable.companyId, eid));
+  } else if (loaRole === "client") {
+    // clients don't have LOAs directly — deny
+    res.status(403).json({ error: "Access denied" });
+    return;
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
+  const entries = await db.select().from(loaTable).where(where).orderBy(desc(loaTable.createdAt));
   res.json(entries);
 });
 
-router.post("/loa", async (req, res): Promise<void> => {
+// POST /loa — create (superuser/admin/company only)
+router.post("/loa", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const parsed = CreateLoaBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+
+  // Company users: hard-deny if no linkage; enforce own company
+  const actorRole = req.session?.role ?? "";
+  const actorLinkedId = req.session?.linkedEntityId;
+  if (actorRole === "company") {
+    const eid = Number(actorLinkedId);
+    if (!actorLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    if (parsed.data.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — you may only create LOAs for your own company" });
+      return;
+    }
+  }
+
   const [loa] = await db.insert(loaTable).values(parsed.data).returning();
 
   // Mark the related passport as submitted now that the wizard is fully complete.
@@ -41,7 +85,8 @@ router.post("/loa", async (req, res): Promise<void> => {
   res.status(201).json(loa);
 });
 
-router.get("/loa/:id", async (req, res): Promise<void> => {
+// GET /loa/:id — detail (requireAuth + ownership check)
+router.get("/loa/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -52,10 +97,28 @@ router.get("/loa/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "LOA not found" });
     return;
   }
+
+  // Ownership check
+  const detailRole = req.session?.role;
+  const detailLinkedId = req.session?.linkedEntityId;
+  if (detailRole === "superuser" || detailRole === "admin" || detailRole === "employee" || detailRole === "agent") {
+    // unrestricted
+  } else if (detailRole === "company") {
+    const eid = Number(detailLinkedId);
+    if (!detailLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   res.json(loa);
 });
 
-router.patch("/loa/:id", async (req, res): Promise<void> => {
+// PATCH /loa/:id — update (superuser/admin/company, company scoped)
+router.patch("/loa/:id", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const params = UpdateLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -66,6 +129,23 @@ router.patch("/loa/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+
+  // Company users can only update LOAs linked to their own company
+  const patchRole = req.session?.role ?? "";
+  const patchLinkedId = req.session?.linkedEntityId;
+  if (patchRole === "company") {
+    const eid = Number(patchLinkedId);
+    if (!patchLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    const [existing] = await db.select({ companyId: loaTable.companyId }).from(loaTable).where(eq(loaTable.id, params.data.id));
+    if (!existing || existing.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — LOA not linked to your company" });
+      return;
+    }
+  }
+
   const [loa] = await db
     .update(loaTable)
     .set(body.data)
@@ -78,12 +158,34 @@ router.patch("/loa/:id", async (req, res): Promise<void> => {
   res.json(loa);
 });
 
-router.delete("/loa/:id", async (req, res): Promise<void> => {
+// DELETE /loa/:id — delete (superuser/admin/company; company scoped to own)
+router.delete("/loa/:id", requireRole("superuser", "admin", "company"), async (req, res): Promise<void> => {
   const params = DeleteLoaParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
+
+  // Company role: ownership check before delete
+  const delRole = req.session?.role ?? "";
+  const delLinkedId = req.session?.linkedEntityId;
+  if (delRole === "company") {
+    const eid = Number(delLinkedId);
+    if (!delLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    const [existing] = await db.select({ companyId: loaTable.companyId }).from(loaTable).where(eq(loaTable.id, params.data.id));
+    if (!existing) {
+      res.status(404).json({ error: "LOA not found" });
+      return;
+    }
+    if (existing.companyId !== eid) {
+      res.status(403).json({ error: "Access denied — LOA not linked to your company" });
+      return;
+    }
+  }
+
   const [loa] = await db
     .delete(loaTable)
     .where(eq(loaTable.id, params.data.id))
@@ -95,8 +197,8 @@ router.delete("/loa/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-// PDF generation endpoint
-router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
+// PDF generation endpoint (requireAuth + ownership check)
+router.get("/loa/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
   if (isNaN(id)) {
@@ -107,6 +209,22 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   const [loa] = await db.select().from(loaTable).where(eq(loaTable.id, id));
   if (!loa) {
     res.status(404).json({ error: "LOA not found" });
+    return;
+  }
+
+  // Ownership check for PDF
+  const pdfRole = req.session?.role;
+  const pdfLinkedId = req.session?.linkedEntityId;
+  if (pdfRole === "superuser" || pdfRole === "admin" || pdfRole === "employee" || pdfRole === "agent") {
+    // unrestricted
+  } else if (pdfRole === "company") {
+    const eid = Number(pdfLinkedId);
+    if (!pdfLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else {
+    res.status(403).json({ error: "Access denied" });
     return;
   }
 
@@ -173,8 +291,6 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
     doc.font("Helvetica-Bold").fontSize(11).text(label, { align: "left" }).moveDown(0.3);
   };
 
-  // Field renders as `Label: value` — empty value leaves only the label and colon
-  // (matches the sample exactly, no underscores or placeholders).
   const field = (label: string, value: string | null | undefined) => {
     const val = (value ?? "").trim();
     doc
@@ -187,7 +303,6 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
 
   const lineGap = () => doc.moveDown(0.25);
 
-  // Format dates as DD/MM/YYYY when ISO-like, otherwise pass through.
   const fmtDate = (v: string | null | undefined) => {
     const s = (v ?? "").trim();
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -217,12 +332,11 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   // ─── 4. Employment (sample skips section 3) ──────────────────────────────
   sectionHeader("4. Details of Employment;");
   field("Job Title / Occupation", loa.jobTitle); lineGap();
-  // Note the literal `Work Type :` with a space before the colon — matches sample.
   doc.font("Helvetica-Bold").fontSize(10).text("Work Type : ", { continued: true })
     .font("Helvetica").text((loa.workType ?? "").trim()); lineGap();
   field("Basic Salary (USD)", loa.basicSalary); lineGap();
   field("Date of Salary payment", loa.salaryPaymentDate);
-  doc.moveDown(0.8); // blank line before "Work site:" as in the sample
+  doc.moveDown(0.8);
   field("Work site", loa.workSite); lineGap();
   field("Date of Commence", loa.dateOfCommence?.trim() || "Date of Arrival"); lineGap();
   field("Job Description", loa.jobDescription?.trim() || "Job Description will be given the time of signing the contract"); lineGap();
@@ -238,13 +352,13 @@ router.get("/loa/:id/pdf", async (req, res): Promise<void> => {
   );
   doc.moveDown(1.2);
 
-  // ─── Signatory (unnumbered, matches sample) ──────────────────────────────
+  // ─── Signatory ──────────────────────────────────────────────────────────
   doc.font("Helvetica-Bold").fontSize(11).text("Details of Signatory;").moveDown(0.3);
   field("Name", loa.signatoryName); lineGap();
   field("Designation", loa.signatoryDesignation);
   doc.moveDown(2);
 
-  // ─── Signature line (with embedded e-signature if available) ─────────────
+  // ─── Signature line ─────────────────────────────────────────────────────
   if (signatureBuf) {
     doc.font("Helvetica-Bold").fontSize(10).text("Signature: ", { continued: false });
     try {
