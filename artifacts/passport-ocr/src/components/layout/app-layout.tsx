@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   LogOut,
+  CircleUserRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -197,11 +198,17 @@ function AppSidebar() {
           />
         </div>
         {role && (
-          <div className="px-2 py-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-sidebar-foreground/50">
+          <Link
+            href="/profile"
+            onClick={handleNavClick}
+            className="px-2 py-1 flex items-center gap-2 rounded-md hover:bg-sidebar-accent/50 transition group"
+            data-testid="link-profile"
+          >
+            <CircleUserRound className="h-3.5 w-3.5 text-sidebar-foreground/50 group-hover:text-sidebar-foreground transition" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-sidebar-foreground/50 group-hover:text-sidebar-foreground transition">
               {role}
             </span>
-          </div>
+          </Link>
         )}
         <button
           onClick={handleLogout}
