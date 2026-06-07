@@ -133,7 +133,12 @@ router.get("/passports", requireAuth, async (req, res): Promise<void> => {
     }
     conditions.push(eq(passportsTable.clientId, eid));
   } else if (sessionRole === "employee" || sessionRole === "agent") {
-    // read-only, no entity scoping — they see all records (dashboard use)
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.companyId, eid));
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -281,12 +286,14 @@ router.get("/passports/stats", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     conditions.push(eq(passportsTable.clientId, eid));
-  } else if (
-    statsRole !== "superuser" &&
-    statsRole !== "admin" &&
-    statsRole !== "employee" &&
-    statsRole !== "agent"
-  ) {
+  } else if (statsRole === "employee" || statsRole === "agent") {
+    const eid = Number(statsLinkedId);
+    if (!statsLinkedId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conditions.push(eq(passportsTable.companyId, eid));
+  } else {
     res.status(403).json({ error: "Access denied" });
     return;
   }
@@ -371,9 +378,12 @@ router.get("/passports/:id", requireAuth, async (req, res): Promise<void> => {
       return;
     }
   } else if (sessionRole === "employee" || sessionRole === "agent") {
-    // read-only detail access — no entity scoping required for these roles
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid) || passport.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
   } else {
-    // unknown or unexpected role: deny
     res.status(403).json({ error: "Access denied" });
     return;
   }

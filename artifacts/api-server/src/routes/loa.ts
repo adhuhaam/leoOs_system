@@ -26,9 +26,9 @@ router.get("/loa", requireAuth, async (req, res): Promise<void> => {
     conditions.push(eq(loaTable.passportId, passportId));
   }
 
-  if (loaRole === "superuser" || loaRole === "admin" || loaRole === "employee" || loaRole === "agent") {
+  if (loaRole === "superuser" || loaRole === "admin") {
     // unrestricted read
-  } else if (loaRole === "company") {
+  } else if (loaRole === "company" || loaRole === "employee" || loaRole === "agent") {
     const eid = Number(linkedEntityId);
     if (!linkedEntityId || Number.isNaN(eid)) {
       res.status(403).json({ error: "Access denied — no linked company on session" });
@@ -101,9 +101,9 @@ router.get("/loa/:id", requireAuth, async (req, res): Promise<void> => {
   // Ownership check
   const detailRole = req.session?.role;
   const detailLinkedId = req.session?.linkedEntityId;
-  if (detailRole === "superuser" || detailRole === "admin" || detailRole === "employee" || detailRole === "agent") {
+  if (detailRole === "superuser" || detailRole === "admin") {
     // unrestricted
-  } else if (detailRole === "company") {
+  } else if (detailRole === "company" || detailRole === "employee" || detailRole === "agent") {
     const eid = Number(detailLinkedId);
     if (!detailLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
       res.status(403).json({ error: "Access denied" });
@@ -215,9 +215,9 @@ router.get("/loa/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   // Ownership check for PDF
   const pdfRole = req.session?.role;
   const pdfLinkedId = req.session?.linkedEntityId;
-  if (pdfRole === "superuser" || pdfRole === "admin" || pdfRole === "employee" || pdfRole === "agent") {
+  if (pdfRole === "superuser" || pdfRole === "admin") {
     // unrestricted
-  } else if (pdfRole === "company") {
+  } else if (pdfRole === "company" || pdfRole === "employee" || pdfRole === "agent") {
     const eid = Number(pdfLinkedId);
     if (!pdfLinkedId || Number.isNaN(eid) || loa.companyId !== eid) {
       res.status(403).json({ error: "Access denied" });

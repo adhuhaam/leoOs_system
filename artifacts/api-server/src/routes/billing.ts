@@ -15,7 +15,7 @@ import {
   GetBillingDocumentParams,
   ListBillingDocumentsQueryParams,
 } from "@workspace/api-zod";
-import { requireRole } from "./auth";
+import { requireAuth, requireRole } from "./auth";
 
 const router: IRouter = Router();
 
@@ -102,7 +102,7 @@ async function allocateNumber(kind: "invoice" | "quotation", tx: Tx): Promise<st
   return `${prefix}${pad(max + 1)}`;
 }
 
-router.get("/billing/documents", async (req, res): Promise<void> => {
+router.get("/billing/documents", requireAuth, async (req, res): Promise<void> => {
   const parsed = ListBillingDocumentsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -133,7 +133,12 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
     }
     conds.push(eq(billingDocumentsTable.clientId, eid));
   } else if (sessionRole === "employee" || sessionRole === "agent") {
-    // read-only, no entity scoping
+    const eid = Number(linkedEntityId);
+    if (!linkedEntityId || Number.isNaN(eid)) {
+      res.status(403).json({ error: "Access denied — no linked company on session" });
+      return;
+    }
+    conds.push(eq(billingDocumentsTable.companyId, eid));
   } else {
     res.status(403).json({ error: "Access denied" });
     return;
@@ -199,7 +204,7 @@ router.get("/billing/documents", async (req, res): Promise<void> => {
   res.json(filtered);
 });
 
-router.get("/billing/documents/:id", async (req, res): Promise<void> => {
+router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void> => {
   const parsed = GetBillingDocumentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -253,7 +258,11 @@ router.get("/billing/documents/:id", async (req, res): Promise<void> => {
       return;
     }
   } else if (docSessionRole === "employee" || docSessionRole === "agent") {
-    // read-only, no entity scoping
+    const eid = Number(docLinkedId);
+    if (!docLinkedId || Number.isNaN(eid) || docRows[0]!.companyId !== eid) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
   } else {
     res.status(403).json({ error: "Access denied" });
     return;

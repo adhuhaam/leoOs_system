@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "291561166861",
+    "project_id": "leo-android-acd9e",
+    "storage_bucket": "leo-android-acd9e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291561166861:android:4ba3307a199458be8b1d44",
+        "android_client_info": {
+          "package_name": "com.leo.os"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfQViasY12na9xEuq_WIHibJdb9taohYA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
