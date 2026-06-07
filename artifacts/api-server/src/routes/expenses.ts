@@ -53,13 +53,9 @@ function normalizeDate(input: string | null | undefined): string | null | "inval
 }
 
 router.get("/expenses", async (req, res): Promise<void> => {
-  // Expenses are internal financial data — only superuser/admin/employee/agent may read
+  // Expenses are internal financial data — only superuser/admin may read
   const expRole = req.session?.role ?? "";
-  if (expRole === "company" || expRole === "client") {
-    res.status(403).json({ error: "Access denied" });
-    return;
-  }
-  if (expRole !== "superuser" && expRole !== "admin" && expRole !== "employee" && expRole !== "agent") {
+  if (expRole !== "superuser" && expRole !== "admin") {
     res.status(403).json({ error: "Access denied" });
     return;
   }

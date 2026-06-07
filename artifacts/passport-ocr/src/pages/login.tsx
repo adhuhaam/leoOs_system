@@ -123,7 +123,14 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <a href="/signup" className="text-primary hover:underline font-medium">
+            Request access
+          </a>
+        </p>
+
+        <p className="mt-4 text-center text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground">
           LEO OS · Employment Operations
         </p>
       </div>

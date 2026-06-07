@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useGetAuthStatus } from "@workspace/api-client-react";
 import LoginPage from "@/pages/login";
+import SignupPage from "@/pages/signup";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -50,6 +51,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (data?.authenticated !== true) {
+    // Allow unauthenticated access to the signup page
+    if (typeof window !== "undefined" && window.location.pathname.endsWith("/signup")) {
+      return <SignupPage />;
+    }
     return <LoginPage />;
   }
 

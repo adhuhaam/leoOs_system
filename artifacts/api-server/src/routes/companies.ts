@@ -41,6 +41,11 @@ router.get("/companies", async (req, res): Promise<void> => {
   // Role-scoped — explicit allowlist; company with missing linkage is hard-denied
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
+  // Deny roles that have no access to the company list
+  if (sessionRole === "employee" || sessionRole === "agent" || sessionRole === "client") {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
   if (sessionRole === "company") {
     const eid = Number(linkedEntityId);
     if (!linkedEntityId || Number.isNaN(eid)) {

@@ -6,6 +6,8 @@ import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AuthGate } from "@/components/auth-gate";
 import { useApplySystemSettings } from "@/hooks/use-system-settings";
+import LoginPage from "@/pages/login";
+import SignupPage from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import MasterListPage from "@/pages/master-list";
@@ -28,6 +30,9 @@ function Router() {
   return (
     <AuthGate>
       <Switch>
+        {/* Public routes — accessible before authentication */}
+        <Route path="/signup" component={SignupPage} />
+        <Route path="/login" component={LoginPage} />
         {/* Print views render standalone — no app sidebar/header */}
         <Route path="/billing/:id/print" component={BillingPrintPage} />
         <Route path="/loa/:id/print" component={LoaPrintPage} />

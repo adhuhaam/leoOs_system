@@ -24,7 +24,7 @@ router.get("/clients", async (req, res): Promise<void> => {
   const sessionRole = req.session?.role;
   const linkedEntityId = req.session?.linkedEntityId;
   let rows: Client[];
-  if (sessionRole === "superuser" || sessionRole === "admin" || sessionRole === "employee" || sessionRole === "agent") {
+  if (sessionRole === "superuser" || sessionRole === "admin") {
     rows = await db.select().from(clientsTable).orderBy(asc(clientsTable.name));
   } else if (sessionRole === "client") {
     const eid = Number(linkedEntityId);
