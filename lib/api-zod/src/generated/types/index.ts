@@ -66,6 +66,7 @@ export * from "./passwordUpdate";
 export * from "./pushTokenInput";
 export * from "./pushTokenInputPlatform";
 export * from "./registerInput";
+export * from "./rolePermission";
 export * from "./systemSettings";
 export * from "./systemSettingsInput";
 export * from "./task";

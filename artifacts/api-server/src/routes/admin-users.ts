@@ -16,6 +16,7 @@ function userShape(u: typeof usersTable.$inferSelect) {
     name: u.name,
     role: u.role,
     isApproved: u.isApproved,
+    isBlocked: u.isBlocked,
     linkedEntityId: u.linkedEntityId,
     hasPassword: u.passwordHash != null,
     hasGoogleId: u.googleId != null,
@@ -118,6 +119,7 @@ const UpdateUserBody = z.object({
   name: z.string().min(1).optional(),
   role: z.enum(ROLES).optional(),
   isApproved: z.boolean().optional(),
+  isBlocked: z.boolean().optional(),
   linkedEntityId: z.string().nullable().optional(),
   newPassword: z.string().min(6).nullable().optional(),
 });
@@ -135,7 +137,7 @@ router.patch("/admin/users/:id", async (req: Request, res: Response): Promise<vo
     return;
   }
 
-  const { name, role, isApproved, linkedEntityId, newPassword } = parsed.data;
+  const { name, role, isApproved, isBlocked, linkedEntityId, newPassword } = parsed.data;
   const actorRole = req.session?.role ?? "";
   const actorId = req.session?.userId;
 
@@ -173,6 +175,7 @@ router.patch("/admin/users/:id", async (req: Request, res: Response): Promise<vo
   if (name !== undefined) patch.name = name.trim();
   if (role !== undefined) patch.role = role;
   if (isApproved !== undefined) patch.isApproved = isApproved;
+  if (isBlocked !== undefined) patch.isBlocked = isBlocked;
   if (linkedEntityId !== undefined)
     patch.linkedEntityId = linkedEntityId ?? null;
   if (newPassword !== null && newPassword !== undefined && newPassword.length > 0) {

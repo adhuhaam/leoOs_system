@@ -15,6 +15,8 @@ import pushTokensRouter from "./push-tokens";
 import systemRouter from "./system";
 import xpatRouter from "./xpat";
 import adminUsersRouter from "./admin-users";
+import adminPermissionsRouter from "./admin-permissions";
+import { permissionsMiddleware } from "../lib/permissions";
 
 const router: IRouter = Router();
 
@@ -32,8 +34,13 @@ router.use(passportsRouter);
 // Admin-only: user management (superuser + admin)
 router.use(requireRole("superuser", "admin"), adminUsersRouter);
 
+// Superuser-only: permissions matrix management
+router.use(requireRole("superuser"), adminPermissionsRouter);
+
 // Everything below requires a valid session
 router.use(requireAuth);
+// Module-level permission check (skips superuser/admin — handled by existing RBAC)
+router.use(permissionsMiddleware);
 router.use(companiesRouter);
 router.use(clientsRouter);
 router.use(expenseCategoriesRouter);

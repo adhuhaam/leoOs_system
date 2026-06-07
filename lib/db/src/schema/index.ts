@@ -31,3 +31,4 @@ export * from "./passwords";
 export * from "./tasks";
 export * from "./push-tokens";
 export * from "./users";
+export * from "./role-permissions";

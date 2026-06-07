@@ -67,6 +67,7 @@ import type {
   PasswordUpdate,
   PushTokenInput,
   RegisterInput,
+  RolePermission,
   SystemSettings,
   SystemSettingsInput,
   Task,
@@ -1212,6 +1213,167 @@ export const useDeleteUser = <
   TContext
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
+};
+
+/**
+ * @summary List all role-module permissions (superuser only)
+ */
+export const getListPermissionsUrl = () => {
+  return `/api/admin/permissions`;
+};
+
+export const listPermissions = async (
+  options?: RequestInit,
+): Promise<RolePermission[]> => {
+  return customFetch<RolePermission[]>(getListPermissionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPermissionsQueryKey = () => {
+  return [`/api/admin/permissions`] as const;
+};
+
+export const getListPermissionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPermissions>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPermissionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPermissions>>> = ({
+    signal,
+  }) => listPermissions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPermissionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPermissions>>
+>;
+export type ListPermissionsQueryError = ErrorType<void>;
+
+/**
+ * @summary List all role-module permissions (superuser only)
+ */
+
+export function useListPermissions<
+  TData = Awaited<ReturnType<typeof listPermissions>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPermissionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Bulk-upsert role-module permissions (superuser only)
+ */
+export const getUpdatePermissionsUrl = () => {
+  return `/api/admin/permissions`;
+};
+
+export const updatePermissions = async (
+  rolePermission: RolePermission[],
+  options?: RequestInit,
+): Promise<RolePermission[]> => {
+  return customFetch<RolePermission[]>(getUpdatePermissionsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rolePermission),
+  });
+};
+
+export const getUpdatePermissionsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePermissions>>,
+    TError,
+    { data: BodyType<RolePermission[]> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePermissions>>,
+  TError,
+  { data: BodyType<RolePermission[]> },
+  TContext
+> => {
+  const mutationKey = ["updatePermissions"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePermissions>>,
+    { data: BodyType<RolePermission[]> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updatePermissions(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePermissionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePermissions>>
+>;
+export type UpdatePermissionsMutationBody = BodyType<RolePermission[]>;
+export type UpdatePermissionsMutationError = ErrorType<void>;
+
+/**
+ * @summary Bulk-upsert role-module permissions (superuser only)
+ */
+export const useUpdatePermissions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePermissions>>,
+    TError,
+    { data: BodyType<RolePermission[]> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePermissions>>,
+  TError,
+  { data: BodyType<RolePermission[]> },
+  TContext
+> => {
+  return useMutation(getUpdatePermissionsMutationOptions(options));
 };
 
 /**

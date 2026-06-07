@@ -12,6 +12,7 @@ export interface AdminUser {
   name: string;
   role: string;
   isApproved: boolean;
+  isBlocked: boolean;
   linkedEntityId?: string | null;
   hasPassword?: boolean;
   hasGoogleId?: boolean;

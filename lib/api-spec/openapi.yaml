@@ -288,6 +288,52 @@ paths:
         "404":
           description: User not found
 
+  /admin/permissions:
+    get:
+      operationId: listPermissions
+      tags: [admin]
+      summary: List all role-module permissions (superuser only)
+      responses:
+        "200":
+          description: Permissions matrix
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RolePermission"
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+    put:
+      operationId: updatePermissions
+      tags: [admin]
+      summary: Bulk-upsert role-module permissions (superuser only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/RolePermission"
+      responses:
+        "200":
+          description: Updated permissions matrix
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RolePermission"
+        "400":
+          description: Validation error
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+
   /system/settings:
     get:
       operationId: getSystemSettings
@@ -1326,7 +1372,7 @@ components:
 
     AdminUser:
       type: object
-      required: [id, email, name, role, isApproved, createdAt]
+      required: [id, email, name, role, isApproved, isBlocked, createdAt]
       properties:
         id:
           type: integer
@@ -1337,6 +1383,8 @@ components:
         role:
           type: string
         isApproved:
+          type: boolean
+        isBlocked:
           type: boolean
         linkedEntityId:
           type: string
@@ -1359,6 +1407,8 @@ components:
           type: string
         isApproved:
           type: boolean
+        isBlocked:
+          type: boolean
         linkedEntityId:
           type: string
           nullable: true
@@ -1366,6 +1416,21 @@ components:
           type: string
           minLength: 6
           nullable: true
+
+    RolePermission:
+      type: object
+      required: [role, module, canView, canEdit, canDelete]
+      properties:
+        role:
+          type: string
+        module:
+          type: string
+        canView:
+          type: boolean
+        canEdit:
+          type: boolean
+        canDelete:
+          type: boolean
 
     CreateUserInput:
       type: object

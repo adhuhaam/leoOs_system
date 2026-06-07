@@ -101,6 +101,7 @@ export const ListUsersResponseItem = zod.object({
   name: zod.string(),
   role: zod.string(),
   isApproved: zod.boolean(),
+  isBlocked: zod.boolean(),
   linkedEntityId: zod.string().nullish(),
   hasPassword: zod.boolean().optional(),
   hasGoogleId: zod.boolean().optional(),
@@ -136,6 +137,7 @@ export const UpdateUserBody = zod.object({
   name: zod.string().min(1).optional(),
   role: zod.string().optional(),
   isApproved: zod.boolean().optional(),
+  isBlocked: zod.boolean().optional(),
   linkedEntityId: zod.string().nullish(),
   newPassword: zod.string().min(updateUserBodyNewPasswordMin).nullish(),
 });
@@ -146,6 +148,7 @@ export const UpdateUserResponse = zod.object({
   name: zod.string(),
   role: zod.string(),
   isApproved: zod.boolean(),
+  isBlocked: zod.boolean(),
   linkedEntityId: zod.string().nullish(),
   hasPassword: zod.boolean().optional(),
   hasGoogleId: zod.boolean().optional(),
@@ -158,6 +161,41 @@ export const UpdateUserResponse = zod.object({
 export const DeleteUserParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List all role-module permissions (superuser only)
+ */
+export const ListPermissionsResponseItem = zod.object({
+  role: zod.string(),
+  module: zod.string(),
+  canView: zod.boolean(),
+  canEdit: zod.boolean(),
+  canDelete: zod.boolean(),
+});
+export const ListPermissionsResponse = zod.array(ListPermissionsResponseItem);
+
+/**
+ * @summary Bulk-upsert role-module permissions (superuser only)
+ */
+export const UpdatePermissionsBodyItem = zod.object({
+  role: zod.string(),
+  module: zod.string(),
+  canView: zod.boolean(),
+  canEdit: zod.boolean(),
+  canDelete: zod.boolean(),
+});
+export const UpdatePermissionsBody = zod.array(UpdatePermissionsBodyItem);
+
+export const UpdatePermissionsResponseItem = zod.object({
+  role: zod.string(),
+  module: zod.string(),
+  canView: zod.boolean(),
+  canEdit: zod.boolean(),
+  canDelete: zod.boolean(),
+});
+export const UpdatePermissionsResponse = zod.array(
+  UpdatePermissionsResponseItem,
+);
 
 /**
  * @summary Read tenant system settings (app name, theme)

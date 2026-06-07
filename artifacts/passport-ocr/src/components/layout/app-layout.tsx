@@ -69,6 +69,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/passwords", label: "Passwords", icon: KeyRound, roles: ["superuser", "admin"] },
   // Admin
   { href: "/users", label: "User Management", icon: UserCog, roles: ["superuser", "admin"] },
+  { href: "/permissions", label: "Permissions", icon: ShieldCheck, roles: ["superuser"] },
   // System — superuser only
   { href: "/settings", label: "Settings", icon: Settings, roles: ["superuser"] },
 ];

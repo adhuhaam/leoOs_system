@@ -22,6 +22,7 @@ import PasswordsPage from "@/pages/passwords";
 import SettingsPage from "@/pages/settings";
 import EmployeeProfilePage from "@/pages/employee-profile";
 import UsersPage from "@/pages/users";
+import PermissionsPage from "@/pages/permissions";
 import ProfilePage from "@/pages/profile";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ function Router() {
               <Route path="/passwords" component={PasswordsPage} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/users" component={UsersPage} />
+              <Route path="/permissions" component={PermissionsPage} />
               <Route path="/profile" component={ProfilePage} />
               <Route component={NotFound} />
             </Switch>

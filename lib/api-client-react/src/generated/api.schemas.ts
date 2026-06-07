@@ -24,6 +24,7 @@ export interface AdminUser {
   name: string;
   role: string;
   isApproved: boolean;
+  isBlocked: boolean;
   linkedEntityId?: string | null;
   hasPassword?: boolean;
   hasGoogleId?: boolean;
@@ -35,9 +36,18 @@ export interface AdminUserUpdate {
   name?: string;
   role?: string;
   isApproved?: boolean;
+  isBlocked?: boolean;
   linkedEntityId?: string | null;
   /** @minLength 6 */
   newPassword?: string | null;
+}
+
+export interface RolePermission {
+  role: string;
+  module: string;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 export interface CreateUserInput {

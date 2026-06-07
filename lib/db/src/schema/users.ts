@@ -20,6 +20,7 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("agent").$type<UserRole>(),
   googleId: text("google_id").unique(),
   isApproved: boolean("is_approved").notNull().default(false),
+  isBlocked: boolean("is_blocked").notNull().default(false),
   passwordHash: text("password_hash"),
   linkedEntityId: text("linked_entity_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

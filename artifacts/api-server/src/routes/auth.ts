@@ -110,6 +110,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  if (user.isBlocked) {
+    res.status(403).json({ error: "Account has been blocked" });
+    return;
+  }
+
   if (!user.isApproved) {
     res.status(403).json({ error: "Account pending approval" });
     return;
@@ -218,6 +223,11 @@ router.post("/auth/google", async (req, res): Promise<void> => {
       .set({ googleId })
       .where(eq(usersTable.id, user.id));
     user = { ...user, googleId };
+  }
+
+  if (user.isBlocked) {
+    res.status(403).json({ error: "Account has been blocked" });
+    return;
   }
 
   if (!user.isApproved) {

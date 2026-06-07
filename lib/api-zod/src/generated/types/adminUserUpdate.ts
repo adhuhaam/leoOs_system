@@ -11,6 +11,7 @@ export interface AdminUserUpdate {
   name?: string;
   role?: string;
   isApproved?: boolean;
+  isBlocked?: boolean;
   linkedEntityId?: string | null;
   /** @minLength 6 */
   newPassword?: string | null;
