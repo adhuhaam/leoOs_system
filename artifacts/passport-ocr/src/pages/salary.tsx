@@ -223,7 +223,19 @@ function SalaryFormDialog({
           <div className="space-y-3">
             <h4 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Earnings</h4>
             <div className="grid grid-cols-2 gap-3">
-              {field("basicSalary", "Basic Salary *", "0.00")}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Basic Salary *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.basicSalary}
+                  onChange={(e) => setForm((p) => ({ ...p, basicSalary: e.target.value }))}
+                  className="h-9"
+                />
+                <p className="text-[10px] text-muted-foreground">Agency salary from passport</p>
+              </div>
               {field("foodAllowance", "Food Allowance")}
               {field("transportAllowance", "Transport Allowance")}
               {field("otherAllowances", "Other Allowances")}

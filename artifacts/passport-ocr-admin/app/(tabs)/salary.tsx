@@ -538,6 +538,7 @@ export default function SalaryScreen() {
                   value={form.basicSalary}
                   onChangeText={(v) => setForm((p) => ({ ...p, basicSalary: v }))}
                 />
+                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>Agency salary from passport</Text>
               </View>
 
               {/* Allowances */}
