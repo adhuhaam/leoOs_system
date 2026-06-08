@@ -110,10 +110,11 @@ const PRIORITY_COLOR = { low: "#10B981", medium: "#F59E0B", high: "#EF4444" };
 const DUE_COLOR = { overdue: "#EF4444", today: "#F59E0B", upcoming: "#6366F1" };
 
 type TaskFilter = "all" | "today" | "upcoming" | "done";
+type UploadFilter = "all" | "processing" | "active" | "attention";
 type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string };
 
-// ── Flip user card ────────────────────────────────────────────────────────────
-const CARD_HEIGHT = 188;
+// ── Flip user card (credit-card proportions) ──────────────────────────────────
+const CARD_HEIGHT = 210;
 
 function FlipUserCard() {
   const { user } = useAuth();
@@ -122,12 +123,8 @@ function FlipUserCard() {
   const flipAnim = useSharedValue(0);
 
   const initials = (user?.name ?? "?")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w: string) => w[0] ?? "")
-    .join("")
-    .toUpperCase();
+    .split(" ").filter(Boolean).slice(0, 2)
+    .map((w: string) => w[0] ?? "").join("").toUpperCase();
 
   const roleLabel = user?.role ? (ROLE_LABEL[user.role] ?? user.role) : "—";
   const rStyle = user?.role
@@ -137,90 +134,96 @@ function FlipUserCard() {
   function toggle() {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
     isBack.current = !isBack.current;
-    flipAnim.value = withTiming(isBack.current ? 1 : 0, { duration: 480 });
+    flipAnim.value = withTiming(isBack.current ? 1 : 0, { duration: 500 });
   }
 
   const frontStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1200 },
-      { rotateY: `${interpolate(flipAnim.value, [0, 1], [0, 180])}deg` },
-    ],
+    transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flipAnim.value, [0, 1], [0, 180])}deg` }],
     backfaceVisibility: "hidden",
   }));
 
   const backStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1200 },
-      { rotateY: `${interpolate(flipAnim.value, [0, 1], [180, 360])}deg` },
-    ],
+    transform: [{ perspective: 1200 }, { rotateY: `${interpolate(flipAnim.value, [0, 1], [180, 360])}deg` }],
     backfaceVisibility: "hidden",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
   }));
 
   return (
     <Pressable onPress={toggle} style={styles.cardWrapper}>
-      {/* ── Front ─────────────────────────────── */}
+      {/* ── Front: credit card ───────────────── */}
       <Animated.View style={[styles.card, frontStyle]}>
         <LinearGradient
           colors={["#0f172a", "#1e3a5f", "#0a192f"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        {/* decorative orbs */}
-        <View style={[styles.cardOrb, { top: -35, right: -25, width: 110, height: 110, backgroundColor: "#6366F115" }]} />
-        <View style={[styles.cardOrb, { bottom: -20, left: 40, width: 70, height: 70, backgroundColor: "#0EA5E912" }]} />
+        <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#6366F10D" }]} />
+        <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#0EA5E90B" }]} />
 
-        {/* top row: brand + role badge */}
+        {/* brand + contactless symbol */}
         <View style={styles.cardTopRow}>
           <Text style={styles.cardBrand}>LEO  OS</Text>
+          <View style={{ transform: [{ rotate: "90deg" }] }}>
+            <Feather name="wifi" size={20} color="#FFFFFF25" />
+          </View>
+        </View>
+
+        {/* EMV chip + avatar initials */}
+        <View style={styles.cardChipRow}>
+          <View style={styles.cardChip}>
+            <View style={styles.cardChipContact} />
+            <View style={styles.cardChipH} />
+            <View style={styles.cardChipH} />
+          </View>
+          <View style={styles.cardAvatar}>
+            <Text style={styles.cardAvatarText}>{initials}</Text>
+          </View>
+        </View>
+
+        {/* card number dots + ID */}
+        <View style={styles.cardDotRow}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.cardDotGroup}>
+              {[0, 1, 2, 3].map((j) => <View key={j} style={styles.cardDot} />)}
+            </View>
+          ))}
+          <Text style={styles.cardDotId}>{String(user?.id ?? 0).padStart(4, "0")}</Text>
+        </View>
+
+        {/* card holder name + role pill */}
+        <View style={styles.cardNameRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardHolderLabel}>CARD HOLDER</Text>
+            <Text style={styles.cardName} numberOfLines={1}>{(user?.name ?? "—").toUpperCase()}</Text>
+          </View>
           <View style={[styles.cardRolePill, { backgroundColor: rStyle.bg }]}>
             <Text style={[styles.cardRoleText, { color: rStyle.text }]}>{roleLabel}</Text>
           </View>
         </View>
-
-        {/* centre: avatar + name/email */}
-        <View style={styles.cardCenter}>
-          <View style={styles.cardAvatar}>
-            <Text style={styles.cardAvatarText}>{initials}</Text>
-          </View>
-          <View style={styles.cardNameBlock}>
-            <Text style={styles.cardName} numberOfLines={1}>{user?.name ?? "—"}</Text>
-            <Text style={styles.cardEmail} numberOfLines={1}>{user?.email ?? "—"}</Text>
-          </View>
-        </View>
-
-        {/* hint */}
-        <View style={styles.cardHintRow}>
-          <Feather name="refresh-cw" size={10} color="#FFFFFF35" />
-          <Text style={styles.cardHint}>Tap for details</Text>
-        </View>
       </Animated.View>
 
-      {/* ── Back ──────────────────────────────── */}
+      {/* ── Back ─────────────────────────────── */}
       <Animated.View style={[styles.card, backStyle]}>
         <LinearGradient
           colors={["#0c1445", "#1a3050", "#0c1445"]}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.cardOrb, { bottom: -15, right: -20, width: 90, height: 90, backgroundColor: "#10B98112" }]} />
+        <View style={[styles.cardOrb, { bottom: -20, right: -15, width: 110, height: 110, backgroundColor: "#10B98110" }]} />
+
+        {/* magnetic stripe */}
+        <View style={styles.cardMagStripe} />
 
         <Text style={styles.cardBackTitle}>Account Details</Text>
 
         {([
-          { icon: "user",          label: "Name",   value: user?.name  ?? "—" },
-          { icon: "mail",          label: "Email",  value: user?.email ?? "—" },
-          { icon: "shield",        label: "Role",   value: roleLabel },
-          { icon: "check-circle",  label: "Status", value: "Active" },
+          { icon: "user",         label: "Name",   value: user?.name  ?? "—" },
+          { icon: "mail",         label: "Email",  value: user?.email ?? "—" },
+          { icon: "shield",       label: "Role",   value: roleLabel },
+          { icon: "check-circle", label: "Status", value: "Active" },
         ] as const).map((row) => (
           <View key={row.label} style={styles.cardInfoRow}>
-            <Feather name={row.icon} size={12} color="#FFFFFF50" />
+            <Feather name={row.icon} size={11} color="#FFFFFF50" />
             <Text style={styles.cardInfoLabel}>{row.label}</Text>
             <Text style={styles.cardInfoValue} numberOfLines={1}>{row.value}</Text>
           </View>
@@ -422,18 +425,20 @@ export default function DashboardScreen() {
     setEditDraft(null);
   }
 
-  // ── Recent uploads ───────────────────────────────────────────────────────
-  const recent = useMemo(
-    () =>
-      [...passports]
-        .sort((a, b) => {
-          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return tb - ta;
-        })
-        .slice(0, 8),
-    [passports],
-  );
+  // ── Upload filter + sorted candidates ────────────────────────────────────
+  const [uploadFilter, setUploadFilter] = useState<UploadFilter>("all");
+
+  const filteredPassports = useMemo(() => {
+    const sorted = [...passports].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+    if (uploadFilter === "processing") return sorted.filter((p) => STATUS_GROUPS.processing.includes(p.status ?? "processing"));
+    if (uploadFilter === "active")     return sorted.filter((p) => STATUS_GROUPS.active.includes(p.status ?? ""));
+    if (uploadFilter === "attention")  return sorted.filter((p) => STATUS_GROUPS.attention.includes(p.status ?? ""));
+    return sorted;
+  }, [passports, uploadFilter]);
 
   return (
     <>
@@ -449,9 +454,9 @@ export default function DashboardScreen() {
         />
       }
     >
-      {/* Hero greeting */}
+      {/* ── Greeting ── */}
       <View style={styles.hero}>
-        <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
+        <Text style={[styles.greeting, { color: colors.foreground }]}>
           {getGreeting()}{firstName ? `, ${firstName}` : ""}
         </Text>
         <Text style={[styles.heroDate, { color: colors.mutedForeground }]}>
@@ -459,124 +464,95 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      {/* User ID card */}
+      {/* ── Credit card ── */}
       <FlipUserCard />
 
-      {/* Passport stats grid */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          Candidate Overview
-        </Text>
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.primary} size="large" />
-          </View>
-        ) : (
-          <View style={styles.statsGrid}>
-            {passportStats.map((s) => (
-              <StatCard key={s.label} stat={s} />
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* Business overview — admin / superuser only */}
-      {isAdmin && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Business Overview
-          </Text>
-          {adminOverviewLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : (
-            <View style={styles.statsGrid}>
-              {adminStats.map((s) => (
-                <StatCard key={s.label} stat={s} />
-              ))}
-            </View>
-          )}
+      {/* ── Compact candidate stat pills ── */}
+      {isLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={colors.primary} size="small" />
+        </View>
+      ) : (
+        <View style={styles.statPillRow}>
+          {passportStats.map((s) => <StatPill key={s.label} stat={s} />)}
         </View>
       )}
 
-      {/* Quick actions */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          Quick Actions
-        </Text>
-        <View style={styles.actionsRow}>
-          {canSeeCapture && (
-            <ActionButton
-              icon="camera"
-              label="Capture"
-              onPress={() => router.push("/(tabs)/upload")}
-            />
-          )}
-          {canSeeMaster && (
-            <ActionButton
-              icon="users"
-              label="Employees"
-              onPress={() => router.push("/(tabs)/master")}
-            />
-          )}
-          {canSeeBilling && (
-            <ActionButton
-              icon="file-text"
-              label="Billing"
-              onPress={() => router.push("/(tabs)/billing")}
-            />
-          )}
-          <ActionButton
-            icon="briefcase"
-            label="Companies"
-            onPress={() => router.push("/companies")}
-          />
+      {/* ── Compact admin stat pills ── */}
+      {isAdmin && !adminOverviewLoading && adminStats.length > 0 && (
+        <View style={styles.statPillRow}>
+          {adminStats.map((s) => <StatPill key={s.label} stat={s} />)}
         </View>
+      )}
+
+      {/* ── Quick actions (no section label) ── */}
+      <View style={styles.actionsRow}>
+        {canSeeCapture && (
+          <ActionButton icon="camera" label="Capture" onPress={() => router.push("/(tabs)/upload")} />
+        )}
+        {canSeeMaster && (
+          <ActionButton icon="users" label="Employees" onPress={() => router.push("/(tabs)/master")} />
+        )}
+        {canSeeBilling && (
+          <ActionButton icon="file-text" label="Billing" onPress={() => router.push("/(tabs)/billing")} />
+        )}
+        <ActionButton icon="briefcase" label="Companies" onPress={() => router.push("/companies")} />
       </View>
 
-      {/* Recent uploads */}
+      {/* ── Candidates with status filter tabs ── */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Recent Uploads
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Candidates</Text>
           {passports.length > 8 && (
             <Pressable onPress={() => router.push("/(tabs)/master")}>
-              <Text style={[styles.seeAll, { color: colors.mutedForeground }]}>
-                See all
-              </Text>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
             </Pressable>
           )}
         </View>
 
-        {isLoading ? null : recent.length === 0 ? (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Feather name="inbox" size={28} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              No uploads yet
-            </Text>
+        {/* Tab bar */}
+        <View style={[styles.uploadFilterRow, { backgroundColor: colors.secondary }]}>
+          {([
+            { key: "all",        label: "All",        count: passports.length,                              color: colors.foreground },
+            { key: "processing", label: "Processing",  count: (passportStats[1]?.value ?? 0) as number,     color: "#F59E0B" },
+            { key: "active",     label: "Active",      count: (passportStats[2]?.value ?? 0) as number,     color: "#10B981" },
+            { key: "attention",  label: "Attention",   count: (passportStats[3]?.value ?? 0) as number,     color: "#EF4444" },
+          ] as const).map((tab) => (
+            <Pressable
+              key={tab.key}
+              onPress={() => setUploadFilter(tab.key as UploadFilter)}
+              style={[
+                styles.uploadFilterBtn,
+                uploadFilter === tab.key && { backgroundColor: colors.card, shadowColor: "#000" },
+              ]}
+            >
+              <Text style={[styles.uploadFilterCount, { color: tab.color }]}>{tab.count}</Text>
+              <Text style={[styles.uploadFilterLabel, {
+                color: uploadFilter === tab.key ? colors.foreground : colors.mutedForeground,
+              }]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Filtered list */}
+        {isLoading ? null : filteredPassports.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="inbox" size={24} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Tap Capture to scan your first passport.
+              {uploadFilter === "all" ? "No candidates yet" : `No ${uploadFilter} candidates`}
             </Text>
           </View>
         ) : (
           <View style={styles.recentList}>
-            {recent.map((p) => (
-              <RecentRow
-                key={p.id}
-                passport={p}
-                onPress={() => router.push(`/passport/${p.id}`)}
-              />
+            {filteredPassports.slice(0, 8).map((p) => (
+              <RecentRow key={p.id} passport={p} onPress={() => router.push(`/passport/${p.id}`)} />
             ))}
           </View>
         )}
       </View>
+
+      {/* ── Monthly revenue chart (admin only) ── */}
+      {isAdmin && <BillingChart docs={(billingData ?? []) as BillingDocumentSummary[]} />}
 
       {/* ── Task Management ──────────────────────────────────────────── */}
       <View style={styles.section}>
@@ -786,34 +762,91 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({ stat }: { stat: StatItem }) {
+function StatPill({ stat }: { stat: StatItem }) {
   const colors = useColors();
   return (
-    <View
-      style={[
-        styles.statCard,
-        { backgroundColor: colors.card, shadowColor: "#000" },
-      ]}
-    >
-      <View style={[styles.statIconWrap, { backgroundColor: stat.color + "18" }]}>
-        <Feather name={stat.icon} size={18} color={stat.color} />
+    <View style={[styles.statPill, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+      <View style={[styles.statPillIcon, { backgroundColor: stat.color + "18" }]}>
+        <Feather name={stat.icon} size={14} color={stat.color} />
       </View>
-      <Text
-        style={[styles.statValue, { color: colors.foreground }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.6}
-      >
-        {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
-      </Text>
-      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-        {stat.label}
-      </Text>
-      {stat.sub ? (
-        <Text style={[styles.statSub, { color: colors.mutedForeground }]} numberOfLines={1}>
-          {stat.sub}
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[styles.statPillValue, { color: colors.foreground }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
         </Text>
-      ) : null}
+        <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {stat.label}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
+  const colors = useColors();
+
+  const months = useMemo(() => {
+    const arr: { key: string; label: string; revenue: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleString("en", { month: "short" });
+      arr.push({ key, label, revenue: 0 });
+    }
+    for (const doc of docs) {
+      if (doc.status === "payment_received" || doc.status === "completed") {
+        const created = (String(((doc as unknown) as Record<string, unknown>).createdAt ?? "") || "").slice(0, 7);
+        const bucket = arr.find((m) => m.key === created);
+        if (bucket) bucket.revenue += Number(doc.subtotal) || 0;
+      }
+    }
+    return arr;
+  }, [docs]);
+
+  const maxRev = Math.max(...months.map((m) => m.revenue), 1);
+  const BAR_MAX_H = 72;
+  const totalRevenue = months.reduce((s, m) => s + m.revenue, 0);
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Monthly Revenue</Text>
+        <Text style={[styles.seeAll, { color: colors.mutedForeground }]}>{fmtMVR(totalRevenue)}</Text>
+      </View>
+      <View style={[styles.chartCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+        <View style={styles.chartBars}>
+          {months.map((m) => {
+            const pct = m.revenue / maxRev;
+            const barH = Math.max(4, pct * BAR_MAX_H);
+            return (
+              <View key={m.key} style={styles.chartCol}>
+                <Text style={[styles.chartValLabel, { color: colors.mutedForeground }]}>
+                  {m.revenue > 0
+                    ? m.revenue >= 1000
+                      ? `${(m.revenue / 1000).toFixed(0)}K`
+                      : String(Math.round(m.revenue))
+                    : ""}
+                </Text>
+                <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
+                  <View
+                    style={[
+                      styles.chartBar,
+                      { height: barH, backgroundColor: pct > 0.6 ? "#6366F1" : pct > 0.2 ? "#818CF8" : "#A5B4FC" },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.chartMonthLabel, { color: colors.mutedForeground }]}>{m.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
     </View>
   );
 }
@@ -930,104 +963,107 @@ function RecentRow({
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 32, gap: 24 },
 
-  hero: { gap: 2, paddingTop: 8 },
-  greeting: { fontSize: 15, letterSpacing: 0.2, fontWeight: "600" },
-  heroDate: { fontSize: 13 },
+  hero: { gap: 3, paddingTop: 8 },
+  greeting: { fontSize: 23, fontWeight: "700", letterSpacing: -0.5 },
+  heroDate: { fontSize: 13, marginTop: 1 },
 
-  // ── Flip card ────────────────────────────────────────────────────────────
+  // ── Credit card ───────────────────────────────────────────────────────────
   cardWrapper: { height: CARD_HEIGHT },
   card: {
     height: CARD_HEIGHT,
-    borderRadius: 22,
+    borderRadius: 20,
     overflow: "hidden",
     padding: 20,
     justifyContent: "space-between",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 22,
+    elevation: 10,
   },
   cardOrb: { position: "absolute", borderRadius: 999 },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardBrand: { fontSize: 13, fontWeight: "700", letterSpacing: 3, color: "#FFFFFF", opacity: 0.6 },
+  // EMV chip
+  cardChipRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  cardChip: {
+    width: 38, height: 28, borderRadius: 5,
+    backgroundColor: "#D4AF3750",
+    borderWidth: 0.5, borderColor: "#D4AF37",
+    padding: 5, gap: 3, justifyContent: "center",
   },
-  cardBrand: {
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 3,
-    color: "#FFFFFF",
-    opacity: 0.65,
+  cardChipContact: {
+    width: "100%", height: 12, borderRadius: 3,
+    borderWidth: 0.5, borderColor: "#D4AF37",
+    backgroundColor: "#D4AF3728",
   },
-  cardRolePill: {
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  cardRoleText: { fontSize: 11, fontWeight: "600" },
-  cardCenter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
+  cardChipH: { width: "100%", height: 1, backgroundColor: "#D4AF3778" },
   cardAvatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#FFFFFF15",
-    borderWidth: 1.5,
-    borderColor: "#FFFFFF25",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#FFFFFF18", borderWidth: 1.5, borderColor: "#FFFFFF30",
+    alignItems: "center", justifyContent: "center",
   },
-  cardAvatarText: { fontSize: 22, fontWeight: "700", color: "#FFFFFF" },
-  cardNameBlock: { flex: 1, gap: 3 },
-  cardName: { fontSize: 18, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.3 },
-  cardEmail: { fontSize: 11.5, color: "#FFFFFF70" },
+  cardAvatarText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  // card number dots
+  cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  cardDotGroup: { flexDirection: "row", gap: 3 },
+  cardDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#FFFFFF65" },
+  cardDotId: { fontSize: 14, fontWeight: "600", color: "#FFFFFF", letterSpacing: 2 },
+  // name row
+  cardNameRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 8 },
+  cardHolderLabel: { fontSize: 7.5, color: "#FFFFFF45", letterSpacing: 1.5, marginBottom: 2 },
+  cardName: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: 0.3 },
+  cardRolePill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, flexShrink: 0 },
+  cardRoleText: { fontSize: 10, fontWeight: "600" },
+  // back face
+  cardMagStripe: { height: 34, backgroundColor: "#00000060", marginHorizontal: -20, marginTop: -6 },
+  cardBackTitle: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.2, marginTop: 6 },
+  cardInfoRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  cardInfoLabel: { fontSize: 10, color: "#FFFFFF50", width: 50 },
+  cardInfoValue: { flex: 1, fontSize: 11, color: "#FFFFFFCC", fontWeight: "500" },
   cardHintRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   cardHint: { fontSize: 10, color: "#FFFFFF38" },
-  cardBackTitle: { fontSize: 15, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.2 },
-  cardInfoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  cardInfoLabel: { fontSize: 11, color: "#FFFFFF55", width: 58 },
-  cardInfoValue: { flex: 1, fontSize: 12, color: "#FFFFFFD0", fontWeight: "500" },
+
+  // ── Compact stat pills ────────────────────────────────────────────────────
+  statPillRow: { flexDirection: "row", gap: 8 },
+  statPill: {
+    flex: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 10,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  statPillIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  statPillValue: { fontSize: 18, fontWeight: "700", letterSpacing: -0.5 },
+  statPillLabel: { fontSize: 9, marginTop: 1 },
 
   rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
-  roleText: { fontSize: 11, },
+  roleText: { fontSize: 11 },
 
   section: { gap: 12 },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: { fontSize: 17, },
-  seeAll: { fontSize: 13, },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionTitle: { fontSize: 17 },
+  seeAll: { fontSize: 13 },
 
-  loadingBox: { height: 120, alignItems: "center", justifyContent: "center" },
+  loadingBox: { height: 80, alignItems: "center", justifyContent: "center" },
 
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  statCard: {
-    flex: 1,
-    minWidth: "44%",
-    borderRadius: 18,
-    padding: 16,
-    gap: 6,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+  // ── Upload filter tabs ────────────────────────────────────────────────────
+  uploadFilterRow: { flexDirection: "row", padding: 3, borderRadius: 14, gap: 2 },
+  uploadFilterBtn: {
+    flex: 1, paddingVertical: 9, paddingHorizontal: 3, alignItems: "center", borderRadius: 11,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 0,
   },
-  statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  uploadFilterCount: { fontSize: 18, fontWeight: "700", letterSpacing: -0.5 },
+  uploadFilterLabel: { fontSize: 9, marginTop: 2 },
+
+  // ── Billing chart ─────────────────────────────────────────────────────────
+  chartCard: {
+    borderRadius: 18, padding: 16,
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
-  statValue: {
-    fontSize: 26,
-    letterSpacing: -0.5,
-    marginTop: 2,
-  },
-  statLabel: { fontSize: 12, },
-  statSub: { fontSize: 10, marginTop: -2 },
+  chartBars: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: 108 },
+  chartCol: { flex: 1, alignItems: "center", justifyContent: "flex-end", gap: 4 },
+  chartValLabel: { fontSize: 9, textAlign: "center" },
+  chartBarTrack: { width: "100%", height: 72, borderRadius: 8, justifyContent: "flex-end", overflow: "hidden" },
+  chartBar: { width: "100%", borderRadius: 8 },
+  chartMonthLabel: { fontSize: 10, textAlign: "center" },
 
   actionsRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
@@ -1097,7 +1133,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
   },
-  emptyTitle: { fontSize: 16, },
   emptyText: {
     fontSize: 13,
     textAlign: "center",
