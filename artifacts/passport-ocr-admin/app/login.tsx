@@ -1,10 +1,8 @@
 import { Feather } from "@/components/Icon";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,89 +13,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri, useAuthRequest, useAutoDiscovery } from "expo-auth-session";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
 
-WebBrowser.maybeCompleteAuthSession();
-
-const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : "";
-
 export default function LoginScreen() {
   const colors = useColors();
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passwordRef = useRef<TextInput>(null);
-
-  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
-  const [googleConfigured, setGoogleConfigured] = useState(false);
-
-  useEffect(() => {
-    fetch(`${BASE_URL}/api/settings/google-client-ids`)
-      .then((r) => r.json())
-      .then((data: { googleClientId?: string | null }) => {
-        if (data.googleClientId) {
-          setGoogleClientId(data.googleClientId);
-          setGoogleConfigured(true);
-        }
-      })
-      .catch(() => {
-        /* silently ignore — Google Sign-In won't show */
-      });
-  }, []);
-
-  const discovery = useAutoDiscovery("https://accounts.google.com");
-
-  const [request, response, promptAsync] = useAuthRequest(
-    {
-      clientId: googleClientId ?? "",
-      redirectUri: makeRedirectUri({ scheme: "com.leo.os" }),
-      scopes: ["openid", "profile", "email"],
-      responseType: "id_token",
-      extraParams: {
-        access_type: "online",
-        prompt: "consent",
-      },
-    },
-    discovery,
-  );
-
-  useEffect(() => {
-    if (response?.type === "success" && response.params.id_token) {
-      const idToken = response.params.id_token;
-      setSubmitting(true);
-      setError(null);
-      loginWithGoogle(idToken)
-        .then(() => {
-          router.replace("/");
-        })
-        .catch((err) => {
-          const status = (err as { status?: number })?.status;
-          if (status === 202) {
-            Alert.alert("Account created", "Your account is pending admin approval.");
-          } else if (status === 403) {
-            setError("Your account is pending approval. Please contact an admin.");
-          } else if (status === 400) {
-            setError("Google Sign-In is not configured on this server.");
-          } else {
-            setError("Google sign-in failed. Please try again.");
-          }
-        })
-        .finally(() => {
-          setSubmitting(false);
-        });
-    }
-  }, [response]);
-
-  const canGoogle = googleConfigured && request != null;
 
   async function onSubmit() {
     if (!email.trim() || !password.trim() || submitting) return;
@@ -223,38 +151,6 @@ export default function LoginScreen() {
               )}
             </Pressable>
           </View>
-
-          {/* Google Sign-In */}
-          {googleConfigured && (
-            <View style={styles.googleWrap}>
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            </View>
-          )}
-
-          {googleConfigured && (
-            <Pressable
-              onPress={() => {
-                if (canGoogle) {
-                  promptAsync();
-                }
-              }}
-              disabled={!canGoogle}
-              style={({ pressed }) => [
-                styles.googleBtn,
-                { borderColor: colors.border, opacity: !canGoogle ? 0.5 : pressed ? 0.8 : 1 },
-              ]}
-            >
-              <Image
-                source={require("../assets/images/icon.png")}
-                style={{ width: 20, height: 20, borderRadius: 10 }}
-              />
-              <Text style={[styles.googleBtnText, { color: colors.foreground }]}>
-                Sign in with Google
-              </Text>
-            </Pressable>
-          )}
 
           {/* Sign up link */}
           <View style={styles.footer}>

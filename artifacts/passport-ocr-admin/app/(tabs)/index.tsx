@@ -170,9 +170,10 @@ function FlipUserCard() {
 
         {/* logo */}
         <Image
-          source={require("../../assets/images/icon.png")}
+          source={require("../../assets/images/logo-transparent.png")}
           style={styles.cardLogo}
           resizeMode="contain"
+          tintColor="#FFFFFF"
         />
 
         {/* spacer pushes bottom content down */}
@@ -967,7 +968,7 @@ const styles = StyleSheet.create({
   },
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
-  cardLogo: { position: "absolute", width: 150, height: 60, left: 10, top: 12, zIndex: 1 },
+  cardLogo: { position: "absolute", width: 140, height: 52, left: 14, top: 16, zIndex: 1 },
   cardBottom: { gap: 6 },
   // card number dots
   cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },
