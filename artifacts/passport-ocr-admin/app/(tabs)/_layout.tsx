@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 const CAN_SEE_MASTER  = new Set(["superuser", "admin", "agent", "client", "company"]);
 const CAN_SEE_UPLOAD  = new Set(["superuser", "admin", "agent"]);
 const CAN_SEE_BILLING = new Set(["superuser", "admin", "client", "company"]);
+const CAN_SEE_SALARY  = new Set(["superuser", "admin", "employee"]);
 
 export default function TabLayout() {
   const colors = useColors();
@@ -138,6 +139,20 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="file-text" size={22} color={color} />
+              {dot(color, focused)}
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="salary"
+        options={{
+          title: "Salary",
+          href: CAN_SEE_SALARY.has(role) ? undefined : null,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: "center" }}>
+              <Feather name="dollar-sign" size={22} color={color} />
               {dot(color, focused)}
             </View>
           ),

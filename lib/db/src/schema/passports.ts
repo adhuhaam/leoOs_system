@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clientsTable } from "./clients";
@@ -23,6 +23,7 @@ export const passportsTable = pgTable("passports", {
   clientId: integer("client_id").references((): import("drizzle-orm/pg-core").AnyPgColumn => clientsTable.id, { onDelete: "set null" }),
   workPermitNumber: text("work_permit_number"),
   agent: text("agent"),
+  agencySalary: numeric("agency_salary", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -373,6 +373,11 @@ export interface Passport {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /**
+   * Monthly agency salary in MVR (stored as numeric string)
+   * @nullable
+   */
+  agencySalary?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -401,6 +406,11 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /**
+   * Monthly agency salary in MVR
+   * @nullable
+   */
+  agencySalary?: string | null;
 }
 
 export interface PassportStats {

@@ -173,6 +173,7 @@ router.get("/passports", requireAuth, async (req, res): Promise<void> => {
       clientName: clientsTable.name,
       workPermitNumber: passportsTable.workPermitNumber,
       agent: passportsTable.agent,
+      agencySalary: passportsTable.agencySalary,
       createdAt: passportsTable.createdAt,
       updatedAt: passportsTable.updatedAt,
     })
@@ -363,6 +364,7 @@ router.get("/passports/:id", requireAuth, async (req, res): Promise<void> => {
       clientName: clientsTable.name,
       workPermitNumber: passportsTable.workPermitNumber,
       agent: passportsTable.agent,
+      agencySalary: passportsTable.agencySalary,
       createdAt: passportsTable.createdAt,
       updatedAt: passportsTable.updatedAt,
     })

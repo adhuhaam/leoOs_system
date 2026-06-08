@@ -1839,6 +1839,9 @@ components:
           type: ["string", "null"]
         agent:
           type: ["string", "null"]
+        agencySalary:
+          type: ["string", "null"]
+          description: "Monthly agency salary in MVR (stored as numeric string)"
         createdAt:
           type: string
         updatedAt:
@@ -1884,6 +1887,9 @@ components:
           type: ["string", "null"]
         agent:
           type: ["string", "null"]
+        agencySalary:
+          type: ["string", "null"]
+          description: "Monthly agency salary in MVR"
 
     PassportStats:
       type: object

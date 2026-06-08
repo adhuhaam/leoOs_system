@@ -425,6 +425,10 @@ export const ListPassportsResponseItem = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  agencySalary: zod
+    .string()
+    .nullish()
+    .describe("Monthly agency salary in MVR (stored as numeric string)"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -506,6 +510,10 @@ export const GetPassportStatsResponse = zod.object({
         ),
       workPermitNumber: zod.string().nullish(),
       agent: zod.string().nullish(),
+      agencySalary: zod
+        .string()
+        .nullish()
+        .describe("Monthly agency salary in MVR (stored as numeric string)"),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -569,6 +577,10 @@ export const GetPassportResponse = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  agencySalary: zod
+    .string()
+    .nullish()
+    .describe("Monthly agency salary in MVR (stored as numeric string)"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -594,6 +606,7 @@ export const UpdatePassportBody = zod.object({
   clientId: zod.number().nullish(),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  agencySalary: zod.string().nullish().describe("Monthly agency salary in MVR"),
 });
 
 export const UpdatePassportResponse = zod.object({
@@ -646,6 +659,10 @@ export const UpdatePassportResponse = zod.object({
     .describe("Joined client name for display (computed; ignored on writes)."),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
+  agencySalary: zod
+    .string()
+    .nullish()
+    .describe("Monthly agency salary in MVR (stored as numeric string)"),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

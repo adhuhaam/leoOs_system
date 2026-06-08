@@ -24,4 +24,9 @@ export interface PassportUpdate {
   workPermitNumber?: string | null;
   /** @nullable */
   agent?: string | null;
+  /**
+   * Monthly agency salary in MVR
+   * @nullable
+   */
+  agencySalary?: string | null;
 }
