@@ -1,0 +1,10 @@
+../../artifacts/api-server
+../../artifacts/passport-ocr
+../../artifacts/mockup-sandbox
+../../attached_assets
+../../.local
+../../.git
+**/node_modules
+**/.expo
+**/dist
+**/build

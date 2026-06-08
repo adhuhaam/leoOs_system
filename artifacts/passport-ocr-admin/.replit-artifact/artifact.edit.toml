@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/passport-ocr-admin/"
+title = "LEO ADMIN"
+version = "1.0.0"
+id = "artifacts/passport-ocr-admin"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/passport-ocr-admin/" ]
+localPort = 26151
+
+[services.development]
+run = "pnpm --filter @workspace/passport-ocr-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/passport-ocr-admin", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/passport-ocr-admin", "run", "serve" ]
+
+[services.env]
+PORT = "26151"
+BASE_PATH = "/passport-ocr-admin/"
