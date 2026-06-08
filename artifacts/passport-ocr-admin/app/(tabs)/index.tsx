@@ -789,8 +789,8 @@ function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
       arr.push({ key, label, count: 0, revenue: 0 });
     }
     for (const doc of docs) {
-      const created = (doc.createdAt ?? "").slice(0, 7);
-      const bucket = arr.find((m) => m.key === created);
+      const issued = (doc.issueDate ?? "").slice(0, 7);
+      const bucket = arr.find((m) => m.key === issued);
       if (!bucket) continue;
       bucket.count += 1;
       if (doc.status === "payment_received" || doc.status === "completed") {
