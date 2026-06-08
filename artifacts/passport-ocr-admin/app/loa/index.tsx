@@ -5,6 +5,7 @@ import {
   useDeleteLoa,
   useListLoa,
 } from "@workspace/api-client-react";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -22,6 +23,17 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 
+const BASE_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "";
+
+function openLoaPrint(id: number) {
+  const url = `${BASE_DOMAIN}/loa/${id}/print`;
+  WebBrowser.openBrowserAsync(url, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+  });
+}
+
 function fmtDate(raw: string | null | undefined): string {
   if (!raw) return "";
   const d = new Date(raw);
@@ -29,13 +41,23 @@ function fmtDate(raw: string | null | undefined): string {
   return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function LoaCard({ loa, onPress, onDelete }: { loa: Loa; onPress: () => void; onDelete: () => void }) {
+function LoaCard({
+  loa,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  loa: Loa;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const colors = useColors();
   const initials = (loa.candidateName ?? "?")
     .split(" ").slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase() || "?";
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onView}
       style={({ pressed }) => [
         styles.card,
         { backgroundColor: colors.card, shadowColor: "#000", opacity: pressed ? 0.85 : 1 },
@@ -55,13 +77,22 @@ function LoaCard({ loa, onPress, onDelete }: { loa: Loa; onPress: () => void; on
           {fmtDate(loa.createdAt)}
         </Text>
       </View>
-      <Pressable
-        onPress={onDelete}
-        hitSlop={10}
-        style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
-      >
-        <Feather name="trash-2" size={16} color={colors.destructive} />
-      </Pressable>
+      <View style={styles.cardActions}>
+        <Pressable
+          onPress={onEdit}
+          hitSlop={10}
+          style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Feather name="edit-2" size={15} color={colors.mutedForeground} />
+        </Pressable>
+        <Pressable
+          onPress={onDelete}
+          hitSlop={10}
+          style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Feather name="trash-2" size={15} color={colors.destructive} />
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -162,7 +193,8 @@ export default function LoaListScreen() {
           renderItem={({ item }) => (
             <LoaCard
               loa={item}
-              onPress={() => router.push(`/loa/${item.id}` as never)}
+              onView={() => openLoaPrint(item.id)}
+              onEdit={() => router.push(`/loa/${item.id}` as never)}
               onDelete={() => handleDelete(item)}
             />
           )}
@@ -227,7 +259,8 @@ const styles = StyleSheet.create({
   candidateName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   cardSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
   cardDate: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
-  deleteBtn: { padding: 6 },
+  cardActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  actionBtn: { padding: 6 },
 
   emptyCard: {
     alignItems: "center",
