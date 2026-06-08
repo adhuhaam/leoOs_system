@@ -164,7 +164,7 @@ function FlipUserCard() {
         {/* logo + contactless symbol */}
         <View style={styles.cardTopRow}>
           <Image
-            source={require("../../assets/images/org-logo.png")}
+            source={require("../../assets/images/logo-white.png")}
             style={styles.cardLogo}
             resizeMode="contain"
           />
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardBrand: { fontSize: 13, fontWeight: "700", letterSpacing: 3, color: "#FFFFFF", opacity: 0.6 },
-  cardLogo: { width: 80, height: 36, borderRadius: 4, overflow: "hidden" },
+  cardLogo: { width: 90, height: 40 },
   // EMV chip
   cardChipRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   cardChip: {
