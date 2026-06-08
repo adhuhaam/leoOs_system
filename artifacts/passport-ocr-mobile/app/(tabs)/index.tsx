@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -34,6 +35,24 @@ function formatDate(): string {
   });
 }
 
+const ROLE_LABEL: Record<string, string> = {
+  superuser: "Superuser",
+  admin: "Admin",
+  client: "Client",
+  company: "Company",
+  employee: "Employee",
+  agent: "Agent",
+};
+
+const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
+  superuser: { bg: "#7C3AED18", text: "#7C3AED" },
+  admin:     { bg: "#0F172A18", text: "#0F172A" },
+  client:    { bg: "#0EA5E918", text: "#0369A1" },
+  company:   { bg: "#10B98118", text: "#047857" },
+  employee:  { bg: "#F59E0B18", text: "#B45309" },
+  agent:     { bg: "#EC489918", text: "#BE185D" },
+};
+
 type StatGroup = {
   label: string;
   value: number;
@@ -50,6 +69,16 @@ const STATUS_GROUPS = {
 
 export default function DashboardScreen() {
   const colors = useColors();
+  const { user } = useAuth();
+
+  const role = user?.role ?? null;
+  const firstName = user?.name?.split(" ")[0] ?? null;
+  const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
+
+  // Role-based Quick Action visibility
+  const canSeeCapture = role === "superuser" || role === "admin" || role === "company";
+  const canSeeBilling = role === "superuser" || role === "admin" || role === "client" || role === "company";
+  const canSeeMaster  = role !== "employee";
 
   const { data, isLoading, isFetching, refetch } = useListPassports(undefined, {
     query: {
@@ -110,12 +139,21 @@ export default function DashboardScreen() {
       {/* Hero greeting */}
       <View style={styles.hero}>
         <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
-          {getGreeting()}
+          {getGreeting()}{firstName ? `, ${firstName}` : ""}
         </Text>
         <Text style={[styles.title, { color: colors.foreground }]}>LEO OS</Text>
-        <Text style={[styles.date, { color: colors.mutedForeground }]}>
-          {formatDate()}
-        </Text>
+        <View style={styles.heroMeta}>
+          <Text style={[styles.date, { color: colors.mutedForeground }]}>
+            {formatDate()}
+          </Text>
+          {role && roleStyle && (
+            <View style={[styles.rolePill, { backgroundColor: roleStyle.bg }]}>
+              <Text style={[styles.roleText, { color: roleStyle.text }]}>
+                {ROLE_LABEL[role] ?? role}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Stats grid */}
@@ -131,27 +169,33 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Quick actions */}
+      {/* Quick actions — only show actions the user's role can access */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
           Quick Actions
         </Text>
         <View style={styles.actionsRow}>
-          <ActionButton
-            icon="camera"
-            label="Capture"
-            onPress={() => router.push("/(tabs)/upload")}
-          />
-          <ActionButton
-            icon="users"
-            label="Employees"
-            onPress={() => router.push("/(tabs)/master")}
-          />
-          <ActionButton
-            icon="file-text"
-            label="Billing"
-            onPress={() => router.push("/(tabs)/billing")}
-          />
+          {canSeeCapture && (
+            <ActionButton
+              icon="camera"
+              label="Capture"
+              onPress={() => router.push("/(tabs)/upload")}
+            />
+          )}
+          {canSeeMaster && (
+            <ActionButton
+              icon="users"
+              label="Employees"
+              onPress={() => router.push("/(tabs)/master")}
+            />
+          )}
+          {canSeeBilling && (
+            <ActionButton
+              icon="file-text"
+              label="Billing"
+              onPress={() => router.push("/(tabs)/billing")}
+            />
+          )}
           <ActionButton
             icon="briefcase"
             label="Companies"
@@ -351,7 +395,14 @@ const styles = StyleSheet.create({
   hero: { gap: 4, paddingTop: 8 },
   greeting: { fontSize: 13, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
   title: { fontSize: 34, fontFamily: "Inter_700Bold", letterSpacing: -1 },
-  date: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  heroMeta: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4, flexWrap: "wrap" },
+  date: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  rolePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
 
   loadingBox: { height: 140, alignItems: "center", justifyContent: "center" },
 

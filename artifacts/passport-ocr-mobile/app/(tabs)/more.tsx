@@ -1,6 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLogout } from "@workspace/api-client-react";
+import {
+  getGetAuthStatusQueryKey,
+  useLogout,
+} from "@workspace/api-client-react";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -22,6 +25,24 @@ type Item = {
   route?: string;
 };
 
+const ROLE_LABEL: Record<string, string> = {
+  superuser: "Superuser",
+  admin: "Admin",
+  client: "Client",
+  company: "Company",
+  employee: "Employee",
+  agent: "Agent",
+};
+
+const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
+  superuser: { bg: "#7C3AED18", text: "#7C3AED" },
+  admin:     { bg: "#0F172A18", text: "#0F172A" },
+  client:    { bg: "#0EA5E918", text: "#0369A1" },
+  company:   { bg: "#10B98118", text: "#047857" },
+  employee:  { bg: "#F59E0B18", text: "#B45309" },
+  agent:     { bg: "#EC489918", text: "#BE185D" },
+};
+
 const TOOL_ITEMS: Item[] = [
   { icon: "briefcase", label: "Companies", detail: "Manage employer companies", route: "/companies" },
   { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
@@ -32,12 +53,14 @@ const TOOL_ITEMS: Item[] = [
 export default function MoreScreen() {
   const colors = useColors();
   const qc = useQueryClient();
-  const { refresh, user } = useAuth();
+  const { user } = useAuth();
   const logoutMutation = useLogout();
 
   const role = user?.role ?? null;
   const isAdmin = role === "superuser" || role === "admin";
   const isSuperuser = role === "superuser";
+
+  const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
   const ADMIN_ITEMS: Item[] = [
     ...(isAdmin ? [{ icon: "users" as const, label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" }] : []),
@@ -56,15 +79,17 @@ export default function MoreScreen() {
           } catch {
             // ignore — clear client state regardless
           }
-          await qc.clear();
-          await refresh();
+          // Remove auth query first so AuthGate sees unauthenticated
+          // immediately and doesn't bounce the user back from /login
+          qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
+          qc.clear();
           router.replace("/login");
         },
       },
     ]);
   }
 
-  function ItemRow({ item, idx, total }: { item: Item; idx: number; total: number }) {
+  function ItemRow({ item, idx }: { item: Item; idx: number }) {
     return (
       <Pressable
         key={item.label}
@@ -109,13 +134,20 @@ export default function MoreScreen() {
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
           <Feather name="user" size={22} color={colors.foreground} />
         </View>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, gap: 2 }}>
           <Text style={[styles.profileName, { color: colors.foreground }]}>
             {user?.name ?? "My Profile"}
           </Text>
           <Text style={[styles.profileSub, { color: colors.mutedForeground }]}>
             {user?.email ?? "View profile & change password"}
           </Text>
+          {role && roleStyle && (
+            <View style={[styles.rolePill, { backgroundColor: roleStyle.bg }]}>
+              <Text style={[styles.roleText, { color: roleStyle.text }]}>
+                {ROLE_LABEL[role] ?? role}
+              </Text>
+            </View>
+          )}
         </View>
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
@@ -126,7 +158,7 @@ export default function MoreScreen() {
       </View>
       <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
         {TOOL_ITEMS.map((item, idx) => (
-          <ItemRow key={item.label} item={item} idx={idx} total={TOOL_ITEMS.length} />
+          <ItemRow key={item.label} item={item} idx={idx} />
         ))}
       </View>
 
@@ -138,7 +170,7 @@ export default function MoreScreen() {
           </View>
           <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
             {ADMIN_ITEMS.map((item, idx) => (
-              <ItemRow key={item.label} item={item} idx={idx} total={ADMIN_ITEMS.length} />
+              <ItemRow key={item.label} item={item} idx={idx} />
             ))}
           </View>
         </>
@@ -190,7 +222,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   profileName: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  profileSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  profileSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  rolePill: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    marginTop: 2,
+  },
+  roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
 
   groupHeader: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
   groupLabel: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
