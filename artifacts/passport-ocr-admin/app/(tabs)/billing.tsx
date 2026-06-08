@@ -13,6 +13,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,6 +29,8 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+
+const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN ?? "leomaldives.com";
 
 type Tab = "all" | "invoice" | "quotation" | "expenses";
 
@@ -553,9 +556,26 @@ function DocCard({
           {formatMVR(sub)}
         </Text>
       </View>
-      <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>
-        Hold to change status
-      </Text>
+      <View style={styles.cardActions}>
+        <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>
+          Hold to change status
+        </Text>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            void WebBrowser.openBrowserAsync(
+              `https://${DOMAIN}/billing/${doc.id}/print`,
+            );
+          }}
+          hitSlop={8}
+          style={[styles.exportBtn, { backgroundColor: colors.primary + "14" }]}
+        >
+          <Feather name="external-link" size={13} color={colors.primary} />
+          <Text style={[styles.exportBtnText, { color: colors.primary }]}>
+            Export
+          </Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -636,7 +656,22 @@ const styles = StyleSheet.create({
   },
   dateText: { fontSize: 12, },
   amount: { fontSize: 15, },
-  longPressHint: { fontSize: 10, marginTop: 4, textAlign: "right" },
+  cardActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  longPressHint: { fontSize: 10 },
+  exportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  exportBtnText: { fontSize: 11 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   emptyTitle: { fontSize: 17, },
   errorText: { fontSize: 14, textAlign: "center", },

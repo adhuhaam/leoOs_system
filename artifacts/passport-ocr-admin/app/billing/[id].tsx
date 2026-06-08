@@ -7,7 +7,9 @@ import {
   useGetBillingDocument,
   useUpdateBillingDocument,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,9 +20,14 @@ import {
   Text,
   View,
 } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+
+const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN ?? "leomaldives.com";
+
+function openPrint(id: number) {
+  void WebBrowser.openBrowserAsync(`https://${DOMAIN}/billing/${id}/print`);
+}
 
 function fmtMVR(s: string | number): string {
   const n = typeof s === "string" ? Number(s) : s;
@@ -154,13 +161,14 @@ export default function BillingDetailScreen() {
           options={{
             title: `${isInvoice ? "Invoice" : "Quote"} ${doc.number}`,
             headerRight: () => (
-              <Pressable
-                onPress={() => router.push(`/billing/edit/${id}`)}
-                hitSlop={10}
-                style={{ marginRight: 4 }}
-              >
-                <Feather name="edit-2" size={20} color={colors.primary} />
-              </Pressable>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 16, marginRight: 4 }}>
+                <Pressable onPress={() => openPrint(id)} hitSlop={10}>
+                  <Feather name="external-link" size={20} color={colors.primary} />
+                </Pressable>
+                <Pressable onPress={() => router.push(`/billing/edit/${id}`)} hitSlop={10}>
+                  <Feather name="edit-2" size={20} color={colors.primary} />
+                </Pressable>
+              </View>
             ),
           }}
         />
