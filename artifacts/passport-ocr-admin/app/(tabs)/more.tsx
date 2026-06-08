@@ -139,15 +139,19 @@ export default function MoreScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Tools group */}
-      <View style={styles.groupHeader}>
-        <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>TOOLS</Text>
-      </View>
-      <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
-        {TOOL_ITEMS.map((item, idx) => (
-          <ItemRow key={item.label} item={item} idx={idx} />
-        ))}
-      </View>
+      {/* Tools group — superuser + admin only */}
+      {isAdmin && (
+        <>
+          <View style={styles.groupHeader}>
+            <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>TOOLS</Text>
+          </View>
+          <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+            {TOOL_ITEMS.map((item, idx) => (
+              <ItemRow key={item.label} item={item} idx={idx} />
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Admin group (superuser + admin only) */}
       {ADMIN_ITEMS.length > 0 && (

@@ -584,7 +584,7 @@ export default function DashboardScreen() {
       <FlipUserCard />
 
       {/* ── Task Management (above stats for quick visibility) ── */}
-      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+      {role !== "employee" && <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Tasks</Text>
@@ -828,10 +828,10 @@ export default function DashboardScreen() {
           </Pressable>
         )}
       </View>
-      </View>
+      </View>}
 
       {/* ── Overview stats card ── */}
-      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+      {role !== "employee" && <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
@@ -851,10 +851,10 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
-      </View>
+      </View>}
 
       {/* ── Candidates with status filter tabs ── */}
-      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+      {role !== "employee" && <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Candidates</Text>
@@ -905,7 +905,7 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
-      </View>
+      </View>}
 
       {/* ── Monthly revenue chart (admin only) ── */}
       {isAdmin && (
