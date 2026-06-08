@@ -648,24 +648,28 @@ function PassportCard({
             ) : null}
           </View>
 
-          {/* Row 4: Company → Client */}
-          <View style={styles.companyRow}>
-            <Feather name="briefcase" size={10} color={colors.mutedForeground} style={{ marginTop: 1 }} />
-            <Text style={[styles.companyText, { color: colors.mutedForeground }]} numberOfLines={1}>
-              {companyName ? (
-                <Text style={{ color: colors.foreground, }}>
-                  {companyName}
-                </Text>
-              ) : (
-                <Text style={{ fontStyle: "italic" }}>No company</Text>
-              )}
-              {"  →  "}
-              {passport.clientName ? (
-                passport.clientName
-              ) : (
-                <Text style={{ fontStyle: "italic" }}>Unallocated</Text>
-              )}
-            </Text>
+          {/* Row 4: Company (line 1) + Client (line 2) */}
+          <View style={styles.companyBlock}>
+            <View style={styles.companyRow}>
+              <Feather name="briefcase" size={10} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+              <Text style={[styles.companyText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {companyName ? (
+                  <Text style={{ color: colors.foreground }}>{companyName}</Text>
+                ) : (
+                  <Text style={{ fontStyle: "italic" }}>No company</Text>
+                )}
+              </Text>
+            </View>
+            <View style={styles.companyRow}>
+              <Feather name="user" size={10} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+              <Text style={[styles.companyText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {passport.clientName ? (
+                  <Text style={{ color: colors.mutedForeground }}>{passport.clientName}</Text>
+                ) : (
+                  <Text style={{ fontStyle: "italic" }}>Unallocated</Text>
+                )}
+              </Text>
+            </View>
           </View>
 
           {/* Row 5: WP badge + expiry | DOB */}
@@ -790,17 +794,17 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 66,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
     flexShrink: 0,
     marginTop: 1,
   },
-  avatarImg: { width: 48, height: 48 },
-  avatarInitials: { fontSize: 15, },
+  avatarImg: { width: 52, height: 66 },
+  avatarInitials: { fontSize: 17, fontWeight: "600" },
 
   cardContent: { flex: 1, gap: 4 },
   cardTopRow: {
@@ -837,6 +841,7 @@ const styles = StyleSheet.create({
   statusBadgeText: { fontSize: 10, },
   natText: { fontSize: 11, },
 
+  companyBlock: { gap: 2 },
   companyRow: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
   companyText: { fontSize: 11, flex: 1 },
 
