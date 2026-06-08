@@ -11,6 +11,7 @@ import { db, appSettingsTable, usersTable } from "@workspace/db";
 import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
 import { z } from "zod/v4";
 import { hashPassword, verifyPasswordHash } from "../lib/crypto";
+import { store } from "../lib/session";
 
 const router: IRouter = Router();
 
@@ -143,15 +144,47 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /auth/mobile-token — returns the session ID for mobile persistent auth
+// ---------------------------------------------------------------------------
+
+router.get("/auth/mobile-token", (req, res): void => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  res.json({ token: req.session.id });
+});
+
+// ---------------------------------------------------------------------------
 // POST /auth/logout
 // ---------------------------------------------------------------------------
 
-router.post("/auth/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) req.log.error({ err }, "Failed to destroy session");
-    res.clearCookie("leo.sid");
-    res.sendStatus(204);
-  });
+router.post("/auth/logout", (req, res): void => {
+  // When a mobile client authenticates via Bearer token, the cookie session
+  // is a freshly-created empty session — the real session is the one identified
+  // by the Bearer token.  Destroy BOTH so the token is fully invalidated.
+  const bearerSessionId = (() => {
+    const auth = req.headers.authorization;
+    if (auth?.startsWith("Bearer ")) return auth.slice(7).trim();
+    return null;
+  })();
+
+  const destroyCookieSession = () => {
+    req.session.destroy((err) => {
+      if (err) req.log.error({ err }, "Failed to destroy cookie session");
+      res.clearCookie("leo.sid");
+      res.sendStatus(204);
+    });
+  };
+
+  if (bearerSessionId) {
+    store.destroy(bearerSessionId, (err) => {
+      if (err) req.log.error({ err }, "Failed to destroy Bearer session");
+      destroyCookieSession();
+    });
+  } else {
+    destroyCookieSession();
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -253,12 +286,76 @@ router.post("/auth/extension-token/regenerate", async (req, res): Promise<void> 
 // Auth middleware
 // ---------------------------------------------------------------------------
 
+/**
+ * Populate req.session from a Bearer session-ID token sent by mobile clients.
+ * Returns true when the session was found and populated, false otherwise.
+ */
+function populateFromBearerToken(
+  req: Request,
+  callback: (ok: boolean) => void,
+): void {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) {
+    callback(false);
+    return;
+  }
+  const sessionId = auth.slice(7).trim();
+  if (!sessionId) {
+    callback(false);
+    return;
+  }
+  store.get(sessionId, (err, sessionData) => {
+    if (err || !sessionData?.authenticated) {
+      callback(false);
+      return;
+    }
+    req.session.authenticated = true;
+    req.session.userId = sessionData.userId;
+    req.session.role = sessionData.role;
+    req.session.userEmail = sessionData.userEmail;
+    req.session.userName = sessionData.userName;
+    req.session.linkedEntityId = sessionData.linkedEntityId;
+    callback(true);
+  });
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   if (req.session?.authenticated) {
     next();
     return;
   }
-  res.status(401).json({ error: "Authentication required" });
+  populateFromBearerToken(req, (ok) => {
+    if (ok) {
+      next();
+    } else {
+      res.status(401).json({ error: "Authentication required" });
+    }
+  });
+}
+
+export function requireRole(
+  ...roles: string[]
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const check = (authenticated: boolean) => {
+      if (!authenticated) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const userRole = req.session.role ?? "";
+      if (!roles.includes(userRole)) {
+        res.status(403).json({ error: "Insufficient permissions" });
+        return;
+      }
+      next();
+    };
+
+    if (req.session?.authenticated) {
+      check(true);
+    } else {
+      populateFromBearerToken(req, check);
+    }
+  };
 }
 
 export async function requireAuthOrToken(
@@ -290,23 +387,6 @@ export async function requireAuthOrToken(
     }
   }
   res.status(401).json({ error: "Authentication required" });
-}
-
-export function requireRole(
-  ...roles: string[]
-): (req: Request, res: Response, next: NextFunction) => void {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.session?.authenticated) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
-    }
-    const userRole = req.session.role ?? "";
-    if (!roles.includes(userRole)) {
-      res.status(403).json({ error: "Insufficient permissions" });
-      return;
-    }
-    next();
-  };
 }
 
 export default router;

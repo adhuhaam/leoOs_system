@@ -70,7 +70,7 @@ export async function ensureSessionTable(): Promise<void> {
 
 const PgStore = connectPgSimple(session);
 
-const store = new PgStore({
+export const store = new PgStore({
   pool,
   tableName: "session",
   createTableIfMissing: false,

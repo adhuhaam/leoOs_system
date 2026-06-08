@@ -1,9 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  getGetAuthStatusQueryKey,
-  useLogout,
-} from "@workspace/api-client-react";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -52,10 +47,9 @@ const TOOL_ITEMS: Item[] = [
 
 export default function MoreScreen() {
   const colors = useColors();
-  const qc = useQueryClient();
-  const { user } = useAuth();
-  const logoutMutation = useLogout();
+  const { user, logout } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const role = user?.role ?? null;
   const isAdmin = role === "superuser" || role === "admin";
@@ -68,15 +62,14 @@ export default function MoreScreen() {
   ];
 
   async function doLogout() {
+    setLoggingOut(true);
     try {
-      await logoutMutation.mutateAsync();
+      await logout();
     } catch {
-      // ignore server errors — clear client state regardless
+      // ignore errors — auth context clears state regardless
+    } finally {
+      setLoggingOut(false);
     }
-    // Remove auth query before clearing so AuthGate immediately sees
-    // unauthenticated and doesn't bounce the user back from /login
-    qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
-    qc.clear();
     router.replace("/login");
   }
 
@@ -183,13 +176,13 @@ export default function MoreScreen() {
             </Pressable>
             <Pressable
               onPress={doLogout}
-              disabled={logoutMutation.isPending}
+              disabled={loggingOut}
               style={({ pressed }) => [
                 styles.confirmSignOut,
-                { opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.82 : 1 },
+                { opacity: loggingOut ? 0.5 : pressed ? 0.82 : 1 },
               ]}
             >
-              {logoutMutation.isPending ? (
+              {loggingOut ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={styles.confirmSignOutText}>Sign out</Text>
