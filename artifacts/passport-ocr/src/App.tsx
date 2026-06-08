@@ -18,6 +18,7 @@ import LoaPrintPage from "@/pages/loa-print";
 import ExpensesPage from "@/pages/expenses";
 import BillingPage from "@/pages/billing";
 import BillingPrintPage from "@/pages/billing-print";
+import ExpenseVoucherPrintPage from "@/pages/expense-voucher-print";
 import PasswordsPage from "@/pages/passwords";
 import SettingsPage from "@/pages/settings";
 import EmployeeProfilePage from "@/pages/employee-profile";
@@ -34,6 +35,7 @@ function Router() {
       {/* Fully public — no auth gate, no sidebar */}
       <Route path="/loa/:id/print" component={LoaPrintPage} />
       <Route path="/billing/:id/print" component={BillingPrintPage} />
+      <Route path="/expenses/:id/print" component={ExpenseVoucherPrintPage} />
       {/* Everything else requires authentication */}
       <Route>
         <AuthGate>

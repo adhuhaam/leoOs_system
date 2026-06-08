@@ -10,8 +10,14 @@ import {
   useListCompanies,
   useListClients,
   useListPassports,
+  useListExpenses,
+  useListExpenseCategories,
+  useCreateExpense,
+  useUpdateExpense,
+  useDeleteExpense,
   getListBillingDocumentsQueryKey,
   getGetBillingDocumentQueryKey,
+  getListExpensesQueryKey,
 } from "@workspace/api-client-react";
 import type {
   BillingDocumentSummary,
@@ -19,6 +25,8 @@ import type {
   Company,
   Client,
   Passport,
+  Expense,
+  ExpenseCategory,
 } from "@workspace/api-client-react";
 
 // Issuing company is hardcoded to LEO Employment Services — resolved by name
@@ -88,6 +96,11 @@ import {
   ChevronDown,
   Check,
   Users,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Printer,
 } from "lucide-react";
 
 type Kind = "invoice" | "quotation";
@@ -290,6 +303,9 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Expenses + P&L section ───────────────────────────────────────────── */}
+      <BillingExpensesSection />
 
       {/* Create dialog */}
       {createOpen && (
@@ -1289,5 +1305,508 @@ function EditDocumentDialog({
       open
       onOpenChange={(o) => !o && onClose()}
     />
+  );
+}
+
+// ── Expense helpers ──────────────────────────────────────────────────────────
+
+interface ExpenseFormState {
+  categoryId: string;
+  amount: string;
+  expenseDate: string;
+  remarks: string;
+}
+
+const EMPTY_EXPENSE: ExpenseFormState = {
+  categoryId: "",
+  amount: "",
+  expenseDate: "",
+  remarks: "",
+};
+
+// Self-contained section rendered below the billing document list.
+// Fetches its own expense + billing data so BillingPage stays lean.
+function BillingExpensesSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // All billing docs for revenue figure (no kind filter)
+  const { data: allDocsRaw = [] } = useListBillingDocuments({});
+  const allDocs = allDocsRaw as BillingDocumentSummary[];
+
+  const { data: expensesRaw = [] } = useListExpenses();
+  const expenses = expensesRaw as Expense[];
+
+  const { data: categoriesRaw = [] } = useListExpenseCategories();
+  const categories = categoriesRaw as ExpenseCategory[];
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Expense | null>(null);
+
+  const revenue = useMemo(
+    () =>
+      allDocs
+        .filter((d) => d.status === "payment_received" || d.status === "completed")
+        .reduce((s, d) => {
+          const sub = Number(d.subtotal || 0);
+          const rate = Number(d.gstRate || 0);
+          return s + (d.gstInclusive ? sub : sub + (sub * rate) / 100);
+        }, 0),
+    [allDocs],
+  );
+  const totalExpenses = useMemo(
+    () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
+    [expenses],
+  );
+  const netProfit = revenue - totalExpenses;
+
+  const expDeleteMutation = useDeleteExpense();
+  const handleDeleteExpense = (e: Expense) => {
+    expDeleteMutation.mutate(
+      { id: e.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+          setConfirmDelete(null);
+          toast({ title: "Expense deleted" });
+        },
+        onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+      },
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Section divider */}
+      <div className="flex items-center gap-3 pt-2">
+        <div className="flex-1 border-t border-border/60" />
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Wallet className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.18em]">
+            Expenses &amp; P&amp;L
+          </span>
+        </div>
+        <div className="flex-1 border-t border-border/60" />
+      </div>
+
+      {/* P&L summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+              Revenue Received
+            </span>
+          </div>
+          <p className="text-xl font-bold tabular-nums text-green-700 dark:text-green-400">
+            {formatMVR(revenue)}
+          </p>
+          <p className="text-[10px] text-green-600/70 dark:text-green-500/70 mt-0.5">
+            paid &amp; completed invoices
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <span className="text-xs font-medium text-red-700 dark:text-red-400">
+              Total Expenses
+            </span>
+          </div>
+          <p className="text-xl font-bold tabular-nums text-red-700 dark:text-red-400">
+            {formatMVR(totalExpenses)}
+          </p>
+          <p className="text-[10px] text-red-600/70 dark:text-red-500/70 mt-0.5">
+            {expenses.length} {expenses.length === 1 ? "entry" : "entries"}
+          </p>
+        </div>
+
+        <div
+          className={`rounded-xl border-2 p-4 ${
+            netProfit >= 0
+              ? "border-indigo-200 bg-indigo-50 dark:bg-indigo-950/30 dark:border-indigo-800"
+              : "border-orange-200 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign
+              className={`h-4 w-4 ${
+                netProfit >= 0
+                  ? "text-indigo-600 dark:text-indigo-400"
+                  : "text-orange-600 dark:text-orange-400"
+              }`}
+            />
+            <span
+              className={`text-xs font-medium ${
+                netProfit >= 0
+                  ? "text-indigo-700 dark:text-indigo-400"
+                  : "text-orange-700 dark:text-orange-400"
+              }`}
+            >
+              Net Profit
+            </span>
+          </div>
+          <p
+            className={`text-xl font-bold tabular-nums ${
+              netProfit >= 0
+                ? "text-indigo-700 dark:text-indigo-400"
+                : "text-orange-700 dark:text-orange-400"
+            }`}
+          >
+            {formatMVR(netProfit)}
+          </p>
+          <p
+            className={`text-[10px] mt-0.5 ${
+              netProfit >= 0
+                ? "text-indigo-600/70 dark:text-indigo-500/70"
+                : "text-orange-600/70"
+            }`}
+          >
+            revenue − expenses
+          </p>
+        </div>
+      </div>
+
+      {/* Ledger header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Expense Ledger</h2>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1 h-8 text-xs"
+          onClick={() => setAddOpen(true)}
+          disabled={categories.length === 0}
+        >
+          <Plus className="h-3.5 w-3.5" /> Add Expense
+        </Button>
+      </div>
+
+      {categories.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          No expense categories yet —{" "}
+          <Link href="/settings" className="underline underline-offset-2 font-medium">
+            add categories in Settings
+          </Link>{" "}
+          before logging expenses.
+        </p>
+      )}
+
+      {/* Expense table */}
+      <Card className="border-border/60 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {expenses.length === 0 ? (
+            <div className="text-center py-10 px-6">
+              <Wallet className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">No expenses recorded yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-900 text-slate-100">
+                  <tr>
+                    <th className="text-left font-semibold px-4 py-3">Category</th>
+                    <th className="text-left font-semibold px-4 py-3">Amount</th>
+                    <th className="text-left font-semibold px-4 py-3">Date</th>
+                    <th className="text-left font-semibold px-4 py-3">Remarks</th>
+                    <th className="text-right font-semibold px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((e) => (
+                    <tr
+                      key={e.id}
+                      className="border-t border-border/60 hover:bg-muted/40"
+                    >
+                      <td className="px-4 py-3 font-medium">{e.categoryName}</td>
+                      <td className="px-4 py-3 tabular-nums">{formatMVR(e.amount)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {formatDate(e.expenseDate)}
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        <span className="line-clamp-2 break-words">{e.remarks ?? "—"}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/expenses/${e.id}/print`} target="_blank">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs gap-1"
+                            >
+                              <Printer className="h-3 w-3" /> Voucher
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs bg-amber-400 border-amber-500 text-amber-950 hover:bg-amber-500"
+                            onClick={() => setEditingExpense(e)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" /> Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs bg-rose-500 border-rose-600 text-white hover:bg-rose-600"
+                            onClick={() => setConfirmDelete(e)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> Del
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      <BillingExpenseFormDialog
+        mode="create"
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        categories={categories}
+      />
+      <BillingExpenseFormDialog
+        mode="edit"
+        open={editingExpense != null}
+        onOpenChange={(o) => !o && setEditingExpense(null)}
+        categories={categories}
+        expense={editingExpense}
+      />
+      <AlertDialog
+        open={confirmDelete != null}
+        onOpenChange={(o) => !o && setConfirmDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the {formatMVR(confirmDelete?.amount)} entry under{" "}
+              <strong>{confirmDelete?.categoryName}</strong>. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={expDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(ev) => {
+                ev.preventDefault();
+                if (confirmDelete) handleDeleteExpense(confirmDelete);
+              }}
+              disabled={expDeleteMutation.isPending}
+            >
+              {expDeleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function BillingExpenseFormDialog({
+  mode,
+  open,
+  onOpenChange,
+  categories,
+  expense,
+}: {
+  mode: "create" | "edit";
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  categories: ExpenseCategory[];
+  expense?: Expense | null;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const createMutation = useCreateExpense();
+  const updateMutation = useUpdateExpense();
+  const isPending = createMutation.isPending || updateMutation.isPending;
+  const [form, setForm] = useState<ExpenseFormState>(EMPTY_EXPENSE);
+
+  useEffect(() => {
+    if (!open) return;
+    if (mode === "edit" && expense) {
+      setForm({
+        categoryId: String(expense.categoryId),
+        amount: expense.amount ?? "",
+        expenseDate: expense.expenseDate ?? "",
+        remarks: expense.remarks ?? "",
+      });
+    } else {
+      setForm({
+        ...EMPTY_EXPENSE,
+        categoryId: categories[0]?.id != null ? String(categories[0].id) : "",
+        expenseDate: todayIso(),
+      });
+    }
+  }, [open, mode, expense, categories]);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: getListExpensesQueryKey() });
+
+  const handleSubmit = () => {
+    if (!form.categoryId) {
+      toast({ title: "Pick a category", variant: "destructive" });
+      return;
+    }
+    const amt = form.amount.replace(/,/g, "").trim();
+    if (!amt || !/^\d+(\.\d{1,2})?$/.test(amt) || Number(amt) < 0) {
+      toast({ title: "Enter a valid amount", variant: "destructive" });
+      return;
+    }
+    if (mode === "create") {
+      createMutation.mutate(
+        {
+          data: {
+            categoryId: Number(form.categoryId),
+            amount: amt,
+            expenseDate: form.expenseDate || undefined,
+            remarks: form.remarks.trim() || undefined,
+          },
+        },
+        {
+          onSuccess: () => {
+            invalidate();
+            toast({ title: "Expense added" });
+            onOpenChange(false);
+          },
+          onError: () =>
+            toast({ title: "Failed to add expense", variant: "destructive" }),
+        },
+      );
+    } else if (expense) {
+      const patch: {
+        categoryId?: number;
+        amount?: string;
+        expenseDate?: string | null;
+        remarks?: string | null;
+      } = {};
+      if (Number(form.categoryId) !== expense.categoryId)
+        patch.categoryId = Number(form.categoryId);
+      if (amt !== expense.amount) patch.amount = amt;
+      const newDate = form.expenseDate.trim();
+      if (newDate !== (expense.expenseDate ?? ""))
+        patch.expenseDate = newDate || null;
+      const newRemarks = form.remarks.trim();
+      if (newRemarks !== (expense.remarks ?? ""))
+        patch.remarks = newRemarks || null;
+      if (Object.keys(patch).length === 0) {
+        onOpenChange(false);
+        return;
+      }
+      updateMutation.mutate(
+        {
+          id: expense.id,
+          data: patch as unknown as Parameters<typeof updateMutation.mutate>[0]["data"],
+        },
+        {
+          onSuccess: () => {
+            invalidate();
+            toast({ title: "Expense updated" });
+            onOpenChange(false);
+          },
+          onError: () =>
+            toast({ title: "Failed to update expense", variant: "destructive" }),
+        },
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "create" ? "Add expense" : "Edit expense"}
+          </DialogTitle>
+          <DialogDescription>
+            All amounts are in MVR. Leave the date blank if unknown.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">
+              Category <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={form.categoryId}
+              onValueChange={(v) => setForm((s) => ({ ...s, categoryId: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pick a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">
+                Amount (MVR) <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                inputMode="decimal"
+                placeholder="0.00"
+                value={form.amount}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, amount: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Date</Label>
+              <Input
+                type="date"
+                value={form.expenseDate}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, expenseDate: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Remarks</Label>
+            <Textarea
+              rows={3}
+              placeholder="Optional notes…"
+              value={form.remarks}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, remarks: e.target.value }))
+              }
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={isPending}>
+            {isPending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : null}
+            {mode === "create" ? "Add expense" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -6,6 +6,9 @@ import {
   ListBillingDocumentsKind,
   useListBillingDocuments,
   useUpdateBillingDocument,
+  type Expense,
+  getListExpensesQueryKey,
+  useListExpenses,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -26,12 +29,13 @@ import {
 
 import { useColors } from "@/hooks/useColors";
 
-type Tab = "all" | "invoice" | "quotation";
+type Tab = "all" | "invoice" | "quotation" | "expenses";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "invoice", label: "Invoices" },
   { key: "quotation", label: "Quotes" },
+  { key: "expenses", label: "Expenses" },
 ];
 
 const STATUS_OPTIONS = [
@@ -90,6 +94,31 @@ export default function BillingScreen() {
     });
 
   const docs = (data ?? []) as BillingDocumentSummary[];
+
+  // Expense data — only fetched when the Expenses tab is active
+  const { data: expenseData = [] } = useListExpenses(undefined, {
+    query: { queryKey: getListExpensesQueryKey(), enabled: tab === "expenses" },
+  });
+  const expenses = expenseData as Expense[];
+
+  // All billing docs for P&L revenue figure (paid + completed)
+  const { data: allDocsData = [] } = useListBillingDocuments(
+    {},
+    { query: { queryKey: getListBillingDocumentsQueryKey({}), enabled: tab === "expenses" } },
+  );
+  const allDocs = allDocsData as BillingDocumentSummary[];
+
+  const revenue = useMemo(
+    () =>
+      allDocs
+        .filter((d) => d.status === "payment_received" || d.status === "completed")
+        .reduce((s, d) => s + Number(d.subtotal || 0), 0),
+    [allDocs],
+  );
+  const totalExp = useMemo(
+    () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
+    [expenses],
+  );
 
   const handleStatusChange = (newStatus: string) => {
     if (!statusDoc) return;
@@ -170,7 +199,130 @@ export default function BillingScreen() {
         })}
       </View>
 
-      {isLoading ? (
+      {tab === "expenses" ? (
+        <FlatList
+          data={expenses}
+          keyExtractor={(e) => String(e.id)}
+          contentContainerStyle={
+            expenses.length === 0 ? styles.emptyContent : styles.expListContent
+          }
+          ListHeaderComponent={
+            <View
+              style={[
+                styles.plBanner,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <View style={styles.plRow}>
+                <Text style={[styles.plLabel, { color: colors.mutedForeground }]}>
+                  Revenue
+                </Text>
+                <Text style={[styles.plValue, { color: "#16A34A" }]}>
+                  {formatMVR(revenue)}
+                </Text>
+              </View>
+              <View style={styles.plRow}>
+                <Text style={[styles.plLabel, { color: colors.mutedForeground }]}>
+                  Expenses
+                </Text>
+                <Text style={[styles.plValue, { color: "#DC2626" }]}>
+                  {formatMVR(totalExp)}
+                </Text>
+              </View>
+              <View
+                style={[styles.plDivider, { backgroundColor: colors.border }]}
+              />
+              <View style={styles.plRow}>
+                <Text
+                  style={[
+                    styles.plLabel,
+                    {
+                      color:
+                        revenue - totalExp >= 0 ? "#4F46E5" : "#EA580C",
+                      fontFamily: "Inter_700Bold",
+                    },
+                  ]}
+                >
+                  Net Profit
+                </Text>
+                <Text
+                  style={[
+                    styles.plValue,
+                    {
+                      color: revenue - totalExp >= 0 ? "#4F46E5" : "#EA580C",
+                      fontSize: 17,
+                    },
+                  ]}
+                >
+                  {formatMVR(revenue - totalExp)}
+                </Text>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Feather name="inbox" size={36} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                No expenses
+              </Text>
+              <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
+                Tap + to record your first expense
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => router.push(`/expense/${item.id}`)}
+              style={({ pressed }) => [
+                styles.expCard,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <View style={styles.expCardRow}>
+                <View
+                  style={[
+                    styles.expCatBadge,
+                    { backgroundColor: colors.secondary },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.expCatText,
+                      { color: colors.secondaryForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.categoryName}
+                  </Text>
+                </View>
+                <Text style={[styles.expAmount, { color: colors.foreground }]}>
+                  {formatMVR(Number(item.amount ?? 0))}
+                </Text>
+              </View>
+              <View style={styles.expCardRow}>
+                <Text style={[styles.expDate, { color: colors.mutedForeground }]}>
+                  {item.expenseDate ?? "—"}
+                </Text>
+                {item.remarks ? (
+                  <Text
+                    style={[
+                      styles.expRemarks,
+                      { color: colors.mutedForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.remarks}
+                  </Text>
+                ) : null}
+              </View>
+            </Pressable>
+          )}
+        />
+      ) : isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -230,7 +382,7 @@ export default function BillingScreen() {
           if (Platform.OS !== "web") {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }
-          router.push("/billing/new");
+          router.push(tab === "expenses" ? "/expense/new" : "/billing/new");
         }}
         style={({ pressed }) => [
           styles.fab,
@@ -540,4 +692,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelText: { fontSize: 15, },
+  // Expense tab styles
+  expListContent: { padding: 16, gap: 12 },
+  plBanner: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 8,
+    marginBottom: 4,
+  },
+  plRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  plDivider: { height: 1, marginVertical: 4 },
+  plLabel: { fontSize: 13 },
+  plValue: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  expCard: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6,
+  },
+  expCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  expCatBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    flex: 1,
+    maxWidth: 160,
+  },
+  expCatText: { fontSize: 11, letterSpacing: 0.4 },
+  expAmount: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  expDate: { fontSize: 11 },
+  expRemarks: { fontSize: 12, flex: 1, textAlign: "right" },
 });
