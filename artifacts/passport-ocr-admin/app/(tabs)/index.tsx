@@ -672,7 +672,12 @@ export default function DashboardScreen() {
       </View>
 
       {/* ── Monthly revenue chart (admin only) ── */}
-      {isAdmin && <BillingChart docs={(billingData ?? []) as BillingDocumentSummary[]} />}
+      {isAdmin && (
+        <BillingChart
+          docs={(billingData ?? []) as BillingDocumentSummary[]}
+          expenses={(expensesData ?? []) as Expense[]}
+        />
+      )}
     </ScrollView>
 
     {/* Edit task modal */}
@@ -772,21 +777,21 @@ function StatPill({ stat }: { stat: StatItem }) {
   );
 }
 
-type ChartTab = "invoices" | "revenue";
+type ChartTab = "invoices" | "revenue" | "vs";
 
-function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
+function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expenses: Expense[] }) {
   const colors = useColors();
   const [tab, setTab] = useState<ChartTab>("invoices");
 
   const months = useMemo(() => {
-    const arr: { key: string; label: string; count: number; revenue: number }[] = [];
+    const arr: { key: string; label: string; count: number; revenue: number; expense: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date();
       d.setDate(1);
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const label = d.toLocaleString("en", { month: "short" });
-      arr.push({ key, label, count: 0, revenue: 0 });
+      arr.push({ key, label, count: 0, revenue: 0, expense: 0 });
     }
     for (const doc of docs) {
       const issued = (doc.issueDate ?? "").slice(0, 7);
@@ -797,15 +802,24 @@ function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
         bucket.revenue += Number(doc.subtotal) || 0;
       }
     }
+    for (const exp of expenses) {
+      const dated = (exp.expenseDate ?? "").slice(0, 7);
+      const bucket = arr.find((m) => m.key === dated);
+      if (!bucket) continue;
+      bucket.expense += Number(exp.amount) || 0;
+    }
     return arr;
-  }, [docs]);
+  }, [docs, expenses]);
 
   const BAR_MAX_H = 72;
-  const totalCount = months.reduce((s, m) => s + m.count, 0);
+  const totalCount   = months.reduce((s, m) => s + m.count,   0);
   const totalRevenue = months.reduce((s, m) => s + m.revenue, 0);
+  const totalExpenses = months.reduce((s, m) => s + m.expense, 0);
+  const netPL = totalRevenue - totalExpenses;
 
   const values = months.map((m) => (tab === "invoices" ? m.count : m.revenue));
-  const maxVal = Math.max(...values, 1);
+  const vsMax  = Math.max(...months.map((m) => Math.max(m.revenue, m.expense)), 1);
+  const maxVal = tab === "vs" ? vsMax : Math.max(...values, 1);
 
   function fmtVal(v: number) {
     if (tab === "invoices") return v > 0 ? String(v) : "";
@@ -823,34 +837,57 @@ function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Monthly Billing</Text>
       </View>
 
-      {/* Summary pills */}
+      {/* Row 1: invoices + revenue */}
       <View style={styles.chartSummaryRow}>
         <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
           <Text style={[styles.chartSummaryVal, { color: "#6366F1" }]}>{totalCount}</Text>
           <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Invoices Created</Text>
         </View>
         <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
-          <Text style={[styles.chartSummaryVal, { color: "#10B981" }]}>{fmtMVR(totalRevenue)}</Text>
+          <Text style={[styles.chartSummaryVal, { color: "#10B981" }]}
+            numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {fmtMVR(totalRevenue)}
+          </Text>
           <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Payment Received</Text>
+        </View>
+      </View>
+
+      {/* Row 2: expenses + net P&L */}
+      <View style={styles.chartSummaryRow}>
+        <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
+          <Text style={[styles.chartSummaryVal, { color: "#EF4444" }]}
+            numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {fmtMVR(totalExpenses)}
+          </Text>
+          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Total Expenses</Text>
+        </View>
+        <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
+          <Text style={[styles.chartSummaryVal, { color: netPL >= 0 ? "#10B981" : "#EF4444" }]}
+            numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {netPL >= 0 ? "+" : "−"}{fmtMVR(Math.abs(netPL))}
+          </Text>
+          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Net Profit</Text>
         </View>
       </View>
 
       {/* Tab toggle */}
       <View style={[styles.chartTabRow, { backgroundColor: colors.secondary }]}>
-        {(["invoices", "revenue"] as ChartTab[]).map((t) => (
+        {([
+          ["invoices", "Invoices"],
+          ["revenue",  "Revenue"],
+          ["vs",       "Income vs Exp"],
+        ] as [ChartTab, string][]).map(([t, label]) => (
           <Pressable
             key={t}
             onPress={() => setTab(t)}
-            style={[
-              styles.chartTab,
-              tab === t && { backgroundColor: colors.card, shadowColor: "#000" },
-            ]}
+            style={[styles.chartTab, tab === t && { backgroundColor: colors.card, shadowColor: "#000" }]}
           >
-            <Text style={[
-              styles.chartTabText,
-              { color: tab === t ? "#6366F1" : colors.mutedForeground },
-            ]}>
-              {t === "invoices" ? "Invoices Created" : "Payment Received"}
+            <Text style={[styles.chartTabText, {
+              color: tab === t
+                ? t === "vs" ? colors.foreground : "#6366F1"
+                : colors.mutedForeground,
+            }]}>
+              {label}
             </Text>
           </Pressable>
         ))}
@@ -858,25 +895,61 @@ function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
 
       {/* Bars */}
       <View style={[styles.chartCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
-        <View style={styles.chartBars}>
-          {months.map((m, idx) => {
-            const v = values[idx];
-            const pct = v / maxVal;
-            const barH = Math.max(4, pct * BAR_MAX_H);
-            const barColor = pct > 0.6 ? COLOR_HIGH : pct > 0.2 ? COLOR_MID : COLOR_LOW;
-            return (
-              <View key={m.key} style={styles.chartCol}>
-                <Text style={[styles.chartValLabel, { color: colors.mutedForeground }]}>
-                  {fmtVal(v)}
-                </Text>
-                <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
-                  <View style={[styles.chartBar, { height: barH, backgroundColor: barColor }]} />
-                </View>
-                <Text style={[styles.chartMonthLabel, { color: colors.mutedForeground }]}>{m.label}</Text>
+        {tab === "vs" ? (
+          <>
+            {/* Legend */}
+            <View style={styles.vsLegend}>
+              <View style={styles.vsLegendItem}>
+                <View style={[styles.vsLegendDot, { backgroundColor: "#10B981" }]} />
+                <Text style={[styles.vsLegendText, { color: colors.mutedForeground }]}>Income</Text>
               </View>
-            );
-          })}
-        </View>
+              <View style={styles.vsLegendItem}>
+                <View style={[styles.vsLegendDot, { backgroundColor: "#EF4444" }]} />
+                <Text style={[styles.vsLegendText, { color: colors.mutedForeground }]}>Expense</Text>
+              </View>
+            </View>
+            {/* Grouped bars — two bars per month */}
+            <View style={styles.chartBars}>
+              {months.map((m) => {
+                const incH = m.revenue > 0 ? Math.max(4, (m.revenue / vsMax) * BAR_MAX_H) : 0;
+                const expH = m.expense > 0 ? Math.max(4, (m.expense / vsMax) * BAR_MAX_H) : 0;
+                return (
+                  <View key={m.key} style={styles.chartCol}>
+                    <View style={styles.vsBarRow}>
+                      <View style={[styles.vsBarTrack, { backgroundColor: colors.secondary }]}>
+                        <View style={[styles.vsBar, { height: incH, backgroundColor: "#10B981" }]} />
+                      </View>
+                      <View style={[styles.vsBarTrack, { backgroundColor: colors.secondary }]}>
+                        <View style={[styles.vsBar, { height: expH, backgroundColor: "#EF4444" }]} />
+                      </View>
+                    </View>
+                    <Text style={[styles.chartMonthLabel, { color: colors.mutedForeground }]}>{m.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <View style={styles.chartBars}>
+            {months.map((m, idx) => {
+              const v = values[idx] ?? 0;
+              const pct = v / maxVal;
+              const barH = Math.max(4, pct * BAR_MAX_H);
+              const barColor = pct > 0.6 ? COLOR_HIGH : pct > 0.2 ? COLOR_MID : COLOR_LOW;
+              return (
+                <View key={m.key} style={styles.chartCol}>
+                  <Text style={[styles.chartValLabel, { color: colors.mutedForeground }]}>
+                    {fmtVal(v)}
+                  </Text>
+                  <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
+                    <View style={[styles.chartBar, { height: barH, backgroundColor: barColor }]} />
+                  </View>
+                  <Text style={[styles.chartMonthLabel, { color: colors.mutedForeground }]}>{m.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -1091,6 +1164,27 @@ const styles = StyleSheet.create({
   chartBarTrack: { width: "100%", height: 72, borderRadius: 8, justifyContent: "flex-end", overflow: "hidden" },
   chartBar: { width: "100%", borderRadius: 8 },
   chartMonthLabel: { fontSize: 10, textAlign: "center" },
+
+  // ── Income vs Expense grouped bars ───────────────────────────────────────
+  vsLegend: { flexDirection: "row", gap: 14, marginBottom: 10 },
+  vsLegendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  vsLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  vsLegendText: { fontSize: 11 },
+  vsBarRow: {
+    flexDirection: "row",
+    gap: 2,
+    width: "100%",
+    height: 72,
+    alignItems: "flex-end",
+  },
+  vsBarTrack: {
+    flex: 1,
+    height: 72,
+    borderRadius: 6,
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  vsBar: { width: "100%", borderRadius: 6 },
 
   actionsRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
