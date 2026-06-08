@@ -12,7 +12,7 @@ import { requireRole } from "./auth";
 const router: IRouter = Router();
 
 // Hard cap on inline base64 branding images (keeps PDF render + payloads bounded).
-const MAX_IMAGE_BYTES = 600 * 1024; // ≈ 600 KB raw bytes
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB raw bytes
 const DATA_URL_RE = /^data:image\/(png|jpe?g);base64,([A-Za-z0-9+/=]+)$/;
 
 /**

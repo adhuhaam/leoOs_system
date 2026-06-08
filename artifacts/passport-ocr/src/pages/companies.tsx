@@ -82,7 +82,7 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_RAW_FILE_BYTES = 10 * 1024 * 1024; // 10 MB raw input cap (before compression)
-const MAX_IMAGE_BYTES = 500 * 1024;           // 500 KB target for the compressed output
+const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;    // 1.5 MB target for the compressed output
 const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg"];
 
 const LOA_CATEGORIES = [

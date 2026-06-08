@@ -28,7 +28,7 @@ import { useColors } from "@/hooks/useColors";
 
 // ─── Image compression ────────────────────────────────────────────────────────
 
-const MAX_IMAGE_BYTES = 500 * 1024; // 500 KB — matches server-side cap
+const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB — well under the 2 MB server cap
 
 async function compressForUpload(uri: string): Promise<string> {
   for (const quality of [0.8, 0.65, 0.5, 0.4]) {
