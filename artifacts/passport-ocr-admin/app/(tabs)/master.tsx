@@ -1,11 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import {
   getGetXpatWorkPermitQueryKey,
+  getListCompaniesQueryKey,
   getListLoaQueryKey,
   getListPassportsQueryKey,
+  type Company,
   type Loa,
   type Passport,
   useGetXpatWorkPermit,
+  useListCompanies,
   useListLoa,
   useListPassports,
 } from "@workspace/api-client-react";
@@ -268,6 +271,20 @@ export default function MasterListScreen() {
     query: { queryKey: getListLoaQueryKey() },
   });
 
+  const { data: companies = [] } = useListCompanies(undefined, {
+    query: { queryKey: getListCompaniesQueryKey() },
+  });
+
+  // id → name map for passport.companyId lookups (always up to date after save)
+  const companyById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const c of companies as Company[]) {
+      if (c.id != null && c.name) m.set(c.id, c.name);
+    }
+    return m;
+  }, [companies]);
+
+  // Fallback: derive company name from LOA (for records without a direct companyId)
   const companyByPassport = useMemo(() => {
     const m = new Map<number, string>();
     for (const loa of loas as Loa[]) {
@@ -279,30 +296,39 @@ export default function MasterListScreen() {
     return m;
   }, [loas]);
 
+  // Resolve company name: prefer passport.companyId (direct, always fresh after save)
+  // fall back to LOA-derived name
+  function resolveCompany(p: Passport): string | null {
+    if (p.companyId != null) return companyById.get(p.companyId) ?? null;
+    return companyByPassport.get(p.id) ?? null;
+  }
+
   const allPassports = (data ?? []) as Passport[];
 
   // Client-side filtering for company + client
   const passports = useMemo(() => {
     let result = allPassports;
     if (companyFilter !== "all") {
-      result = result.filter((p) => (companyByPassport.get(p.id) ?? null) === companyFilter);
+      result = result.filter((p) => resolveCompany(p) === companyFilter);
     }
     if (clientFilter !== "all") {
       result = result.filter((p) => (p.clientName ?? null) === clientFilter);
     }
     return result;
-  }, [allPassports, companyFilter, clientFilter, companyByPassport]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPassports, companyFilter, clientFilter, companyById, companyByPassport]);
 
   // Build unique company + client lists from loaded data
   const companyOptions = useMemo(() => {
     const seen = new Set<string>();
     const opts: { key: string; label: string }[] = [{ key: "all", label: "All companies" }];
     for (const p of allPassports) {
-      const name = companyByPassport.get(p.id);
+      const name = resolveCompany(p);
       if (name && !seen.has(name)) { seen.add(name); opts.push({ key: name, label: name }); }
     }
     return opts;
-  }, [allPassports, companyByPassport]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPassports, companyById, companyByPassport]);
 
   const clientOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -442,7 +468,7 @@ export default function MasterListScreen() {
           renderItem={({ item }) => (
             <PassportCard
               passport={item}
-              companyName={companyByPassport.get(item.id) ?? null}
+              companyName={resolveCompany(item)}
               onPress={() => router.push(`/passport/${item.id}`)}
               onEdit={() => router.push(`/passport/${item.id}`)}
             />
