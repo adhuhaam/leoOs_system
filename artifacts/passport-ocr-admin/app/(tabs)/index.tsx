@@ -36,6 +36,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -1257,43 +1258,56 @@ function RecentRow({
     .toUpperCase();
   const sc = statusColor(status);
 
+  function handlePress() {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  }
+
+  function handleLongPress() {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const buttons: { text: string; onPress?: () => void; style?: "cancel" | "default" | "destructive" }[] = [
+      { text: "View Details", onPress },
+      ...(passport.passportNumber
+        ? [{ text: "Copy Passport #", onPress: () => { void Share.share({ message: passport.passportNumber! }); } }]
+        : []),
+      ...(passport.fullName
+        ? [{ text: "Share Name & #", onPress: () => { void Share.share({ message: `${passport.fullName ?? ""} — ${passport.passportNumber ?? ""}` }); } }]
+        : []),
+      { text: "Cancel", style: "cancel" as const },
+    ];
+    Alert.alert(passport.fullName ?? "Candidate", passport.passportNumber ?? "", buttons);
+  }
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
       style={({ pressed }) => [
         styles.recentRow,
         {
           backgroundColor: colors.card,
           shadowColor: "#000",
-          opacity: pressed ? 0.82 : 1,
+          opacity: pressed ? 0.78 : 1,
+          transform: [{ scale: pressed ? 0.982 : 1 }],
         },
       ]}
     >
       <View style={[styles.recentAvatar, { backgroundColor: colors.secondary }]}>
-        <Text style={[styles.recentInitials, { color: colors.foreground }]}>
-          {initials}
-        </Text>
+        <Text style={[styles.recentInitials, { color: colors.foreground }]}>{initials}</Text>
       </View>
       <View style={styles.recentContent}>
-        <Text
-          style={[styles.recentName, { color: colors.foreground }]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.recentName, { color: colors.foreground }]} numberOfLines={1}>
           {passport.fullName || "Unnamed"}
         </Text>
-        <Text
-          style={[styles.recentNum, { color: colors.mutedForeground }]}
-          numberOfLines={1}
-        >
-          {passport.passportNumber || "No passport #"}
+        <Text style={[styles.recentNum, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {passport.passportNumber || "—"}
         </Text>
       </View>
       <View style={[styles.statusPill, { backgroundColor: sc + "18" }]}>
         <View style={[styles.statusDot, { backgroundColor: sc }]} />
-        <Text style={[styles.statusPillText, { color: sc }]}>
-          {statusLabel(status)}
-        </Text>
+        <Text style={[styles.statusPillText, { color: sc }]}>{statusLabel(status)}</Text>
       </View>
+      <Feather name="chevron-right" size={12} color={colors.mutedForeground} style={{ opacity: 0.4 }} />
     </Pressable>
   );
 }
@@ -1445,29 +1459,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  recentList: { gap: 8 },
+  recentList: { gap: 5 },
   recentRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 16,
-    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    gap: 10,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
     elevation: 1,
   },
   recentAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
-  recentInitials: { fontSize: 15, },
-  recentContent: { flex: 1, gap: 2 },
-  recentName: { fontSize: 14, },
-  recentNum: { fontSize: 12, },
+  recentInitials: { fontSize: 12, fontWeight: "600" },
+  recentContent: { flex: 1, gap: 1 },
+  recentName: { fontSize: 13, fontWeight: "600" },
+  recentNum: { fontSize: 11 },
 
   statusPill: {
     flexDirection: "row",
