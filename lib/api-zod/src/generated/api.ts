@@ -52,14 +52,6 @@ export const LoginResponse = zod.object({
 });
 
 /**
- * @summary Authenticate with a Google ID token
- */
-
-export const GoogleAuthBody = zod.object({
-  idToken: zod.string().min(1),
-});
-
-/**
  * @summary Update the application password
  */
 
@@ -89,14 +81,6 @@ export const RegenerateExtensionTokenResponse = zod.object({
 });
 
 /**
- * @summary Get public Google OAuth client IDs (no secret)
- */
-export const GetGoogleClientIdsResponse = zod.object({
-  googleClientId: zod.string().nullish(),
-  googleClientIdIos: zod.string().nullish(),
-});
-
-/**
  * @summary List all users (superuser + admin only)
  */
 export const ListUsersResponseItem = zod.object({
@@ -108,7 +92,6 @@ export const ListUsersResponseItem = zod.object({
   isBlocked: zod.boolean(),
   linkedEntityId: zod.string().nullish(),
   hasPassword: zod.boolean().optional(),
-  hasGoogleId: zod.boolean().optional(),
   createdAt: zod.coerce.date(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
@@ -155,7 +138,6 @@ export const UpdateUserResponse = zod.object({
   isBlocked: zod.boolean(),
   linkedEntityId: zod.string().nullish(),
   hasPassword: zod.boolean().optional(),
-  hasGoogleId: zod.boolean().optional(),
   createdAt: zod.coerce.date(),
 });
 
@@ -233,9 +215,6 @@ export const GetSystemSettingsResponse = zod.object({
     .describe(
       "True if a user-supplied OpenAI API key is stored in the database.",
     ),
-  hasGoogleSignIn: zod
-    .boolean()
-    .describe("True if Google OAuth client ID is configured."),
 });
 
 /**
@@ -300,18 +279,6 @@ export const UpdateSystemSettingsBody = zod.object({
     .describe(
       "Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.",
     ),
-  googleClientId: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth Web\/Android client ID; null to clear."),
-  googleClientSecret: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth client secret; null to clear."),
-  googleClientIdIos: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth iOS client ID; null to clear."),
 });
 
 export const updateSystemSettingsResponseAccentHueMin = 0;
@@ -343,9 +310,6 @@ export const UpdateSystemSettingsResponse = zod.object({
     .describe(
       "True if a user-supplied OpenAI API key is stored in the database.",
     ),
-  hasGoogleSignIn: zod
-    .boolean()
-    .describe("True if Google OAuth client ID is configured."),
 });
 
 /**

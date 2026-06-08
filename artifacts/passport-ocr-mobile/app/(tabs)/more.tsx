@@ -58,7 +58,7 @@ export default function MoreScreen() {
 
   const ADMIN_ITEMS: Item[] = [
     ...(isAdmin ? [{ icon: "users", label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" }] : []),
-    ...(isSuperuser ? [{ icon: "settings", label: "System Settings", detail: "Configure Google OAuth & more", route: "/admin/system-settings" }] : []),
+    ...(isSuperuser ? [{ icon: "settings", label: "System Settings", detail: "System configuration", route: "/admin/system-settings" }] : []),
   ];
 
   async function doLogout() {

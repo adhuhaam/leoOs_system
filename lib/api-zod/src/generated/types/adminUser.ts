@@ -15,6 +15,5 @@ export interface AdminUser {
   isBlocked: boolean;
   linkedEntityId?: string | null;
   hasPassword?: boolean;
-  hasGoogleId?: boolean;
   createdAt: Date;
 }

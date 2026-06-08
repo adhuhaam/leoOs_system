@@ -129,25 +129,6 @@ paths:
         "204":
           description: Logged out
 
-  /auth/google:
-    post:
-      operationId: googleAuth
-      tags: [auth]
-      summary: Authenticate with a Google ID token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GoogleAuthInput"
-      responses:
-        "204":
-          description: Logged in
-        "401":
-          description: Invalid token or email not registered
-        "403":
-          description: Account pending approval
-
   /auth/change-password:
     post:
       operationId: changePassword
@@ -196,19 +177,6 @@ paths:
                 $ref: "#/components/schemas/ExtensionToken"
         "401":
           description: Authentication required
-
-  /settings/google-client-ids:
-    get:
-      operationId: getGoogleClientIds
-      tags: [auth]
-      summary: Get public Google OAuth client IDs (no secret)
-      responses:
-        "200":
-          description: Google client IDs
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GoogleClientIds"
 
   /admin/users:
     get:
@@ -1367,17 +1335,6 @@ components:
         token:
           type: string
 
-    GoogleClientIds:
-      type: object
-      required: []
-      properties:
-        googleClientId:
-          type: string
-          nullable: true
-        googleClientIdIos:
-          type: string
-          nullable: true
-
     AdminUser:
       type: object
       required: [id, email, name, role, isApproved, isBlocked, createdAt]
@@ -1398,8 +1355,6 @@ components:
           type: string
           nullable: true
         hasPassword:
-          type: boolean
-        hasGoogleId:
           type: boolean
         createdAt:
           type: string
@@ -1476,14 +1431,6 @@ components:
           type: string
           minLength: 1
 
-    GoogleAuthInput:
-      type: object
-      required: [idToken]
-      properties:
-        idToken:
-          type: string
-          minLength: 1
-
     LoginInput:
       type: object
       required: [email, password]
@@ -1509,7 +1456,7 @@ components:
 
     SystemSettings:
       type: object
-      required: [appName, accentHue, hasCustomPassword, hasOpenAiApiKey, hasGoogleSignIn]
+      required: [appName, accentHue, hasCustomPassword, hasOpenAiApiKey]
       properties:
         appName:
           type: string
@@ -1545,9 +1492,6 @@ components:
         hasOpenAiApiKey:
           type: boolean
           description: True if a user-supplied OpenAI API key is stored in the database.
-        hasGoogleSignIn:
-          type: boolean
-          description: True if Google OAuth client ID is configured.
 
     SystemSettingsInput:
       type: object
@@ -1591,18 +1535,6 @@ components:
           type: string
           nullable: true
           description: Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.
-        googleClientId:
-          type: string
-          nullable: true
-          description: Google OAuth Web/Android client ID; null to clear.
-        googleClientSecret:
-          type: string
-          nullable: true
-          description: Google OAuth client secret; null to clear.
-        googleClientIdIos:
-          type: string
-          nullable: true
-          description: Google OAuth iOS client ID; null to clear.
 
     LoaOption:
       type: object

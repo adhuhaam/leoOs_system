@@ -19,7 +19,6 @@ function userShape(u: typeof usersTable.$inferSelect) {
     isBlocked: u.isBlocked,
     linkedEntityId: u.linkedEntityId,
     hasPassword: u.passwordHash != null,
-    hasGoogleId: u.googleId != null,
     createdAt: u.createdAt.toISOString(),
   };
 }

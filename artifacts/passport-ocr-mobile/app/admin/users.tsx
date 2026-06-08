@@ -233,13 +233,6 @@ export default function AdminUsersScreen() {
                   <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
                     {u.isApproved ? "Approved" : "Pending approval"}
                   </Text>
-                  {u.hasGoogleId && (
-                    <View style={[styles.googleBadge, { backgroundColor: colors.secondary }]}>
-                      <Text style={[styles.googleBadgeText, { color: colors.mutedForeground }]}>
-                        Google
-                      </Text>
-                    </View>
-                  )}
                 </View>
 
                 {/* Actions */}
@@ -447,8 +440,6 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
   statusText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
-  googleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  googleBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
 
   actions: {
     flexDirection: "row",

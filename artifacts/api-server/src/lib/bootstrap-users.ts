@@ -17,7 +17,6 @@ export async function ensureUsersTable(): Promise<void> {
         email TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL DEFAULT '',
         role TEXT NOT NULL DEFAULT 'agent',
-        google_id TEXT UNIQUE,
         is_approved BOOLEAN NOT NULL DEFAULT false,
         password_hash TEXT,
         linked_entity_id TEXT,
@@ -26,7 +25,6 @@ export async function ensureUsersTable(): Promise<void> {
       );
     `);
     await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_entity_id TEXT;
     `);
   } catch (err) {

@@ -32,11 +32,6 @@ export const appSettingsTable = pgTable("app_settings", {
   // Pi or any host without the Replit environment.
   openaiApiKey: text("openai_api_key"),
 
-  // Google OAuth 2.0 credentials for server-side ID token verification.
-  // Managed in-app by the superuser; never stored as env vars.
-  googleClientId: text("google_client_id"),
-  googleClientSecret: text("google_client_secret"),
-  googleClientIdIos: text("google_client_id_ios"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

@@ -86,7 +86,6 @@ type UserRow = {
   isBlocked?: boolean;
   linkedEntityId?: string | null;
   hasPassword?: boolean;
-  hasGoogleId?: boolean;
   createdAt: string;
 };
 
@@ -369,11 +368,6 @@ export default function UsersPage() {
                       <div className="text-xs text-muted-foreground">
                         {u.email}
                       </div>
-                      {u.hasGoogleId && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-                          <Shield className="h-3 w-3" /> Google
-                        </span>
-                      )}
                     </td>
 
                     {/* Role badge + quick-picker dropdown */}

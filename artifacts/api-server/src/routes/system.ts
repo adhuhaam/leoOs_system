@@ -2,7 +2,6 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, appSettingsTable } from "@workspace/db";
 import { UpdateSystemSettingsBody } from "@workspace/api-zod";
-import { z } from "zod/v4";
 
 const router: IRouter = Router();
 
@@ -52,15 +51,8 @@ function publicShape(row: typeof appSettingsTable.$inferSelect) {
     logoImage: row.logoImage,
     hasCustomPassword: row.passwordHash != null,
     hasOpenAiApiKey: row.openaiApiKey != null,
-    hasGoogleSignIn: row.googleClientId != null,
   };
 }
-
-const GoogleKeysInput = z.object({
-  googleClientId: z.string().nullable().optional(),
-  googleClientSecret: z.string().nullable().optional(),
-  googleClientIdIos: z.string().nullable().optional(),
-});
 
 router.get("/system/settings", async (req, res): Promise<void> => {
   if (!req.session?.authenticated) {
@@ -117,15 +109,6 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
   if (data.logoImage !== undefined) patch.logoImage = data.logoImage ?? null;
   if (data.openaiApiKey !== undefined)
     patch.openaiApiKey = data.openaiApiKey === null ? null : (data.openaiApiKey?.trim() || null);
-
-  // Google OAuth keys (already superuser-only from the outer check above)
-  const googleParsed = GoogleKeysInput.safeParse(req.body);
-  if (googleParsed.success) {
-    const gd = googleParsed.data;
-    if (gd.googleClientId !== undefined) patch.googleClientId = gd.googleClientId ?? null;
-    if (gd.googleClientSecret !== undefined) patch.googleClientSecret = gd.googleClientSecret ?? null;
-    if (gd.googleClientIdIos !== undefined) patch.googleClientIdIos = gd.googleClientIdIos ?? null;
-  }
 
   await readSettings(); // ensure row exists
 

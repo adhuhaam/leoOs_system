@@ -34,8 +34,6 @@ export * from "./expenseUpdate";
 export * from "./extensionToken";
 export * from "./getAuthStatus200";
 export * from "./getXpatWorkPermitParams";
-export * from "./googleAuthInput";
-export * from "./googleClientIds";
 export * from "./healthStatus";
 export * from "./listBillingDocumentsKind";
 export * from "./listBillingDocumentsParams";

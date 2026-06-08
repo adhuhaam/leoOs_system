@@ -13,11 +13,6 @@ export interface ExtensionToken {
   token: string;
 }
 
-export interface GoogleClientIds {
-  googleClientId?: string | null;
-  googleClientIdIos?: string | null;
-}
-
 export interface AdminUser {
   id: number;
   email: string;
@@ -27,7 +22,6 @@ export interface AdminUser {
   isBlocked: boolean;
   linkedEntityId?: string | null;
   hasPassword?: boolean;
-  hasGoogleId?: boolean;
   createdAt: string;
 }
 
@@ -70,11 +64,6 @@ export interface RegisterInput {
   name: string;
 }
 
-export interface GoogleAuthInput {
-  /** @minLength 1 */
-  idToken: string;
-}
-
 export interface LoginInput {
   /** @minLength 1 */
   email: string;
@@ -111,8 +100,6 @@ export interface SystemSettings {
   hasCustomPassword: boolean;
   /** True if a user-supplied OpenAI API key is stored in the database. */
   hasOpenAiApiKey: boolean;
-  /** True if Google OAuth client ID is configured. */
-  hasGoogleSignIn: boolean;
 }
 
 export interface SystemSettingsInput {
@@ -141,12 +128,6 @@ export interface SystemSettingsInput {
   logoImage?: string | null;
   /** Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations. */
   openaiApiKey?: string | null;
-  /** Google OAuth Web/Android client ID; null to clear. */
-  googleClientId?: string | null;
-  /** Google OAuth client secret; null to clear. */
-  googleClientSecret?: string | null;
-  /** Google OAuth iOS client ID; null to clear. */
-  googleClientIdIos?: string | null;
 }
 
 export type LoaOptionCategory =
