@@ -4,6 +4,7 @@ import {
   useListUsers,
   useUpdateUser,
   useDeleteUser,
+  useCreateUser,
   getListUsersQueryKey,
 } from "@workspace/api-client-react";
 import { router } from "expo-router";
@@ -11,11 +12,13 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -35,6 +38,20 @@ const ROLE_COLORS: Record<Role, string> = {
   agent: "#D97706",
 };
 
+type AddUserForm = {
+  email: string;
+  name: string;
+  password: string;
+  role: Role;
+};
+
+const EMPTY_FORM: AddUserForm = {
+  email: "",
+  name: "",
+  password: "",
+  role: "agent",
+};
+
 export default function AdminUsersScreen() {
   const colors = useColors();
   const { user: me } = useAuth();
@@ -43,7 +60,13 @@ export default function AdminUsersScreen() {
   const { data: users, isLoading, refetch } = useListUsers();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
+  const createMutation = useCreateUser();
+
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState<AddUserForm>(EMPTY_FORM);
+
+  const canManage = me?.role === "superuser" || me?.role === "admin";
 
   async function onRefresh() {
     setRefreshing(true);
@@ -115,6 +138,37 @@ export default function AdminUsersScreen() {
     ]);
   }
 
+  async function handleAddUser() {
+    if (!addForm.email.trim()) {
+      Alert.alert("Required", "Email is required.");
+      return;
+    }
+    if (!addForm.name.trim()) {
+      Alert.alert("Required", "Name is required.");
+      return;
+    }
+    if (!addForm.password.trim()) {
+      Alert.alert("Required", "Password is required.");
+      return;
+    }
+    try {
+      await createMutation.mutateAsync({
+        data: {
+          email: addForm.email.trim(),
+          name: addForm.name.trim(),
+          password: addForm.password,
+          role: addForm.role,
+          isApproved: true,
+        },
+      });
+      await qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      setAddForm(EMPTY_FORM);
+      setShowAddModal(false);
+    } catch (err) {
+      Alert.alert("Failed", err instanceof Error ? err.message : "Please try again.");
+    }
+  }
+
   const roleColor = (r: string) => ROLE_COLORS[r as Role] ?? colors.mutedForeground;
 
   return (
@@ -125,7 +179,17 @@ export default function AdminUsersScreen() {
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Management</Text>
-        <View style={{ width: 22 }} />
+        {canManage ? (
+          <Pressable
+            onPress={() => setShowAddModal(true)}
+            hitSlop={10}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          >
+            <Feather name="user-plus" size={22} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 22 }} />
+        )}
       </View>
 
       {isLoading ? (
@@ -138,78 +202,109 @@ export default function AdminUsersScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {(users ?? []).map((u) => (
-            <View
-              key={u.id}
-              style={[styles.card, { backgroundColor: colors.card, shadowColor: "#000" }]}
-            >
-              {/* Top row */}
-              <View style={styles.cardTop}>
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardName, { color: colors.foreground }]}>{u.name || "—"}</Text>
-                  <Text style={[styles.cardEmail, { color: colors.mutedForeground }]}>{u.email}</Text>
-                </View>
-                <View style={[styles.roleBadge, { backgroundColor: roleColor(u.role) + "22" }]}>
-                  <Text style={[styles.roleBadgeText, { color: roleColor(u.role) }]}>{u.role}</Text>
-                </View>
-              </View>
+          {(users ?? []).map((u) => {
+            const isSuperuser = u.role === "superuser";
+            const canActOnUser = !isSuperuser || me?.role === "superuser";
 
-              {/* Status */}
-              <View style={styles.statusRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: u.isApproved ? "#22C55E" : "#F59E0B" },
-                  ]}
-                />
-                <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
-                  {u.isApproved ? "Approved" : "Pending approval"}
-                </Text>
-                {u.hasGoogleId && (
-                  <View style={[styles.googleBadge, { backgroundColor: colors.secondary }]}>
-                    <Text style={[styles.googleBadgeText, { color: colors.mutedForeground }]}>
-                      Google
-                    </Text>
+            return (
+              <View
+                key={u.id}
+                style={[styles.card, { backgroundColor: colors.card, shadowColor: "#000" }]}
+              >
+                {/* Top row */}
+                <View style={styles.cardTop}>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardName, { color: colors.foreground }]}>{u.name || "—"}</Text>
+                    <Text style={[styles.cardEmail, { color: colors.mutedForeground }]}>{u.email}</Text>
                   </View>
-                )}
-              </View>
+                  <View style={[styles.roleBadge, { backgroundColor: roleColor(u.role) + "22" }]}>
+                    <Text style={[styles.roleBadgeText, { color: roleColor(u.role) }]}>{u.role}</Text>
+                  </View>
+                </View>
 
-              {/* Actions */}
-              <View style={[styles.actions, { borderTopColor: colors.border }]}>
-                <Pressable
-                  onPress={() => showRolePicker(u.id, u.name || u.email, u.role)}
-                  style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Feather name="shield" size={14} color={colors.primary} />
-                  <Text style={[styles.actionText, { color: colors.primary }]}>Role</Text>
-                </Pressable>
-                {!u.isApproved ? (
-                  <Pressable
-                    onPress={() => confirmApprove(u.id, u.name || u.email)}
-                    style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <Feather name="check" size={14} color="#22C55E" />
-                    <Text style={[styles.actionText, { color: "#22C55E" }]}>Approve</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => confirmRevoke(u.id, u.name || u.email)}
-                    style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <Feather name="x" size={14} color={colors.destructive} />
-                    <Text style={[styles.actionText, { color: colors.destructive }]}>Revoke</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={() => confirmDelete(u.id, u.name || u.email)}
-                  style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
-                >
-                  <Feather name="trash-2" size={14} color={colors.destructive} />
-                  <Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text>
-                </Pressable>
+                {/* Status */}
+                <View style={styles.statusRow}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: u.isApproved ? "#22C55E" : "#F59E0B" },
+                    ]}
+                  />
+                  <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
+                    {u.isApproved ? "Approved" : "Pending approval"}
+                  </Text>
+                  {u.hasGoogleId && (
+                    <View style={[styles.googleBadge, { backgroundColor: colors.secondary }]}>
+                      <Text style={[styles.googleBadgeText, { color: colors.mutedForeground }]}>
+                        Google
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Actions */}
+                <View style={[styles.actions, { borderTopColor: colors.border }]}>
+                  {/* Role button — read-only label for superusers visible to non-superusers */}
+                  {canActOnUser ? (
+                    <Pressable
+                      onPress={() => showRolePicker(u.id, u.name || u.email, u.role)}
+                      style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    >
+                      <Feather name="shield" size={14} color={colors.primary} />
+                      <Text style={[styles.actionText, { color: colors.primary }]}>Role</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.actionBtn, { opacity: 0.35 }]}>
+                      <Feather name="shield" size={14} color={colors.mutedForeground} />
+                      <Text style={[styles.actionText, { color: colors.mutedForeground }]}>Role</Text>
+                    </View>
+                  )}
+
+                  {/* Approve / Revoke — hidden for superusers unless actor is superuser */}
+                  {canActOnUser ? (
+                    !u.isApproved ? (
+                      <Pressable
+                        onPress={() => confirmApprove(u.id, u.name || u.email)}
+                        style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+                      >
+                        <Feather name="check" size={14} color="#22C55E" />
+                        <Text style={[styles.actionText, { color: "#22C55E" }]}>Approve</Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        onPress={() => confirmRevoke(u.id, u.name || u.email)}
+                        style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+                      >
+                        <Feather name="x" size={14} color={colors.destructive} />
+                        <Text style={[styles.actionText, { color: colors.destructive }]}>Revoke</Text>
+                      </Pressable>
+                    )
+                  ) : (
+                    <View style={[styles.actionBtn, { opacity: 0 }]}>
+                      <Feather name="lock" size={14} color={colors.mutedForeground} />
+                      <Text style={[styles.actionText, { color: colors.mutedForeground }]}>Protected</Text>
+                    </View>
+                  )}
+
+                  {/* Delete — hidden for superusers unless actor is superuser */}
+                  {canActOnUser ? (
+                    <Pressable
+                      onPress={() => confirmDelete(u.id, u.name || u.email)}
+                      style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    >
+                      <Feather name="trash-2" size={14} color={colors.destructive} />
+                      <Text style={[styles.actionText, { color: colors.destructive }]}>Delete</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.actionBtn, { opacity: 0.35 }]}>
+                      <Feather name="lock" size={14} color={colors.mutedForeground} />
+                      <Text style={[styles.actionText, { color: colors.mutedForeground }]}>Protected</Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
 
           {!isLoading && (users ?? []).length === 0 && (
             <View style={styles.empty}>
@@ -219,6 +314,101 @@ export default function AdminUsersScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* ── Add User Modal ── */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Pressable onPress={() => setShowAddModal(false)} hitSlop={10}>
+              <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
+            </Pressable>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add User</Text>
+            <Pressable
+              onPress={handleAddUser}
+              disabled={createMutation.isPending}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: createMutation.isPending ? 0.5 : pressed ? 0.6 : 1 })}
+            >
+              {createMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Text style={[styles.modalSave, { color: colors.primary }]}>Save</Text>
+              )}
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+            {([
+              { key: "name" as const, label: "Full name", required: true },
+              { key: "email" as const, label: "Email", required: true, keyboard: "email-address" as const },
+              { key: "password" as const, label: "Password", required: true, secure: true },
+            ] as { key: keyof AddUserForm; label: string; required?: boolean; keyboard?: "email-address"; secure?: boolean }[]).map((f) => (
+              <View key={f.key} style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+                  {f.label.toUpperCase()}
+                  {f.required && <Text style={{ color: colors.destructive }}> *</Text>}
+                </Text>
+                <TextInput
+                  value={addForm[f.key] as string}
+                  onChangeText={(v) => setAddForm((p) => ({ ...p, [f.key]: v }))}
+                  placeholder={f.label}
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType={f.keyboard ?? "default"}
+                  autoCapitalize={f.keyboard === "email-address" ? "none" : "words"}
+                  secureTextEntry={f.secure}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.card,
+                      color: colors.foreground,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                />
+              </View>
+            ))}
+
+            {/* Role picker */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>ROLE</Text>
+              <View style={styles.roleGrid}>
+                {(me?.role === "superuser" ? ROLES : ROLES.filter((r) => r !== "superuser")).map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setAddForm((p) => ({ ...p, role: r }))}
+                    style={[
+                      styles.roleChip,
+                      {
+                        backgroundColor:
+                          addForm.role === r
+                            ? roleColor(r) + "22"
+                            : colors.secondary,
+                        borderColor:
+                          addForm.role === r ? roleColor(r) : colors.border,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.roleChipText,
+                        { color: addForm.role === r ? roleColor(r) : colors.mutedForeground },
+                      ]}
+                    >
+                      {r}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -278,4 +468,37 @@ const styles = StyleSheet.create({
 
   empty: { alignItems: "center", gap: 12, paddingVertical: 60 },
   emptyText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+
+  // Modal
+  modalSafe: { flex: 1 },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  modalCancel: { fontSize: 16, fontFamily: "Inter_400Regular" },
+  modalSave: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  modalBody: { padding: 20, gap: 16, paddingBottom: 40 },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    height: 48,
+  },
+  roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 },
+  roleChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  roleChipText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 });

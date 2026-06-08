@@ -13,6 +13,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -60,6 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // returning user would briefly appear logged-out.
   const [tokenReady, setTokenReady] = useState(false);
 
+  // forceLoggedOut overrides isAuthed to false immediately and synchronously
+  // when logout() is called.  This is the definitive fix for the AuthGate race:
+  // without this, the cache clear + refetch cycle has a window where isAuthed
+  // is still true and the AuthGate redirects back to "/" from the login page.
+  // We use React state (not cache manipulation) because state updates are
+  // committed before the next effect run — guaranteed no render ever sees
+  // isAuthed=true after setForceLoggedOut(true) has been called.
+  const [forceLoggedOut, setForceLoggedOut] = useState(false);
+
+  // Keep the current token in a ref so logout() can read it synchronously
+  // (without an async storeGet() call) and include it in the server request.
+  const tokenRef = useRef<string | null>(null);
+
   // enabled: tokenReady — query fires automatically once the SecureStore
   // check completes (no manual refetch() needed in a separate effect).
   const { data, isLoading: authLoading, refetch } = useGetAuthStatus({
@@ -79,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     storeGet(TOKEN_KEY)
       .then((token) => {
+        tokenRef.current = token;
         if (token) setAuthTokenGetter(() => token);
       })
       .finally(() => setTokenReady(true));
@@ -86,22 +101,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      // POST /auth/login returns { token } — the session ID — directly in the
-      // response body. React Native has no persistent cookie jar, so we store
-      // the token in SecureStore and attach it as a Bearer on every request.
       const result = await loginMutation.mutateAsync({ data: { email, password } });
       const token = (result as { token?: string })?.token;
 
-      // Clear any stale token first so the auth check uses fresh credentials.
+      // Clear any stale token first.
       setAuthTokenGetter(null);
+      tokenRef.current = null;
       await storeDelete(TOKEN_KEY);
 
       if (token) {
+        tokenRef.current = token;
         await storeSet(TOKEN_KEY, token);
         setAuthTokenGetter(() => token);
       }
 
-      // Refresh auth state (also wakes up all stale queries).
+      // Re-enable auth check now that credentials are fresh.
+      setForceLoggedOut(false);
       qc.invalidateQueries();
       await refetch();
     },
@@ -116,33 +131,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const storedToken = await storeGet(TOKEN_KEY);
+    // ── Step 1: Override isAuthed to false RIGHT NOW ──────────────────────
+    // This React state update is committed before any subsequent effect runs.
+    // Every render after this point will see isAuthed=false regardless of what
+    // the query cache contains.  This is the only reliable way to stop the
+    // AuthGate from bouncing the user back to "/" during the logout async ops.
+    setForceLoggedOut(true);
 
-    // 1. Synchronously mark as unauthenticated in the query cache FIRST.
-    //    This prevents the AuthGate race condition where qc.clear() wipes the
-    //    cache, triggers a background refetch, and a re-render between the
-    //    clear and the refetch landing sees isAuthed=true → redirects to "/".
-    qc.setQueryData(getGetAuthStatusQueryKey(), { authenticated: false });
+    // ── Step 2: Kill the Bearer synchronously so no in-flight request carries it ─
+    const savedToken = tokenRef.current;
+    tokenRef.current = null;
     setAuthTokenGetter(null);
 
-    // 2. Clear persisted token — client is now fully unauthenticated.
+    // ── Step 3: Clear persisted token (async, but state is already overridden) ──
     await storeDelete(TOKEN_KEY);
 
-    // 3. Tell the server to destroy the session (best-effort).
+    // ── Step 4: Tell the server to invalidate the session (server-side only) ──
     try {
       await fetch(`${BASE_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
-        headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
+        headers: savedToken ? { Authorization: `Bearer ${savedToken}` } : {},
       });
     } catch {
-      // Ignore network errors — client state is already cleared.
+      // Ignore — client is already fully logged out.
     }
 
-    // 4. Clear all other cached API data (passports, companies, etc.) so the
-    //    next user doesn't see stale data.  Do NOT use qc.clear() — it would
-    //    wipe the { authenticated: false } we just set and immediately trigger
-    //    a refetch that could race against the login redirect.
+    // ── Step 5: Flush cached data for the next user ───────────────────────
     qc.removeQueries({
       predicate: (q) => q.queryKey[0] !== "/api/auth/me",
     });
@@ -163,7 +178,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       | undefined;
 
-    const isAuthed = Boolean(raw?.authenticated);
+    // forceLoggedOut short-circuits any cache state — the very first render
+    // after logout() is called will see isAuthed=false.
+    const isAuthed = !forceLoggedOut && Boolean(raw?.authenticated);
 
     const user: AuthUser | null = isAuthed
       ? {
@@ -174,13 +191,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       : null;
 
-    // isLoading stays true until SecureStore is read AND the first auth
-    // check has completed — prevents the AuthGate from flashing the login
-    // screen for a returning user whose token is still being loaded.
     const isLoading = !tokenReady || authLoading;
 
     return { isLoading, isAuthed, user, login, register, logout, refresh };
-  }, [tokenReady, authLoading, data, login, register, logout, refresh]);
+  }, [tokenReady, authLoading, forceLoggedOut, data, login, register, logout, refresh]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

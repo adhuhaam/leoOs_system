@@ -40,7 +40,20 @@ export default function CompaniesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: "Companies" }} />
+      <Stack.Screen
+        options={{
+          title: "Companies",
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push("/companies/new")}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <Feather name="plus" size={22} color={colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
 
       <View
         style={[

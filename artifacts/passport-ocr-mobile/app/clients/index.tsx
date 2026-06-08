@@ -39,7 +39,20 @@ export default function ClientsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: "Clients" }} />
+      <Stack.Screen
+        options={{
+          title: "Clients",
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push("/clients/new")}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <Feather name="plus" size={22} color={colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
       <View
         style={[
           styles.searchWrap,

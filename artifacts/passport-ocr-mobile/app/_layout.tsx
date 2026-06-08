@@ -124,6 +124,14 @@ function RootLayoutNav() {
         name="admin/system-settings"
         options={{ title: "System Settings", headerBackTitle: "More" }}
       />
+      <Stack.Screen
+        name="companies/new"
+        options={{ title: "New Company", presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="clients/new"
+        options={{ title: "New Client", presentation: "modal" }}
+      />
     </Stack>
   );
 }
