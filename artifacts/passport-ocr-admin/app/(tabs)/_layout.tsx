@@ -86,7 +86,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="upload"
         options={{
-          title: "Capture",
+          title: "Process",
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
@@ -105,7 +105,7 @@ export default function TabLayout() {
               }}
             >
               <Feather
-                name="camera"
+                name="zap"
                 size={22}
                 color={focused ? colors.primaryForeground : colors.mutedForeground}
               />
