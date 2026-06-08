@@ -46,6 +46,9 @@ export async function ensureAppSettingsTable(): Promise<void> {
       ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS logo_image text;
       ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS password_hash text;
       ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS openai_api_key text;
+      ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS extension_token text;
+      ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS accent_hue integer NOT NULL DEFAULT 162;
+      ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
       INSERT INTO app_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
     `);
   } catch (err) {

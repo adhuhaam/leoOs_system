@@ -26,6 +26,8 @@ export async function ensureUsersTable(): Promise<void> {
     `);
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_entity_id TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
     `);
   } catch (err) {
     logger.error({ err }, "Failed to ensure users table exists");
