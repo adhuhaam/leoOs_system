@@ -777,7 +777,7 @@ function StatPill({ stat }: { stat: StatItem }) {
   );
 }
 
-type ChartTab = "invoices" | "revenue" | "vs";
+type ChartTab = "invoices" | "expenses" | "vs";
 
 function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expenses: Expense[] }) {
   const colors = useColors();
@@ -817,7 +817,9 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
   const totalExpenses = months.reduce((s, m) => s + m.expense, 0);
   const netPL = totalRevenue - totalExpenses;
 
-  const values = months.map((m) => (tab === "invoices" ? m.count : m.revenue));
+  const values = months.map((m) =>
+    tab === "invoices" ? m.count : tab === "expenses" ? m.expense : m.revenue,
+  );
   const vsMax  = Math.max(...months.map((m) => Math.max(m.revenue, m.expense)), 1);
   const maxVal = tab === "vs" ? vsMax : Math.max(...values, 1);
 
@@ -827,9 +829,10 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
     return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(Math.round(v));
   }
 
-  const COLOR_HIGH = "#6366F1";
-  const COLOR_MID  = "#818CF8";
-  const COLOR_LOW  = "#A5B4FC";
+  const isExpensesTab = tab === "expenses";
+  const COLOR_HIGH = isExpensesTab ? "#EF4444" : "#6366F1";
+  const COLOR_MID  = isExpensesTab ? "#F87171" : "#818CF8";
+  const COLOR_LOW  = isExpensesTab ? "#FCA5A5" : "#A5B4FC";
 
   return (
     <View style={styles.section}>
@@ -874,7 +877,7 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
       <View style={[styles.chartTabRow, { backgroundColor: colors.secondary }]}>
         {([
           ["invoices", "Invoices"],
-          ["revenue",  "Revenue"],
+          ["expenses", "Expenses"],
           ["vs",       "Income vs Exp"],
         ] as [ChartTab, string][]).map(([t, label]) => (
           <Pressable
@@ -884,7 +887,7 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
           >
             <Text style={[styles.chartTabText, {
               color: tab === t
-                ? t === "vs" ? colors.foreground : "#6366F1"
+                ? t === "expenses" ? "#EF4444" : t === "vs" ? colors.foreground : "#6366F1"
                 : colors.mutedForeground,
             }]}>
               {label}
