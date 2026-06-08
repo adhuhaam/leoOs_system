@@ -58,6 +58,7 @@ export default function SalaryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const isAdmin = user?.role === "superuser" || user?.role === "admin";
 
   const { data, isLoading, isError, refetch, isFetching } = useListPassports(undefined, {
     query: {
@@ -98,9 +99,18 @@ export default function SalaryScreen() {
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* ── Navigation bar ── */}
+      <View style={[styles.navBar, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <Text style={[styles.navTitle, { color: colors.foreground }]}>Salary</Text>
+        <Text style={[styles.navSub, { color: colors.mutedForeground }]}>
+          {isAdmin ? "All employees" : "My salary"}
+        </Text>
+      </View>
+
     <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
+      style={{ flex: 1 }}
+      contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />
       }
@@ -185,10 +195,19 @@ export default function SalaryScreen() {
         </>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  navBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 2,
+  },
+  navTitle: { fontSize: 24, fontWeight: "700", letterSpacing: -0.3 },
+  navSub: { fontSize: 13 },
   container: { padding: 16, gap: 12, paddingBottom: 48 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   loadingText: { fontSize: 13, marginTop: 4 },

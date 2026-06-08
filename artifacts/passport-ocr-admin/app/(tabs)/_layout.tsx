@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
  *  Master     ✓          ✓      ✓      ✓       ✓        –
  *  Process    ✓          ✓      ✓      –       –        –
  *  Billing    ✓          ✓      –      ✓       ✓        –
+ *  Salary     ✓          ✓      –      –       –        ✓
  *  More       ✓          ✓      ✓      ✓       ✓        ✓
  */
 const CAN_SEE_MASTER  = new Set(["superuser", "admin", "agent", "client", "company"]);
