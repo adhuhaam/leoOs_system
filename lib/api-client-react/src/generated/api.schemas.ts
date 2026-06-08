@@ -948,6 +948,7 @@ export interface SalaryRecord {
   passportId: number;
   month: number;
   year: number;
+  daysWorked?: number;
   basicSalary: string;
   foodAllowance: string;
   transportAllowance: string;
@@ -972,6 +973,8 @@ export interface CreateSalaryRecord {
    */
   month: number;
   year: number;
+  /** @minimum 0 */
+  daysWorked?: number;
   basicSalary: string;
   foodAllowance?: string;
   transportAllowance?: string;
@@ -983,6 +986,8 @@ export interface CreateSalaryRecord {
 }
 
 export interface UpdateSalaryRecord {
+  /** @minimum 0 */
+  daysWorked?: number;
   basicSalary?: string;
   foodAllowance?: string;
   transportAllowance?: string;

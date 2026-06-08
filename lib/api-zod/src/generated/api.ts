@@ -1620,6 +1620,7 @@ export const ListSalaryRecordsResponseItem = zod.object({
   passportId: zod.number(),
   month: zod.number(),
   year: zod.number(),
+  daysWorked: zod.number().optional(),
   basicSalary: zod.string(),
   foodAllowance: zod.string(),
   transportAllowance: zod.string(),
@@ -1644,10 +1645,13 @@ export const ListSalaryRecordsResponse = zod.array(
  */
 export const createSalaryRecordBodyMonthMax = 12;
 
+export const createSalaryRecordBodyDaysWorkedMin = 0;
+
 export const CreateSalaryRecordBody = zod.object({
   passportId: zod.number(),
   month: zod.number().min(1).max(createSalaryRecordBodyMonthMax),
   year: zod.number(),
+  daysWorked: zod.number().min(createSalaryRecordBodyDaysWorkedMin).optional(),
   basicSalary: zod.string(),
   foodAllowance: zod.string().optional(),
   transportAllowance: zod.string().optional(),
@@ -1665,7 +1669,10 @@ export const UpdateSalaryRecordParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const updateSalaryRecordBodyDaysWorkedMin = 0;
+
 export const UpdateSalaryRecordBody = zod.object({
+  daysWorked: zod.number().min(updateSalaryRecordBodyDaysWorkedMin).optional(),
   basicSalary: zod.string().optional(),
   foodAllowance: zod.string().optional(),
   transportAllowance: zod.string().optional(),
@@ -1682,6 +1689,7 @@ export const UpdateSalaryRecordResponse = zod.object({
   passportId: zod.number(),
   month: zod.number(),
   year: zod.number(),
+  daysWorked: zod.number().optional(),
   basicSalary: zod.string(),
   foodAllowance: zod.string(),
   transportAllowance: zod.string(),

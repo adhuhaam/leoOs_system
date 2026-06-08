@@ -69,6 +69,7 @@ function fmtMVR(val: string | number | null | undefined): string {
 }
 
 type SalaryFormData = {
+  daysWorked: string;
   basicSalary: string;
   foodAllowance: string;
   transportAllowance: string;
@@ -80,6 +81,7 @@ type SalaryFormData = {
 };
 
 const EMPTY_FORM: SalaryFormData = {
+  daysWorked: "0",
   basicSalary: "",
   foodAllowance: "0",
   transportAllowance: "0",
@@ -126,6 +128,7 @@ function SalaryFormDialog({
   const [form, setForm] = useState<SalaryFormData>(() =>
     existing
       ? {
+          daysWorked: String(existing.daysWorked ?? 0),
           basicSalary: existing.basicSalary,
           foodAllowance: existing.foodAllowance,
           transportAllowance: existing.transportAllowance,
@@ -166,7 +169,10 @@ function SalaryFormDialog({
     }
     try {
       if (existing) {
-        await updateMutation.mutateAsync({ id: existing.id, data: { ...form, notes: form.notes || null } });
+        await updateMutation.mutateAsync({
+          id: existing.id,
+          data: { ...form, daysWorked: parseInt(form.daysWorked) || 0, notes: form.notes || null },
+        });
       } else {
         await createMutation.mutateAsync({
           data: {
@@ -174,6 +180,7 @@ function SalaryFormDialog({
             month,
             year,
             ...form,
+            daysWorked: parseInt(form.daysWorked) || 0,
             notes: form.notes || null,
           },
         });
@@ -198,6 +205,20 @@ function SalaryFormDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Days Worked */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Days Worked (Qty)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 26"
+              value={form.daysWorked}
+              onChange={(e) => setForm((p) => ({ ...p, daysWorked: e.target.value }))}
+              className="h-9"
+            />
+          </div>
+
           {/* Earnings */}
           <div className="space-y-3">
             <h4 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Earnings</h4>

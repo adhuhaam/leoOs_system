@@ -14,6 +14,8 @@ export interface CreateSalaryRecord {
    */
   month: number;
   year: number;
+  /** @minimum 0 */
+  daysWorked?: number;
   basicSalary: string;
   foodAllowance?: string;
   transportAllowance?: string;

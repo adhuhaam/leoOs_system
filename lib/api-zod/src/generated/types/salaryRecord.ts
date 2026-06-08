@@ -11,6 +11,7 @@ export interface SalaryRecord {
   passportId: number;
   month: number;
   year: number;
+  daysWorked?: number;
   basicSalary: string;
   foodAllowance: string;
   transportAllowance: string;

@@ -21,6 +21,7 @@ export const salaryRecordsTable = pgTable(
     otherExpenses: numeric("other_expenses", { precision: 14, scale: 2 }).notNull().default("0"),
     netSalary: numeric("net_salary", { precision: 14, scale: 2 }).notNull().default("0"),
     invoiceId: integer("invoice_id").references(() => billingDocumentsTable.id, { onDelete: "set null" }),
+    daysWorked: integer("days_worked").notNull().default(0),
     notes: text("notes"),
     status: text("status").notNull().default("draft"), // 'draft' | 'confirmed'
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -7,6 +7,8 @@
  */
 
 export interface UpdateSalaryRecord {
+  /** @minimum 0 */
+  daysWorked?: number;
   basicSalary?: string;
   foodAllowance?: string;
   transportAllowance?: string;

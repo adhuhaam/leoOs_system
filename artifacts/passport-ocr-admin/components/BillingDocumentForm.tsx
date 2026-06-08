@@ -215,7 +215,7 @@ export default function BillingDocumentForm({
     const newItems = toAdd.map((r) => ({
       description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
       detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
-      qty: "1",
+      qty: r.daysWorked && r.daysWorked > 0 ? String(r.daysWorked) : "1",
       rate: r.netSalary ?? "0",
     }));
     const newLinkedIds = [...(form.linkedSalaryIds ?? []), ...Array.from(selectedSalaryIds)];

@@ -2621,6 +2621,7 @@ components:
         passportId: { type: integer }
         month: { type: integer }
         year: { type: integer }
+        daysWorked: { type: integer }
         basicSalary: { type: string }
         foodAllowance: { type: string }
         transportAllowance: { type: string }
@@ -2643,6 +2644,7 @@ components:
         passportId: { type: integer }
         month: { type: integer, minimum: 1, maximum: 12 }
         year: { type: integer }
+        daysWorked: { type: integer, minimum: 0 }
         basicSalary: { type: string }
         foodAllowance: { type: string }
         transportAllowance: { type: string }
@@ -2655,6 +2657,7 @@ components:
     UpdateSalaryRecord:
       type: object
       properties:
+        daysWorked: { type: integer, minimum: 0 }
         basicSalary: { type: string }
         foodAllowance: { type: string }
         transportAllowance: { type: string }

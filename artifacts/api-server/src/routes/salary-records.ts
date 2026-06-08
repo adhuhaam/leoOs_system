@@ -34,6 +34,7 @@ function salaryShape(
     passportId: r.passportId,
     month: r.month,
     year: r.year,
+    daysWorked: r.daysWorked,
     basicSalary: r.basicSalary,
     foodAllowance: r.foodAllowance,
     transportAllowance: r.transportAllowance,
@@ -128,6 +129,7 @@ const CreateSalarySchema = z.object({
   passportId: z.number().int(),
   month: z.number().int().min(1).max(12),
   year: z.number().int(),
+  daysWorked: z.number().int().min(0).default(0),
   basicSalary: z.string().default("0"),
   foodAllowance: z.string().default("0"),
   transportAllowance: z.string().default("0"),
@@ -153,6 +155,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
         passportId: data.passportId,
         month: data.month,
         year: data.year,
+        daysWorked: data.daysWorked,
         basicSalary: data.basicSalary,
         foodAllowance: data.foodAllowance,
         transportAllowance: data.transportAllowance,
@@ -181,6 +184,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
 });
 
 const UpdateSalarySchema = z.object({
+  daysWorked: z.number().int().min(0).optional(),
   basicSalary: z.string().optional(),
   foodAllowance: z.string().optional(),
   transportAllowance: z.string().optional(),

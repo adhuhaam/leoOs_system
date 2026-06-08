@@ -1300,7 +1300,7 @@ function SalaryPickerDialog({
     const items = chosen.map((r) => ({
       description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
       detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
-      qty: "1",
+      qty: r.daysWorked && r.daysWorked > 0 ? String(r.daysWorked) : "1",
       rate: r.netSalary ?? "0",
     }));
     onAdd(items, chosen.map((r) => r.id));
