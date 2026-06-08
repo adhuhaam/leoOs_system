@@ -307,7 +307,7 @@ export default function SalaryScreen() {
     );
   }
 
-  if (isError) {
+  if (isError && !isAdmin) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Feather name="alert-triangle" size={28} color={colors.destructive} />
