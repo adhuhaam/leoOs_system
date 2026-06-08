@@ -1,7 +1,19 @@
 import { Feather } from "@expo/vector-icons";
 import {
+  getListBillingDocumentsQueryKey,
+  getListClientsQueryKey,
+  getListCompaniesQueryKey,
+  getListExpensesQueryKey,
   getListPassportsQueryKey,
+  type BillingDocumentSummary,
+  type Client,
+  type Company,
+  type Expense,
   type Passport,
+  useListBillingDocuments,
+  useListClients,
+  useListCompanies,
+  useListExpenses,
   useListPassports,
 } from "@workspace/api-client-react";
 import { router } from "expo-router";
@@ -35,6 +47,12 @@ function formatDate(): string {
   });
 }
 
+function fmtMVR(n: number): string {
+  if (n >= 1_000_000) return `MVR ${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `MVR ${(n / 1_000).toFixed(1)}K`;
+  return `MVR ${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 const ROLE_LABEL: Record<string, string> = {
   superuser: "Superuser",
   admin: "Admin",
@@ -53,11 +71,12 @@ const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
   agent:     { bg: "#EC489918", text: "#BE185D" },
 };
 
-type StatGroup = {
+type StatItem = {
   label: string;
-  value: number;
+  value: string | number;
   icon: keyof typeof Feather.glyphMap;
   color: string;
+  sub?: string;
 };
 
 const STATUS_GROUPS = {
@@ -73,44 +92,106 @@ export default function DashboardScreen() {
 
   const role = user?.role ?? null;
   const firstName = user?.name?.split(" ")[0] ?? null;
+  const isAdmin = role === "superuser" || role === "admin";
   const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
-  // Role-based Quick Action visibility
   const canSeeCapture = role === "superuser" || role === "admin" || role === "company";
   const canSeeBilling = role === "superuser" || role === "admin" || role === "client" || role === "company";
   const canSeeMaster  = role !== "employee";
 
+  // ── Passport stats (all roles) ──────────────────────────────────────────
   const { data, isLoading, isFetching, refetch } = useListPassports(undefined, {
-    query: {
-      queryKey: getListPassportsQueryKey(),
-      staleTime: 30_000,
-    },
+    query: { queryKey: getListPassportsQueryKey(), staleTime: 30_000 },
   });
-
   const passports = (data ?? []) as Passport[];
 
-  const stats = useMemo<StatGroup[]>(() => {
-    let processing = 0;
-    let active = 0;
-    let attention = 0;
-    let completed = 0;
+  // ── Admin / superuser overview data ─────────────────────────────────────
+  const { data: companiesData, isLoading: companiesLoading } = useListCompanies(undefined, {
+    query: { queryKey: getListCompaniesQueryKey(), enabled: isAdmin },
+  });
+  const { data: clientsData, isLoading: clientsLoading } = useListClients(undefined, {
+    query: { queryKey: getListClientsQueryKey(), enabled: isAdmin },
+  });
+  const { data: expensesData, isLoading: expensesLoading } = useListExpenses(undefined, {
+    query: { queryKey: getListExpensesQueryKey(), enabled: isAdmin },
+  });
+  const { data: billingData, isLoading: billingLoading } = useListBillingDocuments(undefined, {
+    query: { queryKey: getListBillingDocumentsQueryKey(), enabled: isAdmin },
+  });
 
+  const adminOverviewLoading =
+    companiesLoading || clientsLoading || expensesLoading || billingLoading;
+
+  // ── Passport status stats ────────────────────────────────────────────────
+  const passportStats = useMemo<StatItem[]>(() => {
+    let processing = 0, active = 0, attention = 0;
     for (const p of passports) {
       const s = p.status ?? "processing";
       if (STATUS_GROUPS.processing.includes(s)) processing++;
       else if (STATUS_GROUPS.active.includes(s)) active++;
       else if (STATUS_GROUPS.attention.includes(s)) attention++;
-      else if (STATUS_GROUPS.completed.includes(s)) completed++;
     }
-
     return [
-      { label: "Total", value: passports.length, icon: "users", color: "#0F172A" },
-      { label: "Processing", value: processing, icon: "clock", color: "#F59E0B" },
-      { label: "Active", value: active, icon: "check-circle", color: "#10B981" },
-      { label: "Attention", value: attention, icon: "alert-triangle", color: "#EF4444" },
+      { label: "Employees", value: passports.length, icon: "users",          color: "#0F172A" },
+      { label: "Processing", value: processing,       icon: "clock",          color: "#F59E0B" },
+      { label: "Active",     value: active,           icon: "check-circle",   color: "#10B981" },
+      { label: "Attention",  value: attention,        icon: "alert-triangle", color: "#EF4444" },
     ];
   }, [passports]);
 
+  // ── Business overview stats (admin/superuser only) ───────────────────────
+  const adminStats = useMemo<StatItem[]>(() => {
+    if (!isAdmin) return [];
+
+    const companyCount = ((companiesData ?? []) as Company[]).length;
+    const clientCount  = ((clientsData  ?? []) as Client[]).length;
+
+    const totalExpenses = ((expensesData ?? []) as Expense[]).reduce(
+      (sum, e) => sum + (Number(e.amount) || 0),
+      0,
+    );
+
+    const allDocs = (billingData ?? []) as BillingDocumentSummary[];
+    const paidDocs = allDocs.filter(
+      (d) => d.status === "payment_received" || d.status === "completed",
+    );
+    const totalRevenue = paidDocs.reduce(
+      (sum, d) => sum + (Number(d.subtotal) || 0),
+      0,
+    );
+    const invoiceCount = allDocs.filter((d) => d.kind === "invoice").length;
+    const paidCount    = paidDocs.length;
+
+    return [
+      {
+        label: "Companies",
+        value: companyCount,
+        icon: "briefcase",
+        color: "#6366F1",
+      },
+      {
+        label: "Clients",
+        value: clientCount,
+        icon: "user",
+        color: "#0EA5E9",
+      },
+      {
+        label: "Total Expenses",
+        value: fmtMVR(totalExpenses),
+        icon: "trending-down",
+        color: "#EF4444",
+      },
+      {
+        label: "Revenue",
+        value: fmtMVR(totalRevenue),
+        icon: "dollar-sign",
+        color: "#10B981",
+        sub: `${paidCount} paid of ${invoiceCount} invoices`,
+      },
+    ];
+  }, [isAdmin, companiesData, clientsData, expensesData, billingData]);
+
+  // ── Recent uploads ───────────────────────────────────────────────────────
   const recent = useMemo(
     () =>
       [...passports]
@@ -156,20 +237,45 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Stats grid */}
-      {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-      ) : (
-        <View style={styles.statsGrid}>
-          {stats.map((s) => (
-            <StatCard key={s.label} stat={s} />
-          ))}
+      {/* Passport stats grid */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+          Candidate Overview
+        </Text>
+        {isLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        ) : (
+          <View style={styles.statsGrid}>
+            {passportStats.map((s) => (
+              <StatCard key={s.label} stat={s} />
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Business overview — admin / superuser only */}
+      {isAdmin && (
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            Business Overview
+          </Text>
+          {adminOverviewLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.statsGrid}>
+              {adminStats.map((s) => (
+                <StatCard key={s.label} stat={s} />
+              ))}
+            </View>
+          )}
         </View>
       )}
 
-      {/* Quick actions — only show actions the user's role can access */}
+      {/* Quick actions */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
           Quick Actions
@@ -250,32 +356,34 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({ stat }: { stat: StatGroup }) {
+function StatCard({ stat }: { stat: StatItem }) {
   const colors = useColors();
   return (
     <View
       style={[
         styles.statCard,
-        {
-          backgroundColor: colors.card,
-          shadowColor: "#000",
-        },
+        { backgroundColor: colors.card, shadowColor: "#000" },
       ]}
     >
-      <View
-        style={[
-          styles.statIconWrap,
-          { backgroundColor: stat.color + "18" },
-        ]}
-      >
+      <View style={[styles.statIconWrap, { backgroundColor: stat.color + "18" }]}>
         <Feather name={stat.icon} size={18} color={stat.color} />
       </View>
-      <Text style={[styles.statValue, { color: colors.foreground }]}>
-        {stat.value}
+      <Text
+        style={[styles.statValue, { color: colors.foreground }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
       </Text>
       <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
         {stat.label}
       </Text>
+      {stat.sub ? (
+        <Text style={[styles.statSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {stat.sub}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -395,28 +503,35 @@ const styles = StyleSheet.create({
   hero: { gap: 4, paddingTop: 8 },
   greeting: { fontSize: 13, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
   title: { fontSize: 34, fontFamily: "Inter_700Bold", letterSpacing: -1 },
-  heroMeta: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4, flexWrap: "wrap" },
-  date: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  rolePill: {
-    paddingHorizontal: 9,
-    paddingVertical: 2,
-    borderRadius: 999,
+  heroMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+    flexWrap: "wrap",
   },
+  date: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
   roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
 
-  loadingBox: { height: 140, alignItems: "center", justifyContent: "center" },
-
-  statsGrid: {
+  section: { gap: 12 },
+  sectionHeader: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium" },
+
+  loadingBox: { height: 120, alignItems: "center", justifyContent: "center" },
+
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: {
     flex: 1,
     minWidth: "44%",
     borderRadius: 18,
     padding: 16,
-    gap: 8,
+    gap: 6,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -429,13 +544,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  statValue: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  statValue: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
   statLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-
-  section: { gap: 14 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  statSub: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: -2 },
 
   actionsRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
@@ -456,7 +572,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  actionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  actionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
+  },
 
   recentList: { gap: 8 },
   recentRow: {
@@ -503,5 +623,9 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
 });
