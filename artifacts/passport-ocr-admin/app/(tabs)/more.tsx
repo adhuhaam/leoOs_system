@@ -60,7 +60,6 @@ export default function MoreScreen() {
   const isAdmin = role === "admin" || role === "superuser";
   const ADMIN_ITEMS: Item[] = isAdmin ? [
     { icon: "users", label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" },
-    { icon: "dollar-sign", label: "Salary Generator", detail: "Generate monthly salaries", route: "/admin/salary-generator" },
     { icon: "shield", label: "Permissions", detail: "Role-based access control", route: "/admin/permissions" },
     { icon: "settings", label: "System Settings", detail: "System configuration", route: "/admin/system-settings" },
   ] : [];

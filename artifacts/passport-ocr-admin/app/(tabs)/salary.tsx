@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import {
   useListSalaryRecords,
   useCreateSalaryRecord,
+  useUpdateSalaryRecord,
   useDeleteSalaryRecord,
   useListPassports,
   getListSalaryRecordsQueryKey,
@@ -28,6 +29,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const MONTHS_LONG = [
   "January","February","March","April","May","June",
@@ -55,7 +57,7 @@ function StatusBadge({ status, colors }: { status: string; colors: ReturnType<ty
   );
 }
 
-type CreateForm = {
+type SalaryForm = {
   daysWorked: string;
   basicSalary: string;
   foodAllowance: string;
@@ -67,7 +69,7 @@ type CreateForm = {
   status: "draft" | "confirmed";
 };
 
-const EMPTY_FORM: CreateForm = {
+const EMPTY_FORM: SalaryForm = {
   daysWorked: "",
   basicSalary: "",
   foodAllowance: "0",
@@ -79,14 +81,13 @@ const EMPTY_FORM: CreateForm = {
   status: "draft",
 };
 
-function computeNet(f: CreateForm): number {
+function computeNet(f: SalaryForm): number {
   const n = (v: string) => parseFloat(v) || 0;
   return n(f.basicSalary) + n(f.foodAllowance) + n(f.transportAllowance) + n(f.otherAllowances) + n(f.otherExpenses) - n(f.deductions);
 }
 
-function SalaryCard({ record, isAdmin, colors, onDelete }: {
+function SalaryCard({ record, colors, onDelete }: {
   record: SalaryRecord;
-  isAdmin: boolean;
   colors: ReturnType<typeof useColors>;
   onDelete?: () => void;
 }) {
@@ -97,17 +98,13 @@ function SalaryCard({ record, isAdmin, colors, onDelete }: {
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.cardHeader}>
-        {isAdmin && (
-          <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-            <Text style={[styles.avatarText, { color: colors.foreground }]}>{initials}</Text>
-          </View>
-        )}
+        <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.avatarText, { color: colors.foreground }]}>{initials}</Text>
+        </View>
         <View style={{ flex: 1 }}>
-          {isAdmin && (
-            <Text style={[styles.employeeName, { color: colors.foreground }]} numberOfLines={1}>
-              {record.employeeName ?? "—"}
-            </Text>
-          )}
+          <Text style={[styles.employeeName, { color: colors.foreground }]} numberOfLines={1}>
+            {record.employeeName ?? "—"}
+          </Text>
           <Text style={[styles.monthLabel, { color: colors.mutedForeground }]}>
             {MONTHS_LONG[record.month - 1]} {record.year}
             {record.daysWorked ? ` · ${record.daysWorked} days` : ""}
@@ -117,7 +114,7 @@ function SalaryCard({ record, isAdmin, colors, onDelete }: {
           <Text style={[styles.netSalary, { color: colors.foreground }]}>{fmtMVR(record.netSalary)}</Text>
           <StatusBadge status={record.status} colors={colors} />
         </View>
-        {isAdmin && onDelete && (
+        {onDelete && (
           <TouchableOpacity onPress={onDelete} style={styles.deleteBtn} hitSlop={8}>
             <Feather name="trash-2" size={14} color={colors.mutedForeground} />
           </TouchableOpacity>
@@ -167,105 +164,139 @@ export default function SalaryScreen() {
   const isAdmin = user?.role === "superuser" || user?.role === "admin";
   const now = new Date();
 
+  // Filter state (admin)
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [filterYear, setFilterYear] = useState(now.getFullYear());
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [yearPickerOpen, setYearPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
-  const [selectedPassport, setSelectedPassport] = useState<Passport | null>(null);
-  const [empSearch, setEmpSearch] = useState("");
-  const [createMonth, setCreateMonth] = useState(now.getMonth() + 1);
-  const [createYear, setCreateYear] = useState(now.getFullYear());
-  const [createMonthPickerOpen, setCreateMonthPickerOpen] = useState(false);
-  const [createYearPickerOpen, setCreateYearPickerOpen] = useState(false);
-  const [form, setForm] = useState<CreateForm>(EMPTY_FORM);
+  // Form modal state
+  const [formTarget, setFormTarget] = useState<{ passport: Passport; existing: SalaryRecord | null } | null>(null);
+  const [form, setForm] = useState<SalaryForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [formMonthPickerOpen, setFormMonthPickerOpen] = useState(false);
+  const [formYearPickerOpen, setFormYearPickerOpen] = useState(false);
+  const [formMonth, setFormMonth] = useState(now.getMonth() + 1);
+  const [formYear, setFormYear] = useState(now.getFullYear());
 
+  // Data
   const queryParams = isAdmin ? { month: filterMonth, year: filterYear } : undefined;
-
   const { data, isLoading, isError, refetch, isFetching } = useListSalaryRecords(queryParams, {
     query: {
       queryKey: getListSalaryRecordsQueryKey(queryParams),
       refetchInterval: 30000,
     },
   });
-
-  const { data: passportsRaw = [] } = useListPassports(undefined, {
+  const { data: passportsRaw = [], isLoading: passportsLoading } = useListPassports(undefined, {
     query: { queryKey: ["listPassports"], enabled: isAdmin },
   });
   const passports = passportsRaw as Passport[];
 
   const createMutation = useCreateSalaryRecord();
+  const updateMutation = useUpdateSalaryRecord();
   const deleteMutation = useDeleteSalaryRecord();
 
   const records = (data ?? []) as SalaryRecord[];
 
-  const sortedRecords = useMemo(
-    () =>
-      isAdmin
-        ? records
-        : [...records].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month),
-    [records, isAdmin],
-  );
+  // Salary map: passportId → record (for current filter month/year)
+  const salaryMap = useMemo(() => {
+    const m = new Map<number, SalaryRecord>();
+    for (const r of records) m.set(r.passportId, r);
+    return m;
+  }, [records]);
 
   const totalNet = useMemo(() => records.reduce((s, r) => s + parseFloat(r.netSalary || "0"), 0), [records]);
   const confirmedCount = useMemo(() => records.filter((r) => r.status === "confirmed").length, [records]);
 
+  // Filtered employee list for admin roster
   const filteredPassports = useMemo(() => {
-    const q = empSearch.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
     return q
       ? passports.filter((p) =>
           (p.fullName ?? "").toLowerCase().includes(q) ||
           (p.passportNumber ?? "").toLowerCase().includes(q),
         )
       : passports;
-  }, [passports, empSearch]);
+  }, [passports, search]);
 
-  function openCreate() {
-    setForm(EMPTY_FORM);
-    setSelectedPassport(null);
-    setCreateMonth(filterMonth);
-    setCreateYear(filterYear);
-    setCreateOpen(true);
+  // Employee view: sorted newest-first
+  const sortedRecords = useMemo(
+    () => [...records].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month),
+    [records],
+  );
+
+  function openForm(passport: Passport, existing: SalaryRecord | null) {
+    setFormMonth(existing ? existing.month : filterMonth);
+    setFormYear(existing ? existing.year : filterYear);
+    if (existing) {
+      setForm({
+        daysWorked: String(existing.daysWorked ?? ""),
+        basicSalary: existing.basicSalary,
+        foodAllowance: existing.foodAllowance,
+        transportAllowance: existing.transportAllowance,
+        otherAllowances: existing.otherAllowances,
+        deductions: existing.deductions,
+        otherExpenses: existing.otherExpenses,
+        notes: existing.notes ?? "",
+        status: existing.status as "draft" | "confirmed",
+      });
+    } else {
+      setForm({ ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "" });
+    }
+    setFormTarget({ passport, existing });
   }
 
-  async function handleCreate() {
-    if (!selectedPassport) {
-      Alert.alert("Select employee", "Please choose an employee.");
-      return;
-    }
+  async function handleSave() {
+    if (!formTarget) return;
+    const { passport, existing } = formTarget;
     if (!form.basicSalary || parseFloat(form.basicSalary) <= 0) {
-      Alert.alert("Basic salary required", "Enter a basic salary amount.");
+      Alert.alert("Basic salary missing", "The employee has no agency salary set on their passport record.");
       return;
     }
     setSaving(true);
     try {
-      await createMutation.mutateAsync({
-        data: {
-          passportId: selectedPassport.id,
-          month: createMonth,
-          year: createYear,
-          daysWorked: parseInt(form.daysWorked) || 0,
-          basicSalary: form.basicSalary,
-          foodAllowance: form.foodAllowance || "0",
-          transportAllowance: form.transportAllowance || "0",
-          otherAllowances: form.otherAllowances || "0",
-          deductions: form.deductions || "0",
-          otherExpenses: form.otherExpenses || "0",
-          notes: form.notes || null,
-          status: form.status,
-        },
-      });
+      if (existing) {
+        await updateMutation.mutateAsync({
+          id: existing.id,
+          data: {
+            daysWorked: parseInt(form.daysWorked) || 0,
+            basicSalary: form.basicSalary,
+            foodAllowance: form.foodAllowance || "0",
+            transportAllowance: form.transportAllowance || "0",
+            otherAllowances: form.otherAllowances || "0",
+            deductions: form.deductions || "0",
+            otherExpenses: form.otherExpenses || "0",
+            notes: form.notes || null,
+            status: form.status,
+          },
+        });
+      } else {
+        await createMutation.mutateAsync({
+          data: {
+            passportId: passport.id,
+            month: formMonth,
+            year: formYear,
+            daysWorked: parseInt(form.daysWorked) || 0,
+            basicSalary: form.basicSalary,
+            foodAllowance: form.foodAllowance || "0",
+            transportAllowance: form.transportAllowance || "0",
+            otherAllowances: form.otherAllowances || "0",
+            deductions: form.deductions || "0",
+            otherExpenses: form.otherExpenses || "0",
+            notes: form.notes || null,
+            status: form.status,
+          },
+        });
+        setFilterMonth(formMonth);
+        setFilterYear(formYear);
+      }
       await qc.invalidateQueries({ queryKey: getListSalaryRecordsQueryKey() });
-      setFilterMonth(createMonth);
-      setFilterYear(createYear);
-      setCreateOpen(false);
+      setFormTarget(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create";
+      const msg = err instanceof Error ? err.message : "Please try again.";
       Alert.alert(
-        "Error",
+        "Failed",
         msg.toLowerCase().includes("already exists") || msg.includes("23505")
           ? "A salary record already exists for this employee, month, and year."
           : msg,
@@ -297,9 +328,10 @@ export default function SalaryScreen() {
     );
   }
 
-  const net = computeNet(form);
+  const netPreview = computeNet(form);
+  const dataLoading = isLoading || (isAdmin && passportsLoading);
 
-  if (isLoading) {
+  if (dataLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -325,115 +357,187 @@ export default function SalaryScreen() {
       <View style={[styles.navBar, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <Text style={[styles.navTitle, { color: colors.foreground }]}>Salary</Text>
         <Text style={[styles.navSub, { color: colors.mutedForeground }]}>
-          {isAdmin ? "Manage employee salaries" : "My salary"}
+          {isAdmin ? "Generate & manage employee salaries" : "My salary"}
         </Text>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />}
-      >
-        {/* ── Admin view ── */}
-        {isAdmin && (
-          <>
-            {/* Month/Year filter + New button */}
-            <View style={styles.filterRow}>
-              <TouchableOpacity onPress={() => setMonthPickerOpen(true)} style={[styles.filterBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.filterBtnText, { color: colors.foreground }]}>{MONTHS_SHORT[filterMonth - 1]}</Text>
-                <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setYearPickerOpen(true)} style={[styles.filterBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.filterBtnText, { color: colors.foreground }]}>{filterYear}</Text>
-                <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }} />
-              <TouchableOpacity onPress={openCreate} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
-                <Feather name="plus" size={16} color={colors.primaryForeground} />
-                <Text style={[styles.addBtnText, { color: colors.primaryForeground }]}>New Salary</Text>
-              </TouchableOpacity>
+      {/* ── ADMIN VIEW ── */}
+      {isAdmin && (
+        <>
+          {/* Month / Year filter */}
+          <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setMonthPickerOpen(true)} style={[styles.filterBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.filterBtnText, { color: colors.foreground }]}>{MONTHS_LONG[filterMonth - 1]}</Text>
+              <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setYearPickerOpen(true)} style={[styles.filterBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.filterBtnText, { color: colors.foreground }]}>{filterYear}</Text>
+              <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: "flex-end" }}>
+              <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Total</Text>
+              <Text style={[styles.totalAmount, { color: colors.primary }]}>{fmtMVR(totalNet)}</Text>
             </View>
+          </View>
 
-            {/* Summary strip */}
-            {records.length > 0 && (
-              <View style={[styles.summaryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Total Net</Text>
-                  <Text style={[styles.summaryValue, { color: colors.foreground }]}>{fmtMVR(totalNet)}</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Records</Text>
-                  <Text style={[styles.summaryValue, { color: colors.foreground }]}>{records.length}</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
-                  <Text style={[styles.summaryValue, { color: "#059669" }]}>{confirmedCount}</Text>
-                </View>
+          {/* Search */}
+          <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+            <View style={[styles.searchBox, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Feather name="search" size={15} color={colors.mutedForeground} />
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search employees…"
+                placeholderTextColor={colors.mutedForeground}
+                style={[styles.searchInput, { color: colors.foreground }]}
+              />
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+                  <Feather name="x" size={14} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Summary strip */}
+          {records.length > 0 && (
+            <View style={[styles.summaryRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Records</Text>
+                <Text style={[styles.summaryValue, { color: colors.foreground }]}>{records.length} / {passports.length}</Text>
               </View>
-            )}
+              <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Confirmed</Text>
+                <Text style={[styles.summaryValue, { color: "#059669" }]}>{confirmedCount}</Text>
+              </View>
+              <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Pending</Text>
+                <Text style={[styles.summaryValue, { color: "#D97706" }]}>{passports.length - records.length}</Text>
+              </View>
+            </View>
+          )}
 
-            {sortedRecords.length === 0 ? (
+          {/* Employee roster */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.rosterList}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={isFetching && !dataLoading} onRefresh={() => { refetch(); }} tintColor={colors.primary} />}
+          >
+            {filteredPassports.length === 0 ? (
+              <View style={styles.center}>
+                <Feather name="users" size={28} color={colors.mutedForeground} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No employees found</Text>
+              </View>
+            ) : (
+              filteredPassports.map((p) => {
+                const record = salaryMap.get(p.id) ?? null;
+                const initials = (p.fullName ?? "?").split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
+                const hasSalary = record !== null;
+                const isConfirmed = record?.status === "confirmed";
+
+                return (
+                  <View key={p.id} style={[styles.rosterCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={styles.rosterRow}>
+                      <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+                        <Text style={[styles.avatarText, { color: colors.foreground }]}>{initials}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.employeeName, { color: colors.foreground }]} numberOfLines={1}>{p.fullName ?? "—"}</Text>
+                        <Text style={[styles.monthLabel, { color: colors.mutedForeground }]}>{p.passportNumber ?? "—"}</Text>
+                      </View>
+                      {hasSalary ? (
+                        <View style={{ alignItems: "flex-end", gap: 4 }}>
+                          <Text style={[styles.netSalary, { color: colors.foreground }]}>{fmtMVR(record!.netSalary)}</Text>
+                          <View style={[styles.badge, { backgroundColor: isConfirmed ? "#05966918" : "#D9770618" }]}>
+                            <Text style={[styles.badgeText, { color: isConfirmed ? "#059669" : "#D97706" }]}>
+                              {isConfirmed ? "Confirmed" : "Draft"}
+                            </Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <Text style={[styles.noSalaryText, { color: colors.mutedForeground }]}>No salary</Text>
+                      )}
+                    </View>
+                    <View style={[styles.rosterActions, { borderTopColor: colors.border }]}>
+                      <TouchableOpacity
+                        onPress={() => openForm(p, record)}
+                        style={[styles.actionBtn, { backgroundColor: colors.primary + "14" }]}
+                      >
+                        <Feather name={hasSalary ? "edit-2" : "plus"} size={14} color={colors.primary} />
+                        <Text style={[styles.actionBtnText, { color: colors.primary }]}>
+                          {hasSalary ? "Edit" : "Generate"}
+                        </Text>
+                      </TouchableOpacity>
+                      {hasSalary && (
+                        <TouchableOpacity
+                          onPress={() => handleDelete(record!)}
+                          style={[styles.actionBtn, { backgroundColor: "#DC262614" }]}
+                        >
+                          <Feather name="trash-2" size={14} color="#DC2626" />
+                          <Text style={[styles.actionBtnText, { color: "#DC2626" }]}>Delete</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </ScrollView>
+        </>
+      )}
+
+      {/* ── EMPLOYEE VIEW ── */}
+      {!isAdmin && (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />}
+        >
+          {sortedRecords.length === 0 ? (
+            <>
+              <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+                <Text style={styles.heroLabel}>{MONTHS_LONG[now.getMonth()]} {now.getFullYear()}</Text>
+                <Text style={styles.heroAmount}>Pending</Text>
+                <Text style={styles.heroSub}>Your salary hasn't been processed yet</Text>
+              </View>
               <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Feather name="dollar-sign" size={28} color={colors.mutedForeground} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No salary records</Text>
+                <Feather name="clock" size={28} color={colors.mutedForeground} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Salary not yet generated</Text>
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  Tap "New Salary" to create a salary record for {MONTHS_LONG[filterMonth - 1]} {filterYear}.
+                  Salaries are processed by your admin once the monthly invoice is marked as paid.
                 </Text>
               </View>
-            ) : (
-              sortedRecords.map((r) => (
-                <SalaryCard key={r.id} record={r} isAdmin colors={colors} onDelete={() => handleDelete(r)} />
-              ))
-            )}
-          </>
-        )}
+            </>
+          ) : (
+            <>
+              {(() => {
+                const latest = sortedRecords[0];
+                return (
+                  <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.heroLabel}>{MONTHS_LONG[(latest?.month ?? 1) - 1]} {latest?.year}</Text>
+                    <Text style={styles.heroAmount}>{fmtMVR(latest?.netSalary)}</Text>
+                    <Text style={styles.heroSub}>
+                      {latest?.status === "confirmed" ? "✓ Confirmed" : "Draft — pending confirmation"}
+                    </Text>
+                  </View>
+                );
+              })()}
+              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SALARY HISTORY</Text>
+              {sortedRecords.map((r) => (
+                <SalaryCard key={r.id} record={r} colors={colors} />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      )}
 
-        {/* ── Employee view ── */}
-        {!isAdmin && (
-          <>
-            {sortedRecords.length === 0 ? (
-              <>
-                <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.heroLabel}>{MONTHS_LONG[now.getMonth()]} {now.getFullYear()}</Text>
-                  <Text style={styles.heroAmount}>Pending</Text>
-                  <Text style={styles.heroSub}>Your salary hasn't been processed yet</Text>
-                </View>
-                <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Feather name="clock" size={28} color={colors.mutedForeground} />
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Salary not yet generated</Text>
-                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                    Salaries are processed by your admin once the monthly invoice is marked as paid.
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <>
-                {(() => {
-                  const latest = sortedRecords[0];
-                  return (
-                    <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.heroLabel}>{MONTHS_LONG[(latest?.month ?? 1) - 1]} {latest?.year}</Text>
-                      <Text style={styles.heroAmount}>{fmtMVR(latest?.netSalary)}</Text>
-                      <Text style={styles.heroSub}>
-                        {latest?.status === "confirmed" ? "✓ Confirmed" : "Draft — pending confirmation"}
-                      </Text>
-                    </View>
-                  );
-                })()}
-                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SALARY HISTORY</Text>
-                {sortedRecords.map((r) => (
-                  <SalaryCard key={r.id} record={r} isAdmin={false} colors={colors} />
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </ScrollView>
+      {/* ── MODALS ── */}
 
-      {/* Filter — Month picker */}
+      {/* Filter — Month */}
       <Modal visible={monthPickerOpen} transparent animationType="fade" onRequestClose={() => setMonthPickerOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setMonthPickerOpen(false)}>
           <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
@@ -450,7 +554,7 @@ export default function SalaryScreen() {
         </Pressable>
       </Modal>
 
-      {/* Filter — Year picker */}
+      {/* Filter — Year */}
       <Modal visible={yearPickerOpen} transparent animationType="fade" onRequestClose={() => setYearPickerOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setYearPickerOpen(false)}>
           <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
@@ -465,240 +569,201 @@ export default function SalaryScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Create Salary Sheet ── */}
-      <Modal visible={createOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCreateOpen(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
-            {/* Header */}
-            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-              <TouchableOpacity onPress={() => setCreateOpen(false)} style={styles.sheetClose}>
-                <Text style={[styles.sheetCloseText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>New Salary Record</Text>
-              <TouchableOpacity onPress={handleCreate} disabled={saving} style={styles.sheetSave}>
-                <Text style={[styles.sheetSaveText, { color: saving ? colors.mutedForeground : colors.primary }]}>
-                  {saving ? "Saving…" : "Save"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
-
-              {/* Employee */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE</Text>
-                <TouchableOpacity onPress={() => { setEmpSearch(""); setEmployeePickerOpen(true); }} style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Feather name="user" size={16} color={colors.mutedForeground} />
-                  <Text style={[styles.selectorBtnText, { color: selectedPassport ? colors.foreground : colors.mutedForeground }]} numberOfLines={1}>
-                    {selectedPassport ? (selectedPassport.fullName ?? selectedPassport.passportNumber ?? "Selected") : "Select employee…"}
+      {/* Salary Form Modal */}
+      <Modal
+        visible={formTarget !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setFormTarget(null)}
+      >
+        {formTarget && (
+          <SafeAreaView style={[styles.sheetContainer, { backgroundColor: colors.background }]} edges={["bottom"]}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+              {/* Header */}
+              <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={() => setFormTarget(null)} style={styles.sheetClose}>
+                  <Text style={[styles.sheetCloseText, { color: colors.mutedForeground }]}>Cancel</Text>
+                </TouchableOpacity>
+                <View style={{ flex: 1, alignItems: "center" }}>
+                  <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
+                    {formTarget.existing ? "Edit Salary" : "Generate Salary"}
                   </Text>
-                  <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                  <Text style={[styles.sheetSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    {formTarget.passport.fullName ?? "—"} · {MONTHS_SHORT[formMonth - 1]} {formYear}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={handleSave} disabled={saving} style={[styles.sheetSave, { opacity: saving ? 0.5 : 1 }]}>
+                  {saving ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text style={[styles.sheetSaveText, { color: colors.primary }]}>Save</Text>
+                  )}
                 </TouchableOpacity>
               </View>
 
-              {/* Month / Year */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>MONTH</Text>
-                  <TouchableOpacity onPress={() => setCreateMonthPickerOpen(true)} style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.selectorBtnText, { color: colors.foreground }]}>{MONTHS_LONG[createMonth - 1]}</Text>
-                    <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>YEAR</Text>
-                  <TouchableOpacity onPress={() => setCreateYearPickerOpen(true)} style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.selectorBtnText, { color: colors.foreground }]}>{createYear}</Text>
-                    <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.formBody} keyboardShouldPersistTaps="handled">
 
-              {/* Days Worked */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>DAYS WORKED (QTY)</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="e.g. 26"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="number-pad"
-                  value={form.daysWorked}
-                  onChangeText={(v) => setForm((p) => ({ ...p, daysWorked: v }))}
-                />
-              </View>
+                {/* Month / Year (only for create) */}
+                {!formTarget.existing && (
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <View style={[styles.fieldGroup, { flex: 1 }]}>
+                      <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>MONTH</Text>
+                      <TouchableOpacity onPress={() => setFormMonthPickerOpen(true)} style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.selectorBtnText, { color: colors.foreground }]}>{MONTHS_LONG[formMonth - 1]}</Text>
+                        <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={[styles.fieldGroup, { flex: 1 }]}>
+                      <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>YEAR</Text>
+                      <TouchableOpacity onPress={() => setFormYearPickerOpen(true)} style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.selectorBtnText, { color: colors.foreground }]}>{formYear}</Text>
+                        <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
 
-              {/* Basic Salary */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>BASIC SALARY (MVR) *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.mutedForeground }]}
-                  placeholder="0.00"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="decimal-pad"
-                  value={form.basicSalary}
-                  editable={false}
-                />
-                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>Set on the passport record · edit there to change</Text>
-              </View>
-
-              {/* Allowances */}
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>FOOD ALLOW.</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.foodAllowance} onChangeText={(v) => setForm((p) => ({ ...p, foodAllowance: v }))} />
+                {/* Days Worked */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>DAYS WORKED (QTY)</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder="e.g. 26"
+                    placeholderTextColor={colors.mutedForeground}
+                    keyboardType="number-pad"
+                    value={form.daysWorked}
+                    onChangeText={(v) => setForm((p) => ({ ...p, daysWorked: v }))}
+                  />
                 </View>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>TRANSPORT</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.transportAllowance} onChangeText={(v) => setForm((p) => ({ ...p, transportAllowance: v }))} />
-                </View>
-              </View>
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>OTHER ALLOW.</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.otherAllowances} onChangeText={(v) => setForm((p) => ({ ...p, otherAllowances: v }))} />
-                </View>
-                <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>OTHER EXP.</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.otherExpenses} onChangeText={(v) => setForm((p) => ({ ...p, otherExpenses: v }))} />
-                </View>
-              </View>
 
-              {/* Deductions */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: "#DC2626" }]}>DEDUCTIONS</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="0.00"
-                  placeholderTextColor={colors.mutedForeground}
-                  keyboardType="decimal-pad"
-                  value={form.deductions}
-                  onChangeText={(v) => setForm((p) => ({ ...p, deductions: v }))}
-                />
-              </View>
+                {/* Basic Salary — read-only from passport */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>BASIC SALARY (MVR)</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.mutedForeground }]}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.mutedForeground}
+                    keyboardType="decimal-pad"
+                    value={form.basicSalary}
+                    editable={false}
+                  />
+                  <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>
+                    Agency salary from passport · edit there to change
+                  </Text>
+                </View>
 
-              {/* Net preview */}
-              <View style={[styles.netPreview, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.netLabel, { color: colors.mutedForeground }]}>Net Salary</Text>
-                <Text style={[styles.netValue, { color: net < 0 ? "#DC2626" : colors.foreground }]}>
-                  {`MVR ${net.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                </Text>
-              </View>
+                {/* Allowances */}
+                <Text style={[styles.sectionHeader, { color: "#059669" }]}>EARNINGS</Text>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>FOOD ALLOW.</Text>
+                    <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.foodAllowance} onChangeText={(v) => setForm((p) => ({ ...p, foodAllowance: v }))} />
+                  </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>TRANSPORT</Text>
+                    <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.transportAllowance} onChangeText={(v) => setForm((p) => ({ ...p, transportAllowance: v }))} />
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>OTHER ALLOW.</Text>
+                    <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.otherAllowances} onChangeText={(v) => setForm((p) => ({ ...p, otherAllowances: v }))} />
+                  </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>OTHER EXP.</Text>
+                    <TextInput style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={form.otherExpenses} onChangeText={(v) => setForm((p) => ({ ...p, otherExpenses: v }))} />
+                  </View>
+                </View>
 
-              {/* Status chips */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>STATUS</Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  {(["draft", "confirmed"] as const).map((s) => (
-                    <TouchableOpacity
-                      key={s}
-                      onPress={() => setForm((p) => ({ ...p, status: s }))}
-                      style={[styles.statusChip, { backgroundColor: form.status === s ? colors.primary : colors.card, borderColor: form.status === s ? colors.primary : colors.border }]}
-                    >
-                      <Text style={[styles.statusChipText, { color: form.status === s ? colors.primaryForeground : colors.mutedForeground }]}>
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
-                      </Text>
+                {/* Deductions */}
+                <Text style={[styles.sectionHeader, { color: "#DC2626" }]}>DEDUCTIONS</Text>
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>TOTAL DEDUCTIONS</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.mutedForeground}
+                    keyboardType="decimal-pad"
+                    value={form.deductions}
+                    onChangeText={(v) => setForm((p) => ({ ...p, deductions: v }))}
+                  />
+                </View>
+
+                {/* Net preview */}
+                <View style={[styles.netPreview, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.netLabel, { color: colors.mutedForeground }]}>Net Salary</Text>
+                  <Text style={[styles.netValue, { color: netPreview < 0 ? "#DC2626" : colors.foreground }]}>
+                    {`MVR ${netPreview.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </Text>
+                </View>
+
+                {/* Status */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>STATUS</Text>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    {(["draft", "confirmed"] as const).map((s) => (
+                      <TouchableOpacity
+                        key={s}
+                        onPress={() => setForm((p) => ({ ...p, status: s }))}
+                        style={[styles.statusChip, { backgroundColor: form.status === s ? colors.primary : colors.card, borderColor: form.status === s ? colors.primary : colors.border }]}
+                      >
+                        <Text style={[styles.statusChipText, { color: form.status === s ? colors.primaryForeground : colors.mutedForeground }]}>
+                          {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Notes */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>NOTES (OPTIONAL)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder="Optional notes…"
+                    placeholderTextColor={colors.mutedForeground}
+                    multiline
+                    numberOfLines={3}
+                    value={form.notes}
+                    onChangeText={(v) => setForm((p) => ({ ...p, notes: v }))}
+                  />
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* Form — month picker */}
+            <Modal visible={formMonthPickerOpen} transparent animationType="fade" onRequestClose={() => setFormMonthPickerOpen(false)}>
+              <Pressable style={styles.modalOverlay} onPress={() => setFormMonthPickerOpen(false)}>
+                <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
+                  <ScrollView bounces={false}>
+                    <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Select Month</Text>
+                    {MONTHS_LONG.map((m, i) => (
+                      <TouchableOpacity key={i} onPress={() => { setFormMonth(i + 1); setFormMonthPickerOpen(false); }} style={[styles.pickerItem, formMonth === i + 1 && { backgroundColor: colors.primary + "18" }]}>
+                        <Text style={[styles.pickerItemText, { color: formMonth === i + 1 ? colors.primary : colors.foreground }]}>{m}</Text>
+                        {formMonth === i + 1 && <Feather name="check" size={14} color={colors.primary} />}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </Pressable>
+            </Modal>
+
+            {/* Form — year picker */}
+            <Modal visible={formYearPickerOpen} transparent animationType="fade" onRequestClose={() => setFormYearPickerOpen(false)}>
+              <Pressable style={styles.modalOverlay} onPress={() => setFormYearPickerOpen(false)}>
+                <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
+                  <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Select Year</Text>
+                  {YEARS.map((y) => (
+                    <TouchableOpacity key={y} onPress={() => { setFormYear(y); setFormYearPickerOpen(false); }} style={[styles.pickerItem, formYear === y && { backgroundColor: colors.primary + "18" }]}>
+                      <Text style={[styles.pickerItemText, { color: formYear === y ? colors.primary : colors.foreground }]}>{y}</Text>
+                      {formYear === y && <Feather name="check" size={14} color={colors.primary} />}
                     </TouchableOpacity>
                   ))}
                 </View>
-              </View>
-
-              {/* Notes */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>NOTES (OPTIONAL)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="Optional notes…"
-                  placeholderTextColor={colors.mutedForeground}
-                  multiline
-                  numberOfLines={3}
-                  value={form.notes}
-                  onChangeText={(v) => setForm((p) => ({ ...p, notes: v }))}
-                />
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-
-        {/* Create — month picker */}
-        <Modal visible={createMonthPickerOpen} transparent animationType="fade" onRequestClose={() => setCreateMonthPickerOpen(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setCreateMonthPickerOpen(false)}>
-            <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
-              <ScrollView bounces={false}>
-                <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Select Month</Text>
-                {MONTHS_LONG.map((m, i) => (
-                  <TouchableOpacity key={i} onPress={() => { setCreateMonth(i + 1); setCreateMonthPickerOpen(false); }} style={[styles.pickerItem, createMonth === i + 1 && { backgroundColor: colors.primary + "18" }]}>
-                    <Text style={[styles.pickerItemText, { color: createMonth === i + 1 ? colors.primary : colors.foreground }]}>{m}</Text>
-                    {createMonth === i + 1 && <Feather name="check" size={14} color={colors.primary} />}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </Pressable>
-        </Modal>
-
-        {/* Create — year picker */}
-        <Modal visible={createYearPickerOpen} transparent animationType="fade" onRequestClose={() => setCreateYearPickerOpen(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setCreateYearPickerOpen(false)}>
-            <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
-              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Select Year</Text>
-              {YEARS.map((y) => (
-                <TouchableOpacity key={y} onPress={() => { setCreateYear(y); setCreateYearPickerOpen(false); }} style={[styles.pickerItem, createYear === y && { backgroundColor: colors.primary + "18" }]}>
-                  <Text style={[styles.pickerItemText, { color: createYear === y ? colors.primary : colors.foreground }]}>{y}</Text>
-                  {createYear === y && <Feather name="check" size={14} color={colors.primary} />}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-
-        {/* Employee picker sheet */}
-        <Modal visible={employeePickerOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEmployeePickerOpen(false)}>
-          <View style={[styles.sheetContainer, { backgroundColor: colors.background }]}>
-            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-              <TouchableOpacity onPress={() => setEmployeePickerOpen(false)} style={styles.sheetClose}>
-                <Text style={[styles.sheetCloseText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Select Employee</Text>
-              <View style={{ width: 60 }} />
-            </View>
-
-            <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, margin: 16 }]}>
-              <Feather name="search" size={16} color={colors.mutedForeground} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.foreground }]}
-                placeholder="Search name or passport…"
-                placeholderTextColor={colors.mutedForeground}
-                value={empSearch}
-                onChangeText={setEmpSearch}
-                autoFocus
-              />
-            </View>
-
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
-              {filteredPassports.map((p) => {
-                const initials = (p.fullName ?? "?").split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
-                return (
-                  <TouchableOpacity key={p.id} onPress={() => { setSelectedPassport(p); setForm((prev) => ({ ...prev, basicSalary: p.agencySalary ?? prev.basicSalary })); setEmployeePickerOpen(false); }} style={[styles.empRow, { borderBottomColor: colors.border }]}>
-                    <View style={[styles.empAvatar, { backgroundColor: colors.secondary }]}>
-                      <Text style={[styles.empAvatarText, { color: colors.foreground }]}>{initials}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.empName, { color: colors.foreground }]} numberOfLines={1}>{p.fullName ?? "—"}</Text>
-                      <Text style={[styles.empSub, { color: colors.mutedForeground }]} numberOfLines={1}>
-                        {p.passportNumber ?? ""}
-                        {p.nationality ? ` · ${p.nationality}` : ""}
-                      </Text>
-                    </View>
-                    {selectedPassport?.id === p.id && <Feather name="check" size={16} color={colors.primary} />}
-                  </TouchableOpacity>
-                );
-              })}
-              {filteredPassports.length === 0 && (
-                <Text style={[{ color: colors.mutedForeground, padding: 24, textAlign: "center", fontSize: 14 }]}>No employees found</Text>
-              )}
-            </ScrollView>
-          </View>
-        </Modal>
+              </Pressable>
+            </Modal>
+          </SafeAreaView>
+        )}
       </Modal>
     </View>
   );
@@ -713,20 +778,31 @@ const styles = StyleSheet.create({
   navTitle: { fontSize: 24, fontWeight: "700", letterSpacing: -0.3 },
   navSub: { fontSize: 13 },
 
-  container: { padding: 16, gap: 12, paddingBottom: 48 },
+  filterBar: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  filterBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
+  filterBtnText: { fontSize: 14, fontWeight: "500" },
+  totalLabel: { fontSize: 10, letterSpacing: 0.4 },
+  totalAmount: { fontSize: 15, fontWeight: "700" },
 
-  filterRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  filterBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
-  filterBtnText: { fontSize: 14, fontWeight: "600" },
-  addBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
-  addBtnText: { fontSize: 14, fontWeight: "600" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchBox: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
 
-  summaryRow: { flexDirection: "row", borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  summaryItem: { flex: 1, alignItems: "center", padding: 14, gap: 3 },
-  summaryLabel: { fontSize: 11, letterSpacing: 0.3 },
-  summaryValue: { fontSize: 18, fontWeight: "700" },
+  summaryRow: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
+  summaryItem: { flex: 1, alignItems: "center", paddingVertical: 10, gap: 2 },
+  summaryLabel: { fontSize: 10, letterSpacing: 0.3 },
+  summaryValue: { fontSize: 15, fontWeight: "700" },
   summaryDivider: { width: StyleSheet.hairlineWidth },
 
+  rosterList: { padding: 16, gap: 10, paddingBottom: 48 },
+  rosterCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  rosterRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  rosterActions: { flexDirection: "row", gap: 8, padding: 10, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8, borderRadius: 10 },
+  actionBtnText: { fontSize: 13, fontWeight: "600" },
+  noSalaryText: { fontSize: 12 },
+
+  container: { padding: 16, gap: 12, paddingBottom: 48 },
   sectionTitle: { fontSize: 11, letterSpacing: 0.8, fontWeight: "600", marginTop: 4 },
 
   card: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
@@ -766,11 +842,14 @@ const styles = StyleSheet.create({
   sheetContainer: { flex: 1 },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   sheetTitle: { fontSize: 17, fontWeight: "700" },
+  sheetSub: { fontSize: 12, marginTop: 2 },
   sheetClose: { width: 60 },
   sheetCloseText: { fontSize: 16 },
   sheetSave: { width: 60, alignItems: "flex-end" },
   sheetSaveText: { fontSize: 16, fontWeight: "600" },
-  sheetContent: { padding: 20, gap: 16, paddingBottom: 60 },
+
+  formBody: { padding: 20, gap: 16, paddingBottom: 60 },
+  sectionHeader: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, marginTop: 4 },
 
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6 },
@@ -786,13 +865,4 @@ const styles = StyleSheet.create({
 
   statusChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
   statusChipText: { fontSize: 14, fontWeight: "600" },
-
-  searchBar: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
-  searchInput: { flex: 1, fontSize: 15 },
-
-  empRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  empAvatar: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-  empAvatarText: { fontSize: 15, fontWeight: "600" },
-  empName: { fontSize: 15, fontWeight: "600" },
-  empSub: { fontSize: 12, marginTop: 2 },
 });
