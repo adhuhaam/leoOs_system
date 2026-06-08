@@ -1,0 +1,7 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Mf7VMyMT922dqQmV3Ee0B"
+uri = "file://artifacts/passport-ocr-admin/assets/images/icon.png"
+type = "image"

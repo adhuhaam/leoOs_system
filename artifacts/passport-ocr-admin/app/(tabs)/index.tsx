@@ -154,17 +154,17 @@ function FlipUserCard() {
       {/* ── Front: credit card ───────────────── */}
       <Animated.View style={[styles.card, frontStyle]}>
         <LinearGradient
-          colors={["#0f172a", "#1e3a5f", "#0a192f"]}
+          colors={["#0B1A15", "#1A3D33", "#2A6B5A"]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#6366F10D" }]} />
-        <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#0EA5E90B" }]} />
+        <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#4ADE8010" }]} />
+        <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#2DD4BF0B" }]} />
 
         {/* logo + contactless symbol */}
         <View style={styles.cardTopRow}>
           <Image
-            source={require("../../assets/images/logo-white.png")}
+            source={require("../../assets/images/icon.png")}
             style={styles.cardLogo}
             resizeMode="contain"
           />
@@ -210,14 +210,14 @@ function FlipUserCard() {
       {/* ── Back ─────────────────────────────── */}
       <Animated.View style={[styles.card, backStyle]}>
         <LinearGradient
-          colors={["#0c1445", "#1a3050", "#0c1445"]}
+          colors={["#0B1A15", "#1A3D33", "#0B1A15"]}
           start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.cardOrb, { bottom: -20, right: -15, width: 110, height: 110, backgroundColor: "#10B98110" }]} />
+        <View style={[styles.cardOrb, { bottom: -20, right: -15, width: 110, height: 110, backgroundColor: "#4ADE8010" }]} />
 
         {/* magnetic stripe */}
-        <View style={styles.cardMagStripe} />
+        <View style={[styles.cardMagStripe, { backgroundColor: "#1A3D33" }]} />
 
         <Text style={styles.cardBackTitle}>Account Details</Text>
 
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardBrand: { fontSize: 13, fontWeight: "700", letterSpacing: 3, color: "#FFFFFF", opacity: 0.6 },
-  cardLogo: { width: 90, height: 40 },
+  cardLogo: { width: 150, height: 60, marginLeft: -4, marginTop: -4 },
   // EMV chip
   cardChipRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   cardChip: {
