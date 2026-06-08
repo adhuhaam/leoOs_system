@@ -539,6 +539,7 @@ const styles = StyleSheet.create({
   statusFilterWrap: { paddingVertical: 5 },
   statusFilterScroll: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 7,
     paddingHorizontal: 16,
     paddingRight: 24,
