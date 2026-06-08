@@ -667,6 +667,8 @@ function EditCandidateDialog({
     jobTitle: "",
     workType: "",
     workSite: "",
+    agencySalary: passport.agencySalary ?? "",
+    clientSalary: passport.clientSalary ?? "",
   });
 
   useEffect(() => {
@@ -691,7 +693,7 @@ function EditCandidateDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, ...rest } = form;
+    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, agencySalary, clientSalary, ...rest } = form;
 
     updateMutation.mutate(
       {
@@ -702,6 +704,8 @@ function EditCandidateDialog({
           clientId: clientId === "" ? null : Number(clientId),
           workPermitNumber: workPermitNumber.trim() || null,
           agent: agent.trim() || null,
+          agencySalary: agencySalary.trim() || null,
+          clientSalary: clientSalary.trim() || null,
         },
       },
       {
@@ -948,6 +952,43 @@ function EditCandidateDialog({
             {!existingLoa && (
               <p className="text-[11px] text-muted-foreground">No LOA exists for this candidate yet — employment terms are set when the LOA is created.</p>
             )}
+          </div>
+
+          {/* Salary Rates */}
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Salary Rates</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Employee Salary (MVR/month)</Label>
+                <Input
+                  type="number" min="0" step="0.01" placeholder="0.00"
+                  value={form.agencySalary}
+                  onChange={(e) => setForm({ ...form, agencySalary: e.target.value })}
+                />
+                <p className="text-[10px] text-muted-foreground">What you pay the employee</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Client Billing Rate (MVR/month)</Label>
+                <Input
+                  type="number" min="0" step="0.01" placeholder="0.00"
+                  value={form.clientSalary}
+                  onChange={(e) => setForm({ ...form, clientSalary: e.target.value })}
+                />
+                <p className="text-[10px] text-muted-foreground">What you charge the client</p>
+              </div>
+            </div>
+            {(Number(form.agencySalary || 0) > 0 || Number(form.clientSalary || 0) > 0) && (() => {
+              const margin = Number(form.clientSalary || 0) - Number(form.agencySalary || 0);
+              const color = margin > 0 ? "text-emerald-600" : margin < 0 ? "text-destructive" : "text-muted-foreground";
+              return (
+                <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                  <span className="text-xs text-muted-foreground">Monthly margin (billing − salary)</span>
+                  <span className={`text-sm font-semibold tabular-nums font-mono ${color}`}>
+                    {margin >= 0 ? "+" : ""}{margin.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}&nbsp;MVR
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Allocation */}

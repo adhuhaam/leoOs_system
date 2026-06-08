@@ -141,7 +141,7 @@ function SalaryFormDialog({
           notes: existing.notes ?? "",
           status: existing.status as "draft" | "confirmed",
         }
-      : { ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? "0" },
+      : { ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? passport.agencySalary ?? "0" },
   );
 
   // Reset form when dialog opens with new data
@@ -237,6 +237,7 @@ function SalaryFormDialog({
                   onChange={(e) => setForm((p) => ({ ...p, basicSalary: e.target.value }))}
                   className="h-9"
                 />
+                <p className="text-[10px] text-muted-foreground">What you pay the employee</p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide">Client Billing Rate (MVR)</Label>
@@ -249,7 +250,20 @@ function SalaryFormDialog({
                   onChange={(e) => setForm((p) => ({ ...p, clientSalary: e.target.value }))}
                   className="h-9"
                 />
+                <p className="text-[10px] text-muted-foreground">What you charge the client</p>
               </div>
+              {(() => {
+                const margin = Number(form.clientSalary || 0) - Number(form.basicSalary || 0);
+                const color = margin > 0 ? "text-emerald-600" : margin < 0 ? "text-destructive" : "text-muted-foreground";
+                return (
+                  <div className="col-span-2 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                    <span className="text-xs text-muted-foreground">Monthly margin (billing − salary)</span>
+                    <span className={`text-sm font-semibold tabular-nums font-mono ${color}`}>
+                      {margin >= 0 ? "+" : ""}{fmtMVR(margin)}&nbsp;MVR
+                    </span>
+                  </div>
+                );
+              })()}
               {field("foodAllowance", "Food Allowance")}
               {field("transportAllowance", "Transport Allowance")}
               {field("otherAllowances", "Other Allowances")}

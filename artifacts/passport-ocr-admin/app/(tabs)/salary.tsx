@@ -245,7 +245,7 @@ export default function SalaryScreen() {
         status: existing.status as "draft" | "confirmed",
       });
     } else {
-      setForm({ ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? "0" });
+      setForm({ ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? passport.agencySalary ?? "0" });
     }
     setFormTarget({ passport, existing });
   }
@@ -653,6 +653,7 @@ export default function SalaryScreen() {
                       value={form.basicSalary}
                       onChangeText={(v) => setForm((p) => ({ ...p, basicSalary: v }))}
                     />
+                    <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>What you pay</Text>
                   </View>
                   <View style={[styles.fieldGroup, { flex: 1 }]}>
                     <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR)</Text>
@@ -664,8 +665,21 @@ export default function SalaryScreen() {
                       value={form.clientSalary}
                       onChangeText={(v) => setForm((p) => ({ ...p, clientSalary: v }))}
                     />
+                    <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>What you charge</Text>
                   </View>
                 </View>
+                {(() => {
+                  const margin = Number(form.clientSalary || 0) - Number(form.basicSalary || 0);
+                  const mc = margin > 0 ? "#059669" : margin < 0 ? "#DC2626" : colors.mutedForeground;
+                  return (
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.card, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.border }}>
+                      <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Monthly margin</Text>
+                      <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: mc }}>
+                        {margin >= 0 ? "+" : ""}{margin.toFixed(2)} MVR
+                      </Text>
+                    </View>
+                  );
+                })()}
 
                 {/* Allowances */}
                 <Text style={[styles.sectionHeader, { color: "#059669" }]}>EARNINGS</Text>

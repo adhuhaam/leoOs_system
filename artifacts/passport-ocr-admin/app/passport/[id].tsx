@@ -807,7 +807,22 @@ export default function PassportDetailScreen() {
               { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
             ]}
           />
+          <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>What you charge the client — used as billing rate on invoices</Text>
         </View>
+
+        {/* Margin hint */}
+        {(Number(form.agencySalary || 0) > 0 || Number(form.clientSalary || 0) > 0) && (() => {
+          const margin = Number(form.clientSalary || 0) - Number(form.agencySalary || 0);
+          const mc = margin > 0 ? "#059669" : margin < 0 ? "#DC2626" : colors.mutedForeground;
+          return (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.card, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Monthly margin (billing − salary)</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: mc }}>
+                {margin >= 0 ? "+" : ""}{margin.toFixed(2)} MVR
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* ── Xpat Employee Data ── */}
         {hasXpat && (
