@@ -28,6 +28,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -263,6 +264,7 @@ export default function DashboardScreen() {
   const colors = useColors();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const role = user?.role ?? null;
   const firstName = user?.name?.split(" ")[0] ?? null;
@@ -504,7 +506,7 @@ export default function DashboardScreen() {
     <>
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl

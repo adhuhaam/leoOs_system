@@ -12,6 +12,7 @@ import {
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Item = {
   icon: string;
@@ -48,6 +49,7 @@ const TOOL_ITEMS: Item[] = [
 
 export default function MoreScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -105,7 +107,7 @@ export default function MoreScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Profile card */}

@@ -45,14 +45,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
-        headerStyle: { backgroundColor: colors.background },
-        headerTitleStyle: {
-          color: colors.foreground,
-          fontSize: 17,
-        },
-        headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: {
           backgroundColor: colors.card,

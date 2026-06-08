@@ -30,6 +30,7 @@ import {
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useColors } from "@/hooks/useColors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   fileNameFromUri,
   inferMimeType,
@@ -955,6 +956,7 @@ const dsStyles = StyleSheet.create({
 
 export default function ProcessDocumentScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<WizardStep>("upload");
   const [picked, setPicked] = useState<PickedFile | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -1115,7 +1117,7 @@ export default function ProcessDocumentScreen() {
   return (
     <KeyboardAwareScrollViewCompat
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
     >
       {/* ── Header ── */}
       <View style={styles.header}>

@@ -23,8 +23,14 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+    "androidStatusBar": {
+      "translucent": true,
+      "backgroundColor": "transparent",
+      "barStyle": "dark-content"
+    },
     "android": {
       "package": "com.leo.admin",
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0d2e28"

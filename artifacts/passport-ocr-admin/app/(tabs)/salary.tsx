@@ -1,5 +1,6 @@
 import { Feather } from "@/components/Icon";
 import { useColors } from "@/hooks/useColors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth";
 import {
   type Passport,
@@ -55,6 +56,7 @@ function InfoRow({ icon, label, value, valueColor }: {
 
 export default function SalaryScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const { data, isLoading, isError, refetch, isFetching } = useListPassports(undefined, {
@@ -98,7 +100,7 @@ export default function SalaryScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
       refreshControl={
         <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />
       }

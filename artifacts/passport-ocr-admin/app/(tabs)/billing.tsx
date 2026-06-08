@@ -29,6 +29,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN ?? "leomaldives.com";
 
@@ -75,6 +76,7 @@ function formatMVR(s: string | number): string {
 
 export default function BillingScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
@@ -145,7 +147,7 @@ export default function BillingScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View
         style={[
           styles.searchWrap,

@@ -31,6 +31,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const XPAT_STALE = 15 * 60 * 1000;
 
@@ -245,6 +246,7 @@ function FilterChip({
 
 export default function MasterListScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [nationalityFilter, setNationalityFilter] = useState<NationalityFilter>("all");
@@ -347,7 +349,7 @@ export default function MasterListScreen() {
   const activeCount = [statusFilter, nationalityFilter, companyFilter, clientFilter].filter((v) => v !== "all").length;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* Search */}
       <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Feather name="search" size={18} color={colors.mutedForeground} />
