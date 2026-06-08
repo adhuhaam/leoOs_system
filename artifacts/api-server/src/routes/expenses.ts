@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, sql, type SQL } from "drizzle-orm";
+import { eq, desc, and, type SQL } from "drizzle-orm";
 import { db, expensesTable, expenseCategoriesTable } from "@workspace/db";
 import {
   CreateExpenseBody,
@@ -275,9 +275,6 @@ router.delete("/expenses/:id", requireRole("superuser", "admin"), async (req, re
   }
   res.sendStatus(204);
 });
-
-// suppress unused import warning when sql util is unused above
-void sql;
 
 // Postgres foreign-key violation — surfaced by node-postgres on the `code`
 // field. We map this to a clean 400 instead of letting it bubble up as 500.

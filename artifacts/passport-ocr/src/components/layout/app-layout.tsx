@@ -139,9 +139,7 @@ function AppSidebar() {
   const adminItems = visibleItems.filter((i) =>
     i.href === "/users" || i.href === "/permissions"
   );
-  const systemItems = visibleItems.filter(
-    (i) => i.href === "/settings" || i.href === "/system-settings",
-  );
+  const systemItems = visibleItems.filter((i) => i.href === "/settings");
 
   const groups = [
     { group: "Overview", items: overviewItems },
