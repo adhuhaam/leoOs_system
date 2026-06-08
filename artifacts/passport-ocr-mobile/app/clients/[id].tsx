@@ -17,7 +17,6 @@ import {
   FlatList,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -76,24 +75,26 @@ export default function ClientDetailScreen() {
     { query: { queryKey: getListPassportsQueryKey({ clientId: clientIdStr }), enabled: !!client } },
   );
 
-  const { data: invoicesData = [] } = useListBillingDocuments(
-    { clientId: id },
-    { query: { queryKey: getListBillingDocumentsQueryKey({ clientId: id }), enabled: !!client } },
-  );
-  const { data: quotationsData = [] } = useListBillingDocuments(
-    { clientId: id, kind: "quotation" },
-    { query: { queryKey: getListBillingDocumentsQueryKey({ clientId: id, kind: "quotation" }), enabled: !!client } },
+  // Fetch all accessible billing docs then filter client-side.
+  // Many invoices/quotations were created with only customerName set and
+  // clientId = null, so a pure FK filter misses them. We match by either
+  // the FK or a case-insensitive customerName match.
+  const { data: allDocsData = [], isLoading: docsLoading } = useListBillingDocuments(
+    {},
+    { query: { queryKey: getListBillingDocumentsQueryKey(), enabled: !!client } },
   );
 
   const clientDocs = useMemo<BillingDocumentSummary[]>(() => {
-    const byId = new Map<number, BillingDocumentSummary>();
-    for (const d of [...(invoicesData as BillingDocumentSummary[]), ...(quotationsData as BillingDocumentSummary[])]) {
-      byId.set(d.id, d);
-    }
-    return [...byId.values()].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }, [invoicesData, quotationsData]);
+    if (!client) return [];
+    const normalizedName = client.name.trim().toLowerCase();
+    return (allDocsData as BillingDocumentSummary[])
+      .filter(
+        (d) =>
+          d.clientId === id ||
+          d.customerName.trim().toLowerCase() === normalizedName,
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [allDocsData, id, client]);
 
   const candidates = candidatesData as Passport[];
 
@@ -241,6 +242,10 @@ export default function ClientDetailScreen() {
             )}
           />
         )
+      ) : docsLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
       ) : clientDocs.length === 0 ? (
         <View style={styles.center}>
           <Feather name="file-text" size={36} color={colors.mutedForeground} />
@@ -248,7 +253,7 @@ export default function ClientDetailScreen() {
             No documents
           </Text>
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            No invoices or quotations matched this client.
+            No invoices or quotations found for this client.
           </Text>
         </View>
       ) : (
@@ -379,9 +384,6 @@ function BillingRow({
     </Pressable>
   );
 }
-
-// kept for potential future use
-const _ScrollView = ScrollView;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
