@@ -58,10 +58,15 @@ export interface Passport {
   /** @nullable */
   agent?: string | null;
   /**
-   * Monthly agency salary in MVR (stored as numeric string)
+   * Monthly salary agreed with the employee in MVR (stored as numeric string)
    * @nullable
    */
   agencySalary?: string | null;
+  /**
+   * Monthly billing rate agreed with the client in MVR (stored as numeric string)
+   * @nullable
+   */
+  clientSalary?: string | null;
   createdAt: string;
   updatedAt: string;
 }

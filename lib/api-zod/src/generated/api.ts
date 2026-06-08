@@ -467,7 +467,15 @@ export const ListPassportsResponseItem = zod.object({
   agencySalary: zod
     .string()
     .nullish()
-    .describe("Monthly agency salary in MVR (stored as numeric string)"),
+    .describe(
+      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+    ),
+  clientSalary: zod
+    .string()
+    .nullish()
+    .describe(
+      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -552,7 +560,15 @@ export const GetPassportStatsResponse = zod.object({
       agencySalary: zod
         .string()
         .nullish()
-        .describe("Monthly agency salary in MVR (stored as numeric string)"),
+        .describe(
+          "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+        ),
+      clientSalary: zod
+        .string()
+        .nullish()
+        .describe(
+          "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+        ),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -619,7 +635,15 @@ export const GetPassportResponse = zod.object({
   agencySalary: zod
     .string()
     .nullish()
-    .describe("Monthly agency salary in MVR (stored as numeric string)"),
+    .describe(
+      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+    ),
+  clientSalary: zod
+    .string()
+    .nullish()
+    .describe(
+      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -645,7 +669,14 @@ export const UpdatePassportBody = zod.object({
   clientId: zod.number().nullish(),
   workPermitNumber: zod.string().nullish(),
   agent: zod.string().nullish(),
-  agencySalary: zod.string().nullish().describe("Monthly agency salary in MVR"),
+  agencySalary: zod
+    .string()
+    .nullish()
+    .describe("Monthly salary agreed with the employee in MVR"),
+  clientSalary: zod
+    .string()
+    .nullish()
+    .describe("Monthly billing rate agreed with the client in MVR"),
 });
 
 export const UpdatePassportResponse = zod.object({
@@ -701,7 +732,15 @@ export const UpdatePassportResponse = zod.object({
   agencySalary: zod
     .string()
     .nullish()
-    .describe("Monthly agency salary in MVR (stored as numeric string)"),
+    .describe(
+      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+    ),
+  clientSalary: zod
+    .string()
+    .nullish()
+    .describe(
+      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1635,6 +1674,7 @@ export const ListSalaryRecordsResponseItem = zod.object({
   updatedAt: zod.string().optional(),
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
+  clientSalary: zod.string().nullish(),
 });
 export const ListSalaryRecordsResponse = zod.array(
   ListSalaryRecordsResponseItem,
@@ -1704,6 +1744,7 @@ export const UpdateSalaryRecordResponse = zod.object({
   updatedAt: zod.string().optional(),
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
+  clientSalary: zod.string().nullish(),
 });
 
 /**

@@ -25,8 +25,13 @@ export interface PassportUpdate {
   /** @nullable */
   agent?: string | null;
   /**
-   * Monthly agency salary in MVR
+   * Monthly salary agreed with the employee in MVR
    * @nullable
    */
   agencySalary?: string | null;
+  /**
+   * Monthly billing rate agreed with the client in MVR
+   * @nullable
+   */
+  clientSalary?: string | null;
 }

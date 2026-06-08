@@ -2017,7 +2017,10 @@ components:
           type: ["string", "null"]
         agencySalary:
           type: ["string", "null"]
-          description: "Monthly agency salary in MVR (stored as numeric string)"
+          description: "Monthly salary agreed with the employee in MVR (stored as numeric string)"
+        clientSalary:
+          type: ["string", "null"]
+          description: "Monthly billing rate agreed with the client in MVR (stored as numeric string)"
         createdAt:
           type: string
         updatedAt:
@@ -2065,7 +2068,10 @@ components:
           type: ["string", "null"]
         agencySalary:
           type: ["string", "null"]
-          description: "Monthly agency salary in MVR"
+          description: "Monthly salary agreed with the employee in MVR"
+        clientSalary:
+          type: ["string", "null"]
+          description: "Monthly billing rate agreed with the client in MVR"
 
     PassportStats:
       type: object
@@ -2636,6 +2642,7 @@ components:
         updatedAt: { type: string }
         employeeName: { type: string, nullable: true }
         passportNumber: { type: string, nullable: true }
+        clientSalary: { type: string, nullable: true }
 
     CreateSalaryRecord:
       type: object

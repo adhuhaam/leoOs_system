@@ -385,6 +385,7 @@ interface FormState {
   workPermitNumber: string;
   agent: string;
   agencySalary: string;
+  clientSalary: string;
 }
 
 function toForm(p: Passport): FormState {
@@ -402,13 +403,14 @@ function toForm(p: Passport): FormState {
     workPermitNumber: p.workPermitNumber ?? "",
     agent:           p.agent ?? "",
     agencySalary:    p.agencySalary ?? "",
+    clientSalary:    p.clientSalary ?? "",
   };
 }
 
 const EMPTY_FORM: FormState = {
   fullName: "", passportNumber: "", dateOfBirth: "", dateOfIssue: "",
   dateOfExpiry: "", nationality: "", address: "", status: "processing",
-  companyId: null, clientId: null, workPermitNumber: "", agent: "", agencySalary: "",
+  companyId: null, clientId: null, workPermitNumber: "", agent: "", agencySalary: "", clientSalary: "",
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -505,6 +507,7 @@ export default function PassportDetailScreen() {
           workPermitNumber: form.workPermitNumber || null,
           agent:           form.agent || null,
           agencySalary:    form.agencySalary || null,
+          clientSalary:    form.clientSalary || null,
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/passports"] });
@@ -774,10 +777,27 @@ export default function PassportDetailScreen() {
 
         {/* Agency salary */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENCY SALARY (MVR / month)</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE SALARY (MVR / month)</Text>
           <TextInput
             value={form.agencySalary}
             onChangeText={(v) => setField("agencySalary", v)}
+            placeholder="0.00"
+            placeholderTextColor={colors.mutedForeground}
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
+            ]}
+          />
+        </View>
+
+        {/* Client billing rate */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR / month)</Text>
+          <TextInput
+            value={form.clientSalary}
+            onChangeText={(v) => setField("clientSalary", v)}
             placeholder="0.00"
             placeholderTextColor={colors.mutedForeground}
             keyboardType="decimal-pad"

@@ -27,7 +27,7 @@ function computeNet(data: {
 
 function salaryShape(
   r: typeof salaryRecordsTable.$inferSelect,
-  passport?: { fullName: string | null; passportNumber: string | null } | null,
+  passport?: { fullName: string | null; passportNumber: string | null; clientSalary: string | null } | null,
 ) {
   return {
     id: r.id,
@@ -49,6 +49,7 @@ function salaryShape(
     updatedAt: r.updatedAt.toISOString(),
     employeeName: passport?.fullName ?? null,
     passportNumber: passport?.passportNumber ?? null,
+    clientSalary: passport?.clientSalary ?? null,
   };
 }
 
@@ -73,6 +74,7 @@ router.get("/salary-records", async (req, res) => {
           record: salaryRecordsTable,
           fullName: passportsTable.fullName,
           passportNumber: passportsTable.passportNumber,
+          clientSalary: passportsTable.clientSalary,
         })
         .from(salaryRecordsTable)
         .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
@@ -90,7 +92,7 @@ router.get("/salary-records", async (req, res) => {
 
       return res.json(
         rows.map((r) =>
-          salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber }),
+          salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber, clientSalary: r.clientSalary }),
         ),
       );
     }
@@ -112,6 +114,7 @@ router.get("/salary-records", async (req, res) => {
       record: salaryRecordsTable,
       fullName: passportsTable.fullName,
       passportNumber: passportsTable.passportNumber,
+      clientSalary: passportsTable.clientSalary,
     })
     .from(salaryRecordsTable)
     .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
@@ -120,7 +123,7 @@ router.get("/salary-records", async (req, res) => {
 
   return res.json(
     rows.map((r) =>
-      salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber }),
+      salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber, clientSalary: r.clientSalary }),
     ),
   );
 });
@@ -170,7 +173,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
 
     const passport = await db.query.passportsTable.findFirst({
       where: eq(passportsTable.id, data.passportId),
-      columns: { fullName: true, passportNumber: true },
+      columns: { fullName: true, passportNumber: true, clientSalary: true },
     });
 
     return res.status(201).json(salaryShape(row, passport));
@@ -222,7 +225,7 @@ router.patch("/salary-records/:id", requireRole("superuser", "admin"), async (re
 
   const passport = await db.query.passportsTable.findFirst({
     where: eq(passportsTable.id, updated.passportId),
-    columns: { fullName: true, passportNumber: true },
+    columns: { fullName: true, passportNumber: true, clientSalary: true },
   });
 
   return res.json(salaryShape(updated, passport));

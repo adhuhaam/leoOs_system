@@ -1301,7 +1301,7 @@ function SalaryPickerDialog({
       description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
       detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
       qty: r.daysWorked && r.daysWorked > 0 ? String(r.daysWorked) : "1",
-      rate: r.netSalary ?? "0",
+      rate: r.clientSalary ?? r.netSalary ?? "0",
     }));
     onAdd(items, chosen.map((r) => r.id));
   };
@@ -1314,7 +1314,7 @@ function SalaryPickerDialog({
         <DialogHeader>
           <DialogTitle>From Salary Records</DialogTitle>
           <DialogDescription>
-            Select confirmed salary records. Each will be added as a line item at its net salary amount.
+            Select confirmed salary records. Each will be added as a line item using the client billing rate.
           </DialogDescription>
         </DialogHeader>
 

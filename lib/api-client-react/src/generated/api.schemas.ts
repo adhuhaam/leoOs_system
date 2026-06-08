@@ -391,10 +391,15 @@ export interface Passport {
   /** @nullable */
   agent?: string | null;
   /**
-   * Monthly agency salary in MVR (stored as numeric string)
+   * Monthly salary agreed with the employee in MVR (stored as numeric string)
    * @nullable
    */
   agencySalary?: string | null;
+  /**
+   * Monthly billing rate agreed with the client in MVR (stored as numeric string)
+   * @nullable
+   */
+  clientSalary?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -424,10 +429,15 @@ export interface PassportUpdate {
   /** @nullable */
   agent?: string | null;
   /**
-   * Monthly agency salary in MVR
+   * Monthly salary agreed with the employee in MVR
    * @nullable
    */
   agencySalary?: string | null;
+  /**
+   * Monthly billing rate agreed with the client in MVR
+   * @nullable
+   */
+  clientSalary?: string | null;
 }
 
 export interface PassportStats {
@@ -963,6 +973,7 @@ export interface SalaryRecord {
   updatedAt?: string;
   employeeName?: string | null;
   passportNumber?: string | null;
+  clientSalary?: string | null;
 }
 
 export interface CreateSalaryRecord {

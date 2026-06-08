@@ -24,6 +24,7 @@ export const passportsTable = pgTable("passports", {
   workPermitNumber: text("work_permit_number"),
   agent: text("agent"),
   agencySalary: numeric("agency_salary", { precision: 12, scale: 2 }),
+  clientSalary: numeric("client_salary", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
