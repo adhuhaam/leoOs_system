@@ -26,6 +26,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
+import { CalendarPicker, todayISO } from "@/components/CalendarPicker";
 import { useColors } from "@/hooks/useColors";
 
 export type LineItemDraft = {
@@ -59,7 +60,7 @@ export const EMPTY_FORM: BillingFormState = {
   customerName: "",
   customerAddress: "",
   customerTin: "",
-  issueDate: "",
+  issueDate: todayISO(),
   dueDate: "",
   terms: "",
   gstRate: "0",
@@ -115,6 +116,8 @@ export default function BillingDocumentForm({
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [employeeModalVisible, setEmployeeModalVisible] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(new Set());
+  const [showIssueCal, setShowIssueCal] = useState(false);
+  const [showDueCal, setShowDueCal] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
@@ -409,26 +412,70 @@ export default function BillingDocumentForm({
         />
       </View>
 
-      {/* Dates */}
-      <View style={styles.row2}>
-        <View style={[styles.section, { flex: 1 }]}>
-          <Label text="Issue Date *" />
-          <Field
+      {/* Issue Date */}
+      <View style={styles.section}>
+        <Label text="Issue Date *" />
+        <Pressable
+          onPress={() => { setShowIssueCal((v) => !v); setShowDueCal(false); }}
+          style={[
+            styles.dateTrigger,
+            { backgroundColor: colors.card, borderColor: form.issueDate ? colors.primary : colors.border },
+          ]}
+        >
+          <Feather name="calendar" size={16} color={form.issueDate ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.dateTriggerText, { color: form.issueDate ? colors.foreground : colors.mutedForeground, flex: 1 }]}>
+            {form.issueDate || "Pick date"}
+          </Text>
+          {form.issueDate ? (
+            <Pressable
+              onPress={(e) => { e.stopPropagation?.(); setF("issueDate", ""); setShowIssueCal(false); }}
+              hitSlop={8}
+            >
+              <Feather name="x" size={14} color={colors.mutedForeground} />
+            </Pressable>
+          ) : (
+            <Feather name={showIssueCal ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
+          )}
+        </Pressable>
+        {showIssueCal && (
+          <CalendarPicker
             value={form.issueDate}
-            onChangeText={(v) => setF("issueDate", v)}
-            placeholder="YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
+            onChange={(d) => { setF("issueDate", d); if (d) setShowIssueCal(false); }}
           />
-        </View>
-        <View style={[styles.section, { flex: 1 }]}>
-          <Label text="Due Date" />
-          <Field
+        )}
+      </View>
+
+      {/* Due Date */}
+      <View style={styles.section}>
+        <Label text="Due Date" />
+        <Pressable
+          onPress={() => { setShowDueCal((v) => !v); setShowIssueCal(false); }}
+          style={[
+            styles.dateTrigger,
+            { backgroundColor: colors.card, borderColor: form.dueDate ? colors.primary : colors.border },
+          ]}
+        >
+          <Feather name="calendar" size={16} color={form.dueDate ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.dateTriggerText, { color: form.dueDate ? colors.foreground : colors.mutedForeground, flex: 1 }]}>
+            {form.dueDate || "Pick date (optional)"}
+          </Text>
+          {form.dueDate ? (
+            <Pressable
+              onPress={(e) => { e.stopPropagation?.(); setF("dueDate", ""); setShowDueCal(false); }}
+              hitSlop={8}
+            >
+              <Feather name="x" size={14} color={colors.mutedForeground} />
+            </Pressable>
+          ) : (
+            <Feather name={showDueCal ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
+          )}
+        </Pressable>
+        {showDueCal && (
+          <CalendarPicker
             value={form.dueDate}
-            onChangeText={(v) => setF("dueDate", v)}
-            placeholder="YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
+            onChange={(d) => { setF("dueDate", d); if (d) setShowDueCal(false); }}
           />
-        </View>
+        )}
       </View>
 
       {/* Terms */}
@@ -1314,6 +1361,17 @@ const styles = StyleSheet.create({
   statusRowText: { fontSize: 15 },
   cancelBtn: { marginTop: 8, padding: 14, borderRadius: 12, borderWidth: 1, alignItems: "center" },
   cancelText: { fontSize: 15, },
+  // Date pickers
+  dateTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateTriggerText: { fontSize: 15 },
   // Employee picker
   selectAllRow: {
     flexDirection: "row",
