@@ -130,7 +130,7 @@ const TASK_STATUS_CONFIG = {
   done:        { label: "Done",        color: "#10B981", icon: "check-circle" as const },
 };
 
-type TaskFilter = "all" | "today" | "upcoming" | "done";
+type TaskFilter = "all" | "today" | "overdue" | "upcoming" | "done";
 type UploadFilter = "all" | "processing" | "active" | "attention";
 type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string; status: string };
 
@@ -395,12 +395,25 @@ export default function DashboardScreen() {
   }, [topTasks, todayStr]);
 
   const filteredTasks = useMemo(() => {
-    if (taskFilter === "all") return topTasks.filter((t) => t.status !== "done");
     if (taskFilter === "done") return topTasks.filter((t) => t.status === "done");
     if (taskFilter === "today") return topTasks.filter((t) => t.status !== "done" && t.dueDate === todayStr);
+    if (taskFilter === "overdue") return topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate < todayStr);
     if (taskFilter === "upcoming") return topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate > todayStr);
-    return topTasks;
+    const open = topTasks.filter((t) => t.status !== "done");
+    return [...open].sort((a, b) => {
+      const aOv = a.dueDate && a.dueDate < todayStr ? 0 : 1;
+      const bOv = b.dueDate && b.dueDate < todayStr ? 0 : 1;
+      return aOv - bOv;
+    });
   }, [topTasks, taskFilter, todayStr]);
+
+  const filterCounts = useMemo(() => ({
+    all:      topTasks.filter((t) => t.status !== "done").length,
+    today:    topTasks.filter((t) => t.status !== "done" && t.dueDate === todayStr).length,
+    overdue:  topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate < todayStr).length,
+    upcoming: topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate > todayStr).length,
+    done:     topTasks.filter((t) => t.status === "done").length,
+  }), [topTasks, todayStr]);
 
   const createTask = useCreateTask({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }) },
@@ -421,10 +434,26 @@ export default function DashboardScreen() {
     setNewTaskPriority("medium");
   }
 
-  function toggleTask(t: Task) {
-    const next = t.status === "done" ? "todo" : "done";
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  function cycleTaskStatus(t: Task) {
+    const next: Task["status"] = t.status === "todo" ? "in_progress" : t.status === "in_progress" ? "done" : "todo";
+    void Haptics.impactAsync(next === "done" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
     updateTask.mutate({ id: t.id, data: { status: next } });
+  }
+
+  function cyclePriority(t: Task) {
+    const next: Task["priority"] = t.priority === "low" ? "medium" : t.priority === "medium" ? "high" : "low";
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    updateTask.mutate({ id: t.id, data: { priority: next } });
+  }
+
+  function clearDoneTasks() {
+    const doneTasks = topTasks.filter((t) => t.status === "done");
+    if (!doneTasks.length) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert("Clear completed?", `Remove ${doneTasks.length} completed task${doneTasks.length === 1 ? "" : "s"} permanently.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear all", style: "destructive", onPress: () => doneTasks.forEach((t) => deleteTask.mutate({ id: t.id })) },
+    ]);
   }
 
   function handleDeleteTask(t: Task) {
@@ -506,37 +535,60 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {/* Task stat chips */}
+        {/* Task stat chips — tap to filter */}
         <View style={styles.taskStatRow}>
           {([
-            { label: "Open",      value: taskStats.open,     color: "#0F172A" },
-            { label: "Due Today", value: taskStats.dueToday, color: "#F59E0B" },
-            { label: "Overdue",   value: taskStats.overdue,  color: "#EF4444" },
-            { label: "Done",      value: taskStats.done,     color: "#10B981" },
-          ] as const).map((s) => (
-            <View key={s.label} style={[styles.taskStatChip, { backgroundColor: s.color + "12" }]}>
-              <Text style={[styles.taskStatVal, { color: s.color }]}>{s.value}</Text>
-              <Text style={[styles.taskStatLbl, { color: s.color }]}>{s.label}</Text>
-            </View>
-          ))}
+            { label: "Open",      value: taskStats.open,     color: "#0F172A", filter: "all"     as TaskFilter },
+            { label: "Due Today", value: taskStats.dueToday, color: "#F59E0B", filter: "today"   as TaskFilter },
+            { label: "Overdue",   value: taskStats.overdue,  color: "#EF4444", filter: "overdue" as TaskFilter },
+            { label: "Done",      value: taskStats.done,     color: "#10B981", filter: "done"    as TaskFilter },
+          ]).map((s) => {
+            const active = taskFilter === s.filter;
+            return (
+              <Pressable
+                key={s.label}
+                onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTaskFilter(active ? "all" : s.filter); }}
+                style={({ pressed }) => [
+                  styles.taskStatChip,
+                  { backgroundColor: s.color + (active ? "20" : "12"), opacity: pressed ? 0.8 : 1 },
+                  active && { borderWidth: 1.5, borderColor: s.color },
+                ]}
+              >
+                <Text style={[styles.taskStatVal, { color: s.color }]}>{s.value}</Text>
+                <Text style={[styles.taskStatLbl, { color: s.color }]}>{s.label}</Text>
+                {active && <View style={[styles.statChipActiveDot, { backgroundColor: s.color }]} />}
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Filter tabs */}
+        {/* Filter tabs with counts */}
         <View style={[styles.taskFilterRow, { backgroundColor: colors.secondary, borderRadius: 12 }]}>
-          {(["all", "today", "upcoming", "done"] as TaskFilter[]).map((f) => (
-            <Pressable
-              key={f}
-              onPress={() => setTaskFilter(f)}
-              style={[
-                styles.taskFilterBtn,
-                taskFilter === f && { backgroundColor: colors.card, shadowColor: "#000" },
-              ]}
-            >
-              <Text style={[styles.taskFilterText, { color: taskFilter === f ? colors.foreground : colors.mutedForeground }]}>
-                {f === "all" ? "All" : f === "today" ? "Today" : f === "upcoming" ? "Upcoming" : "Done"}
-              </Text>
-            </Pressable>
-          ))}
+          {([
+            { key: "all",      label: "All",      count: filterCounts.all,      accent: colors.foreground },
+            { key: "today",    label: "Today",    count: filterCounts.today,    accent: "#F59E0B" },
+            { key: "overdue",  label: "Overdue",  count: filterCounts.overdue,  accent: "#EF4444" },
+            { key: "upcoming", label: "Upcoming", count: filterCounts.upcoming, accent: "#6366F1" },
+            { key: "done",     label: "Done",     count: filterCounts.done,     accent: "#10B981" },
+          ] as const).map((f) => {
+            const active = taskFilter === f.key;
+            return (
+              <Pressable
+                key={f.key}
+                onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTaskFilter(f.key); }}
+                style={[styles.taskFilterBtn, active && { backgroundColor: colors.card, shadowColor: "#000" }]}
+              >
+                <Text style={[styles.taskFilterText, { color: active ? colors.foreground : colors.mutedForeground, fontWeight: active ? "700" : "400" }]}>
+                  {f.label}
+                </Text>
+                {f.count > 0 && (
+                  <View style={[styles.filterCountBadge, { backgroundColor: active ? f.accent + "20" : colors.muted }]}>
+                    <Text style={[styles.filterCountText, { color: active ? f.accent : colors.mutedForeground }]}>{f.count}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Quick-add */}
@@ -610,7 +662,7 @@ export default function DashboardScreen() {
           <View style={[styles.taskEmpty, { borderColor: colors.border }]}>
             <Feather name="check-circle" size={24} color={colors.mutedForeground} />
             <Text style={[styles.taskEmptyText, { color: colors.mutedForeground }]}>
-              {taskFilter === "done" ? "No completed tasks" : taskFilter === "today" ? "Nothing due today" : taskFilter === "upcoming" ? "Nothing upcoming" : "All caught up!"}
+              {taskFilter === "done" ? "No completed tasks" : taskFilter === "today" ? "Nothing due today" : taskFilter === "overdue" ? "No overdue tasks 🎉" : taskFilter === "upcoming" ? "Nothing upcoming" : "All caught up!"}
             </Text>
           </View>
         ) : (
@@ -645,7 +697,7 @@ export default function DashboardScreen() {
                     isInProgress && { borderLeftWidth: 3, borderLeftColor: "#F59E0B" },
                   ]}
                 >
-                  <Pressable onPress={() => toggleTask(t)} hitSlop={10} style={styles.taskCheckWrap}>
+                  <Pressable onPress={() => cycleTaskStatus(t)} hitSlop={10} style={styles.taskCheckWrap}>
                     {isInProgress && !isDone ? (
                       <View style={[styles.taskCheck, { borderColor: "#F59E0B", backgroundColor: "#F59E0B15" }]}>
                         <Feather name="clock" size={10} color="#F59E0B" />
@@ -661,10 +713,14 @@ export default function DashboardScreen() {
                       <Text style={[styles.taskTitle, { color: isDone ? colors.mutedForeground : colors.foreground }, isDone && styles.taskDoneText]} numberOfLines={2}>
                         {t.title}
                       </Text>
-                      <View style={[styles.priorityBadge, { backgroundColor: pc + "20" }]}>
+                      <Pressable
+                        onPress={(e) => { e.stopPropagation(); cyclePriority(t); }}
+                        hitSlop={8}
+                        style={[styles.priorityBadge, { backgroundColor: pc + "20" }]}
+                      >
                         <View style={[styles.priorityDot, { backgroundColor: pc }]} />
                         <Text style={[styles.priorityText, { color: pc }]}>{t.priority.toUpperCase()}</Text>
-                      </View>
+                      </Pressable>
                     </View>
                     {t.notes ? (
                       <Text style={[styles.taskNotes, { color: colors.mutedForeground }]} numberOfLines={1}>{t.notes}</Text>
@@ -699,6 +755,19 @@ export default function DashboardScreen() {
               );
             })}
           </View>
+        )}
+
+        {/* Clear done bulk action */}
+        {taskFilter === "done" && filterCounts.done > 0 && (
+          <Pressable
+            onPress={clearDoneTasks}
+            style={({ pressed }) => [styles.clearDoneBtn, { backgroundColor: "#EF444415", opacity: pressed ? 0.75 : 1 }]}
+          >
+            <Feather name="trash-2" size={13} color="#EF4444" />
+            <Text style={[styles.clearDoneBtnText, { color: "#EF4444" }]}>
+              Clear {filterCounts.done} completed task{filterCounts.done === 1 ? "" : "s"}
+            </Text>
+          </Pressable>
         )}
       </View>
 
@@ -1723,15 +1792,21 @@ const styles = StyleSheet.create({
   },
   taskStatVal: { fontSize: 20, },
   taskStatLbl: { fontSize: 9, textTransform: "uppercase" },
+  statChipActiveDot: { width: 4, height: 4, borderRadius: 2, marginTop: 1 },
 
   taskFilterRow: {
     flexDirection: "row", padding: 3, gap: 2,
   },
   taskFilterBtn: {
-    flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10,
+    flex: 1, paddingVertical: 7, paddingHorizontal: 2, alignItems: "center", borderRadius: 10, gap: 3,
     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 0,
   },
-  taskFilterText: { fontSize: 12, },
+  taskFilterText: { fontSize: 11, },
+  filterCountBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 8, minWidth: 18, alignItems: "center" },
+  filterCountText: { fontSize: 10, fontWeight: "700" },
+
+  clearDoneBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11, borderRadius: 12 },
+  clearDoneBtnText: { fontSize: 13, fontWeight: "600" },
 
   addTaskRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
