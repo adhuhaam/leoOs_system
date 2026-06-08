@@ -31,8 +31,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Image,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -858,7 +860,10 @@ export default function DashboardScreen() {
       onRequestClose={() => setEditDraft(null)}
     >
       {editDraft && (
-        <View style={[styles.editModal, { backgroundColor: colors.background }]}>
+        <KeyboardAvoidingView
+          style={[styles.editModal, { backgroundColor: colors.background }]}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={[styles.editHeader, { borderBottomColor: colors.border }]}>
             <Pressable onPress={() => setEditDraft(null)}>
               <Text style={[styles.editCancel, { color: colors.mutedForeground }]}>Cancel</Text>
@@ -868,12 +873,17 @@ export default function DashboardScreen() {
               <Text style={[styles.editSave, { color: colors.primary }]}>Save</Text>
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={styles.editBody} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.editBody}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
             <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Title</Text>
             <TextInput
               style={[styles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
               value={editDraft.title}
               onChangeText={(v) => setEditDraft((d) => d ? { ...d, title: v } : d)}
+              onFocus={() => setShowCalInModal(false)}
               autoFocus
             />
             <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Notes</Text>
@@ -881,6 +891,7 @@ export default function DashboardScreen() {
               style={[styles.editInput, styles.editMultiline, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
               value={editDraft.notes}
               onChangeText={(v) => setEditDraft((d) => d ? { ...d, notes: v } : d)}
+              onFocus={() => setShowCalInModal(false)}
               multiline
               numberOfLines={3}
               placeholder="Optional notes…"
@@ -946,7 +957,7 @@ export default function DashboardScreen() {
               />
             )}
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       )}
     </Modal>
     </>
