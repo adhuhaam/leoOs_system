@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -23,6 +22,14 @@ import { useAuth } from "@/lib/auth";
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Env-var fallbacks — set EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID and
+// EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS in Replit Secrets for always-on Google sign-in
+// without needing to configure them through System Settings.
+const ENV_GOOGLE_CLIENT_ID_ANDROID =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? undefined;
+const ENV_GOOGLE_CLIENT_ID_IOS =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? undefined;
+
 export default function LoginScreen() {
   const colors = useColors();
   const { login, loginWithGoogle } = useAuth();
@@ -31,12 +38,14 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const passwordRef = useRef<TextInput>(null);
 
+  // Merge DB-configured client IDs with env-var fallbacks
   const { data: googleIds } = useGetGoogleClientIds();
-  const googleClientId = googleIds?.googleClientId ?? undefined;
-  const googleClientIdIos = googleIds?.googleClientIdIos ?? undefined;
-  const hasGoogleSignIn = Boolean(googleClientId);
+  const googleClientId = googleIds?.googleClientId ?? ENV_GOOGLE_CLIENT_ID_ANDROID ?? undefined;
+  const googleClientIdIos = googleIds?.googleClientIdIos ?? ENV_GOOGLE_CLIENT_ID_IOS ?? undefined;
+  const hasGoogleSignIn = Boolean(googleClientId || ENV_GOOGLE_CLIENT_ID_ANDROID);
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
     androidClientId: googleClientId,
@@ -53,34 +62,38 @@ export default function LoginScreen() {
     if (googleResponse.type === "success") {
       const idToken = googleResponse.authentication?.idToken;
       if (!idToken) {
-        Alert.alert("Google Sign-In failed", "Could not retrieve identity token. Please try again.");
+        setError("Google Sign-In failed: could not retrieve identity token. Please try again.");
         return;
       }
       setGoogleSubmitting(true);
+      setError(null);
       loginWithGoogle(idToken)
         .then(() => router.replace("/"))
         .catch((err) => {
           const msg = err instanceof Error ? err.message : "Google sign-in failed.";
-          Alert.alert("Sign in failed", msg);
+          setError(msg);
         })
         .finally(() => setGoogleSubmitting(false));
     } else if (googleResponse.type === "error") {
-      Alert.alert("Google Sign-In error", googleResponse.error?.message ?? "Unknown error");
+      setError(googleResponse.error?.message ?? "Google Sign-In failed. Please try again.");
     }
   }, [googleResponse]);
 
   async function onSubmit() {
     if (!email.trim() || !password.trim() || submitting) return;
+    setError(null);
     setSubmitting(true);
     try {
       await login(email.trim(), password.trim());
       router.replace("/");
     } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = (err as { status?: number })?.status;
       if (status === 403) {
-        Alert.alert("Account pending approval", "Your account has not been approved yet. Please contact an admin.");
+        setError("Your account is pending approval. Please contact an admin.");
+      } else if (status === 401) {
+        setError("Invalid email or password.");
       } else {
-        Alert.alert("Sign in failed", err instanceof Error ? err.message : "Invalid credentials.");
+        setError(err instanceof Error ? err.message : "Sign in failed. Please try again.");
       }
     } finally {
       setSubmitting(false);
@@ -114,6 +127,14 @@ export default function LoginScreen() {
             </Text>
           </View>
 
+          {/* Inline error banner */}
+          {error && (
+            <View style={[styles.errorBanner, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+              <Feather name="alert-circle" size={15} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           {/* Form */}
           <View style={styles.form}>
             {/* Email */}
@@ -125,7 +146,7 @@ export default function LoginScreen() {
                 <Feather name="mail" size={17} color={colors.mutedForeground} />
                 <TextInput
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(v) => { setEmail(v); setError(null); }}
                   placeholder="you@example.com"
                   placeholderTextColor={colors.mutedForeground}
                   keyboardType="email-address"
@@ -148,7 +169,7 @@ export default function LoginScreen() {
                 <TextInput
                   ref={passwordRef}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(v) => { setPassword(v); setError(null); }}
                   placeholder="••••••••"
                   placeholderTextColor={colors.mutedForeground}
                   secureTextEntry={!showPassword}
@@ -200,12 +221,10 @@ export default function LoginScreen() {
             <Pressable
               onPress={() => {
                 if (!hasGoogleSignIn || !googleRequest) {
-                  Alert.alert(
-                    "Not configured",
-                    "Google Sign-In has not been set up by your admin.",
-                  );
+                  setError("Google Sign-In is not configured. Please contact your admin.");
                   return;
                 }
+                setError(null);
                 googlePromptAsync();
               }}
               disabled={googleSubmitting}
@@ -259,6 +278,23 @@ const styles = StyleSheet.create({
   },
   wordmark: { fontSize: 30, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
   tagline: { fontSize: 15, fontFamily: "Inter_400Regular" },
+
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#DC2626",
+    lineHeight: 18,
+  },
 
   form: { gap: 16 },
   fieldWrap: { gap: 6 },
