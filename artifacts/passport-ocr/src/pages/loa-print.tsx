@@ -31,7 +31,7 @@ function FieldRow({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11.5px] font-bold text-slate-900 mt-5 mb-1 border-b border-slate-200 pb-0.5">
+    <p className="print-section-header text-[11.5px] font-bold text-slate-900 mt-5 mb-1 border-b border-slate-200 pb-0.5">
       {children}
     </p>
   );
@@ -83,24 +83,46 @@ export default function LoaPrintPage() {
   // Print-only stylesheet — same technique as billing-print.tsx.
   useEffect(() => {
     const css = `
-      @page { size: A4; margin: 14mm; }
+      @page { size: A4 portrait; margin: 14mm; }
       @media print {
-        html, body { background: white !important; }
+        html, body {
+          background: white !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
         .no-print { display: none !important; }
         .print-outer {
           background: white !important;
           padding: 0 !important;
           margin: 0 !important;
           min-height: 0 !important;
+          width: 100% !important;
         }
         .print-shell {
           box-shadow: none !important;
           border: none !important;
           padding: 0 !important;
-          max-width: none !important;
+          max-width: 100% !important;
+          width: 100% !important;
           margin: 0 !important;
         }
-        .print-page { padding: 0 !important; }
+        .print-page {
+          padding: 0 !important;
+          font-size: 10pt !important;
+          line-height: 1.5 !important;
+        }
+        .print-letterhead img {
+          max-width: 100% !important;
+          width: 100% !important;
+          height: auto !important;
+          max-height: 80pt !important;
+          object-fit: contain !important;
+        }
+        .print-section-header {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+        }
       }
     `;
     const style = document.createElement("style");
@@ -156,11 +178,11 @@ export default function LoaPrintPage() {
 
           {/* ── Company letterhead ── */}
           {letterheadImage ? (
-            <div className="flex justify-center mb-4">
+            <div className="print-letterhead flex justify-center mb-4">
               <img
                 src={letterheadImage}
                 alt={companyName}
-                className="max-h-24 max-w-[420px] object-contain"
+                className="max-h-28 w-full max-w-full object-contain"
               />
             </div>
           ) : (
