@@ -440,6 +440,14 @@ export interface Company {
    * @nullable
    */
   signatureImage?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankAccountHolder?: string | null;
+  /** @nullable */
+  bankSwiftCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -455,6 +463,10 @@ export interface CompanyInput {
   signatoryDesignation?: string;
   letterheadImage?: string;
   signatureImage?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountHolder?: string;
+  bankSwiftCode?: string;
 }
 
 export interface CompanyUpdate {
@@ -470,6 +482,14 @@ export interface CompanyUpdate {
   letterheadImage?: string | null;
   /** @nullable */
   signatureImage?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankAccountHolder?: string | null;
+  /** @nullable */
+  bankSwiftCode?: string | null;
 }
 
 export interface Loa {
@@ -607,7 +627,25 @@ export interface BillingDocumentSummary {
   companyId: number;
   companyName: string;
   /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyEmail?: string | null;
+  /** @nullable */
+  companyPhone?: string | null;
+  /** @nullable */
+  companyRegistrationNumber?: string | null;
+  /** @nullable */
+  companyBankName?: string | null;
+  /** @nullable */
+  companyBankAccountNumber?: string | null;
+  /** @nullable */
+  companyBankAccountHolder?: string | null;
+  /** @nullable */
+  companyBankSwiftCode?: string | null;
+  /** @nullable */
   clientId?: number | null;
+  /** @nullable */
+  clientName?: string | null;
   customerName: string;
   /** @nullable */
   customerAddress?: string | null;
@@ -662,7 +700,7 @@ export const BillingDocumentInputKind = {
 
 export interface BillingDocumentInput {
   kind: BillingDocumentInputKind;
-  companyId?: number;
+  companyId: number;
   /** @nullable */
   clientId?: number | null;
   /** @minLength 1 */

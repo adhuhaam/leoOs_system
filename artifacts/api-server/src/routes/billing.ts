@@ -150,7 +150,16 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
       number: billingDocumentsTable.number,
       companyId: billingDocumentsTable.companyId,
       companyName: companiesTable.name,
+      companyAddress: companiesTable.address,
+      companyEmail: companiesTable.email,
+      companyPhone: companiesTable.phone,
+      companyRegistrationNumber: companiesTable.registrationNumber,
+      companyBankName: companiesTable.bankName,
+      companyBankAccountNumber: companiesTable.bankAccountNumber,
+      companyBankAccountHolder: companiesTable.bankAccountHolder,
+      companyBankSwiftCode: companiesTable.bankSwiftCode,
       clientId: billingDocumentsTable.clientId,
+      clientName: clientsTable.name,
       customerName: billingDocumentsTable.customerName,
       customerAddress: billingDocumentsTable.customerAddress,
       customerTin: billingDocumentsTable.customerTin,
@@ -166,6 +175,7 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
     })
     .from(billingDocumentsTable)
     .innerJoin(companiesTable, eq(billingDocumentsTable.companyId, companiesTable.id))
+    .leftJoin(clientsTable, eq(billingDocumentsTable.clientId, clientsTable.id))
     .where(where)
     .orderBy(desc(billingDocumentsTable.createdAt));
 
@@ -214,8 +224,17 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       kind: billingDocumentsTable.kind,
       number: billingDocumentsTable.number,
       companyId: billingDocumentsTable.companyId,
-      clientId: billingDocumentsTable.clientId,
       companyName: companiesTable.name,
+      companyAddress: companiesTable.address,
+      companyEmail: companiesTable.email,
+      companyPhone: companiesTable.phone,
+      companyRegistrationNumber: companiesTable.registrationNumber,
+      companyBankName: companiesTable.bankName,
+      companyBankAccountNumber: companiesTable.bankAccountNumber,
+      companyBankAccountHolder: companiesTable.bankAccountHolder,
+      companyBankSwiftCode: companiesTable.bankSwiftCode,
+      clientId: billingDocumentsTable.clientId,
+      clientName: clientsTable.name,
       customerName: billingDocumentsTable.customerName,
       customerAddress: billingDocumentsTable.customerAddress,
       customerTin: billingDocumentsTable.customerTin,
@@ -231,6 +250,7 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
     })
     .from(billingDocumentsTable)
     .innerJoin(companiesTable, eq(billingDocumentsTable.companyId, companiesTable.id))
+    .leftJoin(clientsTable, eq(billingDocumentsTable.clientId, clientsTable.id))
     .where(eq(billingDocumentsTable.id, id))
     .limit(1);
   if (docRows.length === 0) {
@@ -336,7 +356,7 @@ router.post("/billing/documents", requireRole("superuser", "admin"), async (req,
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const result = await db.transaction(async (tx) => {
-        const issuerId = await getOrCreateIssuerId(tx);
+        const issuerId = data.companyId != null ? data.companyId : await getOrCreateIssuerId(tx);
         const number = await allocateNumber(data.kind as "invoice" | "quotation", tx);
         const inserted = await tx
           .insert(billingDocumentsTable)
@@ -396,7 +416,7 @@ router.patch("/billing/documents/:id", requireRole("superuser", "admin"), async 
 
   // Build patch for the document row
   const patch: Record<string, unknown> = {};
-  // companyId is intentionally ignored on update — issuer is fixed.
+  if (data.companyId !== undefined) patch.companyId = data.companyId;
   if (data.customerName !== undefined) patch.customerName = data.customerName.trim();
   if (data.customerAddress !== undefined)
     patch.customerAddress = data.customerAddress?.trim() || null;

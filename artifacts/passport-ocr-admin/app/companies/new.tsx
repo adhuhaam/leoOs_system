@@ -36,6 +36,10 @@ const FIELDS: Field[] = [
   { key: "registrationNumber", label: "Registration number" },
   { key: "signatoryName", label: "Signatory name" },
   { key: "signatoryDesignation", label: "Signatory designation" },
+  { key: "bankName", label: "Bank name" },
+  { key: "bankAccountHolder", label: "Account holder" },
+  { key: "bankAccountNumber", label: "Account number" },
+  { key: "bankSwiftCode", label: "SWIFT / BIC code" },
 ];
 
 type FormState = {
@@ -47,6 +51,10 @@ type FormState = {
   registrationNumber: string;
   signatoryName: string;
   signatoryDesignation: string;
+  bankName: string;
+  bankAccountHolder: string;
+  bankAccountNumber: string;
+  bankSwiftCode: string;
 };
 
 const EMPTY: FormState = {
@@ -58,6 +66,10 @@ const EMPTY: FormState = {
   registrationNumber: "",
   signatoryName: "",
   signatoryDesignation: "",
+  bankName: "",
+  bankAccountHolder: "",
+  bankAccountNumber: "",
+  bankSwiftCode: "",
 };
 
 export default function NewCompanyScreen() {
@@ -86,6 +98,10 @@ export default function NewCompanyScreen() {
           registrationNumber: form.registrationNumber.trim() || undefined,
           signatoryName: form.signatoryName.trim() || undefined,
           signatoryDesignation: form.signatoryDesignation.trim() || undefined,
+          bankName: form.bankName.trim() || undefined,
+          bankAccountHolder: form.bankAccountHolder.trim() || undefined,
+          bankAccountNumber: form.bankAccountNumber.trim() || undefined,
+          bankSwiftCode: form.bankSwiftCode.trim() || undefined,
         },
       });
       await qc.invalidateQueries({ queryKey: getListCompaniesQueryKey() });

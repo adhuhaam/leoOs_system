@@ -19,4 +19,12 @@ export interface CompanyUpdate {
   letterheadImage?: string | null;
   /** @nullable */
   signatureImage?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankAccountHolder?: string | null;
+  /** @nullable */
+  bankSwiftCode?: string | null;
 }

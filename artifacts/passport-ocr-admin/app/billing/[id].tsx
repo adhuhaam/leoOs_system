@@ -214,12 +214,61 @@ export default function BillingDetailScreen() {
           </View>
         </View>
 
+        {/* Company details */}
         <View
           style={[
             styles.card,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
+          <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 0 }]}>
+            Issued by
+          </Text>
+          <FieldRow label="Company" value={doc.companyName} />
+          {(doc as any).companyAddress ? (
+            <FieldRow label="Address" value={(doc as any).companyAddress} />
+          ) : null}
+          {(doc as any).companyPhone ? (
+            <FieldRow label="Phone" value={(doc as any).companyPhone} />
+          ) : null}
+          {(doc as any).companyEmail ? (
+            <FieldRow label="Email" value={(doc as any).companyEmail} />
+          ) : null}
+          {(doc as any).companyRegistrationNumber ? (
+            <FieldRow label="Reg. No." value={(doc as any).companyRegistrationNumber} />
+          ) : null}
+          {(doc as any).companyBankName || (doc as any).companyBankAccountNumber ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <Text style={[styles.bankLabel, { color: colors.mutedForeground }]}>
+                BANK DETAILS
+              </Text>
+              {(doc as any).companyBankName ? (
+                <FieldRow label="Bank" value={(doc as any).companyBankName} />
+              ) : null}
+              {(doc as any).companyBankAccountHolder ? (
+                <FieldRow label="Account holder" value={(doc as any).companyBankAccountHolder} />
+              ) : null}
+              {(doc as any).companyBankAccountNumber ? (
+                <FieldRow label="Account No." value={(doc as any).companyBankAccountNumber} />
+              ) : null}
+              {(doc as any).companyBankSwiftCode ? (
+                <FieldRow label="SWIFT / BIC" value={(doc as any).companyBankSwiftCode} />
+              ) : null}
+            </>
+          ) : null}
+        </View>
+
+        {/* Customer details */}
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 0 }]}>
+            Bill to
+          </Text>
           <FieldRow label="Customer" value={doc.customerName} />
           {doc.customerAddress ? (
             <FieldRow label="Address" value={doc.customerAddress} />
@@ -510,6 +559,8 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 13 },
   totalValue: { fontSize: 14 },
   totalDivider: { height: 1, marginVertical: 4 },
+  divider: { height: 1, marginVertical: 8 },
+  bankLabel: { fontSize: 10, letterSpacing: 0.6, marginBottom: 4 },
   errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontSize: 14 },

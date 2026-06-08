@@ -14,7 +14,25 @@ export interface BillingDocumentSummary {
   companyId: number;
   companyName: string;
   /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyEmail?: string | null;
+  /** @nullable */
+  companyPhone?: string | null;
+  /** @nullable */
+  companyRegistrationNumber?: string | null;
+  /** @nullable */
+  companyBankName?: string | null;
+  /** @nullable */
+  companyBankAccountNumber?: string | null;
+  /** @nullable */
+  companyBankAccountHolder?: string | null;
+  /** @nullable */
+  companyBankSwiftCode?: string | null;
+  /** @nullable */
   clientId?: number | null;
+  /** @nullable */
+  clientName?: string | null;
   customerName: string;
   /** @nullable */
   customerAddress?: string | null;

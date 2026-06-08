@@ -691,6 +691,10 @@ export const ListCompaniesResponseItem = zod.object({
     .describe(
       "Base64 data URL (image\/png or image\/jpeg) inserted on the signature line of generated LOA PDFs",
     ),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankAccountHolder: zod.string().nullish(),
+  bankSwiftCode: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -710,6 +714,10 @@ export const CreateCompanyBody = zod.object({
   signatoryDesignation: zod.string().optional(),
   letterheadImage: zod.string().optional(),
   signatureImage: zod.string().optional(),
+  bankName: zod.string().optional(),
+  bankAccountNumber: zod.string().optional(),
+  bankAccountHolder: zod.string().optional(),
+  bankSwiftCode: zod.string().optional(),
 });
 
 /**
@@ -730,6 +738,10 @@ export const UpdateCompanyBody = zod.object({
   signatoryDesignation: zod.string().optional(),
   letterheadImage: zod.string().nullish(),
   signatureImage: zod.string().nullish(),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankAccountHolder: zod.string().nullish(),
+  bankSwiftCode: zod.string().nullish(),
 });
 
 export const UpdateCompanyResponse = zod.object({
@@ -754,6 +766,10 @@ export const UpdateCompanyResponse = zod.object({
     .describe(
       "Base64 data URL (image\/png or image\/jpeg) inserted on the signature line of generated LOA PDFs",
     ),
+  bankName: zod.string().nullish(),
+  bankAccountNumber: zod.string().nullish(),
+  bankAccountHolder: zod.string().nullish(),
+  bankSwiftCode: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1318,7 +1334,16 @@ export const ListBillingDocumentsResponseItem = zod.object({
   number: zod.string(),
   companyId: zod.number(),
   companyName: zod.string(),
+  companyAddress: zod.string().nullish(),
+  companyEmail: zod.string().nullish(),
+  companyPhone: zod.string().nullish(),
+  companyRegistrationNumber: zod.string().nullish(),
+  companyBankName: zod.string().nullish(),
+  companyBankAccountNumber: zod.string().nullish(),
+  companyBankAccountHolder: zod.string().nullish(),
+  companyBankSwiftCode: zod.string().nullish(),
   clientId: zod.number().nullish(),
+  clientName: zod.string().nullish(),
   customerName: zod.string(),
   customerAddress: zod.string().nullish(),
   customerTin: zod.string().nullish(),
@@ -1343,7 +1368,7 @@ export const ListBillingDocumentsResponse = zod.array(
 
 export const CreateBillingDocumentBody = zod.object({
   kind: zod.enum(["invoice", "quotation"]),
-  companyId: zod.number().optional(),
+  companyId: zod.number(),
   clientId: zod.number().nullish(),
   customerName: zod.string().min(1),
   customerAddress: zod.string().optional(),
@@ -1381,7 +1406,16 @@ export const GetBillingDocumentResponse = zod
     number: zod.string(),
     companyId: zod.number(),
     companyName: zod.string(),
+    companyAddress: zod.string().nullish(),
+    companyEmail: zod.string().nullish(),
+    companyPhone: zod.string().nullish(),
+    companyRegistrationNumber: zod.string().nullish(),
+    companyBankName: zod.string().nullish(),
+    companyBankAccountNumber: zod.string().nullish(),
+    companyBankAccountHolder: zod.string().nullish(),
+    companyBankSwiftCode: zod.string().nullish(),
     clientId: zod.number().nullish(),
+    clientName: zod.string().nullish(),
     customerName: zod.string(),
     customerAddress: zod.string().nullish(),
     customerTin: zod.string().nullish(),

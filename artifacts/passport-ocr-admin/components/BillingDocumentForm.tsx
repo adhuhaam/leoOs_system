@@ -1,8 +1,11 @@
 import { Feather } from "@/components/Icon";
 import {
   type Client,
+  type Company,
   getListClientsQueryKey,
+  getListCompaniesQueryKey,
   useListClients,
+  useListCompanies,
 } from "@workspace/api-client-react";
 import React, { useMemo, useState } from "react";
 import {
@@ -32,6 +35,7 @@ export type LineItemDraft = {
 
 export type BillingFormState = {
   kind: "invoice" | "quotation";
+  companyId: number | null;
   clientId: number | null;
   customerName: string;
   customerAddress: string;
@@ -48,6 +52,7 @@ export type BillingFormState = {
 
 export const EMPTY_FORM: BillingFormState = {
   kind: "invoice",
+  companyId: null,
   clientId: null,
   customerName: "",
   customerAddress: "",
@@ -103,14 +108,33 @@ export default function BillingDocumentForm({
         : EMPTY_FORM.items,
   });
 
+  const [companyModalVisible, setCompanyModalVisible] = useState(false);
   const [clientModalVisible, setClientModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [companySearch, setCompanySearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
+
+  const { data: companiesRaw = [] } = useListCompanies(undefined, {
+    query: { queryKey: getListCompaniesQueryKey() },
+  });
+  const companies = companiesRaw as Company[];
 
   const { data: clientsRaw = [] } = useListClients(undefined, {
     query: { queryKey: getListClientsQueryKey() },
   });
   const clients = clientsRaw as Client[];
+
+  const filteredCompanies = useMemo(
+    () =>
+      companySearch
+        ? companies.filter((c) =>
+            (c.name ?? "").toLowerCase().includes(companySearch.toLowerCase()),
+          )
+        : companies,
+    [companies, companySearch],
+  );
+
+  const selectedCompany = companies.find((c) => c.id === form.companyId) ?? null;
 
   const filteredClients = useMemo(
     () =>
@@ -164,6 +188,10 @@ export default function BillingDocumentForm({
   }, [form.items, form.gstRate, form.gstInclusive]);
 
   const handleSubmit = async () => {
+    if (!form.companyId) {
+      Alert.alert("Required", "Please select a company.");
+      return;
+    }
     if (!form.customerName.trim()) {
       Alert.alert("Required", "Customer name is required.");
       return;
@@ -226,6 +254,35 @@ export default function BillingDocumentForm({
             );
           })}
         </View>
+      </View>
+
+      {/* Company (issuer) */}
+      <View style={styles.section}>
+        <Label text="Company *" />
+        <Pressable
+          onPress={() => setCompanyModalVisible(true)}
+          style={[
+            styles.pickerBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: form.companyId ? colors.border : colors.destructive + "66",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.pickerBtnText,
+              {
+                color: selectedCompany ? colors.foreground : colors.mutedForeground,
+                flex: 1,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {selectedCompany?.name ?? "Select company…"}
+          </Text>
+          <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+        </Pressable>
       </View>
 
       {/* Client */}
@@ -492,6 +549,106 @@ export default function BillingDocumentForm({
           </>
         )}
       </Pressable>
+
+      {/* Company picker modal */}
+      <Modal
+        visible={companyModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setCompanyModalVisible(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalNav, { borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              Select Company
+            </Text>
+            <Pressable
+              onPress={() => { setCompanyModalVisible(false); setCompanySearch(""); }}
+              hitSlop={12}
+            >
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+          <View
+            style={[
+              styles.searchWrap,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="search" size={16} color={colors.mutedForeground} />
+            <TextInput
+              value={companySearch}
+              onChangeText={setCompanySearch}
+              placeholder="Search…"
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.searchInput, { color: colors.foreground }]}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {companySearch.length > 0 && (
+              <Pressable onPress={() => setCompanySearch("")} hitSlop={8}>
+                <Feather name="x" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            )}
+          </View>
+          <FlatList
+            data={filteredCompanies}
+            keyExtractor={(c) => String(c.id)}
+            contentContainerStyle={{ padding: 16, gap: 8 }}
+            renderItem={({ item }) => {
+              const selected = item.id === form.companyId;
+              return (
+                <Pressable
+                  onPress={() => {
+                    setF("companyId", item.id);
+                    setCompanyModalVisible(false);
+                    setCompanySearch("");
+                  }}
+                  style={({ pressed }) => [
+                    styles.companyRow,
+                    {
+                      backgroundColor: selected ? colors.primary : colors.card,
+                      borderColor: selected ? colors.primary : colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.companyName,
+                        { color: selected ? colors.primaryForeground : colors.foreground },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    {item.registrationNumber ? (
+                      <Text
+                        style={[
+                          styles.clientSub,
+                          { color: selected ? colors.primaryForeground + "cc" : colors.mutedForeground },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Reg: {item.registrationNumber}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {selected && (
+                    <Feather name="check" size={16} color={colors.primaryForeground} />
+                  )}
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No companies found
+              </Text>
+            }
+          />
+        </View>
+      </Modal>
 
       {/* Client picker modal */}
       <Modal

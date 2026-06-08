@@ -17,4 +17,8 @@ export interface CompanyInput {
   signatoryDesignation?: string;
   letterheadImage?: string;
   signatureImage?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountHolder?: string;
+  bankSwiftCode?: string;
 }

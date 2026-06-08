@@ -16,6 +16,10 @@ export const companiesTable = pgTable("companies", {
   signatoryDesignation: text("signatory_designation"),
   letterheadImage: text("letterhead_image"),
   signatureImage: text("signature_image"),
+  bankName: text("bank_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountHolder: text("bank_account_holder"),
+  bankSwiftCode: text("bank_swift_code"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

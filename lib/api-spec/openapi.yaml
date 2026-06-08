@@ -1934,6 +1934,14 @@ components:
         signatureImage:
           type: ["string", "null"]
           description: Base64 data URL (image/png or image/jpeg) inserted on the signature line of generated LOA PDFs
+        bankName:
+          type: ["string", "null"]
+        bankAccountNumber:
+          type: ["string", "null"]
+        bankAccountHolder:
+          type: ["string", "null"]
+        bankSwiftCode:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -1963,6 +1971,14 @@ components:
           type: string
         signatureImage:
           type: string
+        bankName:
+          type: string
+        bankAccountNumber:
+          type: string
+        bankAccountHolder:
+          type: string
+        bankSwiftCode:
+          type: string
 
     CompanyUpdate:
       type: object
@@ -1986,6 +2002,14 @@ components:
         letterheadImage:
           type: ["string", "null"]
         signatureImage:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        bankAccountNumber:
+          type: ["string", "null"]
+        bankAccountHolder:
+          type: ["string", "null"]
+        bankSwiftCode:
           type: ["string", "null"]
 
     Loa:
@@ -2178,7 +2202,16 @@ components:
         number: { type: string }
         companyId: { type: integer }
         companyName: { type: string }
+        companyAddress: { type: ["string", "null"] }
+        companyEmail: { type: ["string", "null"] }
+        companyPhone: { type: ["string", "null"] }
+        companyRegistrationNumber: { type: ["string", "null"] }
+        companyBankName: { type: ["string", "null"] }
+        companyBankAccountNumber: { type: ["string", "null"] }
+        companyBankAccountHolder: { type: ["string", "null"] }
+        companyBankSwiftCode: { type: ["string", "null"] }
         clientId: { type: ["integer", "null"] }
+        clientName: { type: ["string", "null"] }
         customerName: { type: string }
         customerAddress: { type: ["string", "null"] }
         customerTin: { type: ["string", "null"] }
@@ -2228,7 +2261,7 @@ components:
 
     BillingDocumentInput:
       type: object
-      required: [kind, customerName, issueDate, items]
+      required: [kind, companyId, customerName, issueDate, items]
       properties:
         kind: { type: string, enum: [invoice, quotation] }
         companyId: { type: integer }

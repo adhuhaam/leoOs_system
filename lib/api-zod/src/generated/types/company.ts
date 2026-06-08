@@ -33,6 +33,14 @@ export interface Company {
    * @nullable
    */
   signatureImage?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  bankAccountNumber?: string | null;
+  /** @nullable */
+  bankAccountHolder?: string | null;
+  /** @nullable */
+  bankSwiftCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -42,7 +42,11 @@ type EditableField =
   | "country"
   | "registrationNumber"
   | "signatoryName"
-  | "signatoryDesignation";
+  | "signatoryDesignation"
+  | "bankName"
+  | "bankAccountHolder"
+  | "bankAccountNumber"
+  | "bankSwiftCode";
 
 const FIELDS: { key: EditableField; label: string; multiline?: boolean; keyboard?: "email-address" | "phone-pad" }[] = [
   { key: "name", label: "Company name" },
@@ -53,6 +57,10 @@ const FIELDS: { key: EditableField; label: string; multiline?: boolean; keyboard
   { key: "registrationNumber", label: "Registration number" },
   { key: "signatoryName", label: "Signatory name" },
   { key: "signatoryDesignation", label: "Signatory designation" },
+  { key: "bankName", label: "Bank name" },
+  { key: "bankAccountHolder", label: "Account holder" },
+  { key: "bankAccountNumber", label: "Account number" },
+  { key: "bankSwiftCode", label: "SWIFT / BIC code" },
 ];
 
 type FormState = Record<EditableField, string>;
@@ -66,6 +74,10 @@ const EMPTY_FORM: FormState = {
   registrationNumber: "",
   signatoryName: "",
   signatoryDesignation: "",
+  bankName: "",
+  bankAccountHolder: "",
+  bankAccountNumber: "",
+  bankSwiftCode: "",
 };
 
 function toForm(c: Company): FormState {
@@ -78,6 +90,10 @@ function toForm(c: Company): FormState {
     registrationNumber: c.registrationNumber ?? "",
     signatoryName: c.signatoryName ?? "",
     signatoryDesignation: c.signatoryDesignation ?? "",
+    bankName: c.bankName ?? "",
+    bankAccountHolder: c.bankAccountHolder ?? "",
+    bankAccountNumber: c.bankAccountNumber ?? "",
+    bankSwiftCode: c.bankSwiftCode ?? "",
   };
 }
 
@@ -207,6 +223,10 @@ export default function CompanyEditScreen() {
           registrationNumber: form.registrationNumber.trim() || undefined,
           signatoryName: form.signatoryName.trim() || undefined,
           signatoryDesignation: form.signatoryDesignation.trim() || undefined,
+          bankName: form.bankName.trim() || null,
+          bankAccountHolder: form.bankAccountHolder.trim() || null,
+          bankAccountNumber: form.bankAccountNumber.trim() || null,
+          bankSwiftCode: form.bankSwiftCode.trim() || null,
         },
       });
       await queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
