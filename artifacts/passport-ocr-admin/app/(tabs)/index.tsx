@@ -24,8 +24,10 @@ import {
   useListTasks,
   useUpdateTask,
 } from "@workspace/api-client-react";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -38,6 +40,12 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
@@ -104,6 +112,129 @@ const DUE_COLOR = { overdue: "#EF4444", today: "#F59E0B", upcoming: "#6366F1" };
 type TaskFilter = "all" | "today" | "upcoming" | "done";
 type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string };
 
+// ── Flip user card ────────────────────────────────────────────────────────────
+const CARD_HEIGHT = 188;
+
+function FlipUserCard() {
+  const { user } = useAuth();
+  const colors = useColors();
+  const isBack = useRef(false);
+  const flipAnim = useSharedValue(0);
+
+  const initials = (user?.name ?? "?")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .toUpperCase();
+
+  const roleLabel = user?.role ? (ROLE_LABEL[user.role] ?? user.role) : "—";
+  const rStyle = user?.role
+    ? (ROLE_COLOR[user.role] ?? { bg: "#FFFFFF18", text: "#FFFFFF99" })
+    : { bg: "#FFFFFF18", text: "#FFFFFF99" };
+
+  function toggle() {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    isBack.current = !isBack.current;
+    flipAnim.value = withTiming(isBack.current ? 1 : 0, { duration: 480 });
+  }
+
+  const frontStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 1200 },
+      { rotateY: `${interpolate(flipAnim.value, [0, 1], [0, 180])}deg` },
+    ],
+    backfaceVisibility: "hidden",
+  }));
+
+  const backStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 1200 },
+      { rotateY: `${interpolate(flipAnim.value, [0, 1], [180, 360])}deg` },
+    ],
+    backfaceVisibility: "hidden",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  }));
+
+  return (
+    <Pressable onPress={toggle} style={styles.cardWrapper}>
+      {/* ── Front ─────────────────────────────── */}
+      <Animated.View style={[styles.card, frontStyle]}>
+        <LinearGradient
+          colors={["#0f172a", "#1e3a5f", "#0a192f"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* decorative orbs */}
+        <View style={[styles.cardOrb, { top: -35, right: -25, width: 110, height: 110, backgroundColor: "#6366F115" }]} />
+        <View style={[styles.cardOrb, { bottom: -20, left: 40, width: 70, height: 70, backgroundColor: "#0EA5E912" }]} />
+
+        {/* top row: brand + role badge */}
+        <View style={styles.cardTopRow}>
+          <Text style={styles.cardBrand}>LEO  OS</Text>
+          <View style={[styles.cardRolePill, { backgroundColor: rStyle.bg }]}>
+            <Text style={[styles.cardRoleText, { color: rStyle.text }]}>{roleLabel}</Text>
+          </View>
+        </View>
+
+        {/* centre: avatar + name/email */}
+        <View style={styles.cardCenter}>
+          <View style={styles.cardAvatar}>
+            <Text style={styles.cardAvatarText}>{initials}</Text>
+          </View>
+          <View style={styles.cardNameBlock}>
+            <Text style={styles.cardName} numberOfLines={1}>{user?.name ?? "—"}</Text>
+            <Text style={styles.cardEmail} numberOfLines={1}>{user?.email ?? "—"}</Text>
+          </View>
+        </View>
+
+        {/* hint */}
+        <View style={styles.cardHintRow}>
+          <Feather name="refresh-cw" size={10} color="#FFFFFF35" />
+          <Text style={styles.cardHint}>Tap for details</Text>
+        </View>
+      </Animated.View>
+
+      {/* ── Back ──────────────────────────────── */}
+      <Animated.View style={[styles.card, backStyle]}>
+        <LinearGradient
+          colors={["#0c1445", "#1a3050", "#0c1445"]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.cardOrb, { bottom: -15, right: -20, width: 90, height: 90, backgroundColor: "#10B98112" }]} />
+
+        <Text style={styles.cardBackTitle}>Account Details</Text>
+
+        {([
+          { icon: "user",          label: "Name",   value: user?.name  ?? "—" },
+          { icon: "mail",          label: "Email",  value: user?.email ?? "—" },
+          { icon: "shield",        label: "Role",   value: roleLabel },
+          { icon: "check-circle",  label: "Status", value: "Active" },
+        ] as const).map((row) => (
+          <View key={row.label} style={styles.cardInfoRow}>
+            <Feather name={row.icon} size={12} color="#FFFFFF50" />
+            <Text style={styles.cardInfoLabel}>{row.label}</Text>
+            <Text style={styles.cardInfoValue} numberOfLines={1}>{row.value}</Text>
+          </View>
+        ))}
+
+        <View style={styles.cardHintRow}>
+          <Feather name="refresh-cw" size={10} color="#FFFFFF35" />
+          <Text style={styles.cardHint}>Tap to flip back</Text>
+        </View>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export default function DashboardScreen() {
   const colors = useColors();
   const { user } = useAuth();
@@ -112,7 +243,6 @@ export default function DashboardScreen() {
   const role = user?.role ?? null;
   const firstName = user?.name?.split(" ")[0] ?? null;
   const isAdmin = role === "superuser" || role === "admin";
-  const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
   const canSeeCapture = role === "superuser" || role === "admin" || role === "company";
   const canSeeBilling = role === "superuser" || role === "admin" || role === "client" || role === "company";
@@ -324,20 +454,13 @@ export default function DashboardScreen() {
         <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
           {getGreeting()}{firstName ? `, ${firstName}` : ""}
         </Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>LEO ADMIN</Text>
-        <View style={styles.heroMeta}>
-          <Text style={[styles.date, { color: colors.mutedForeground }]}>
-            {formatDate()}
-          </Text>
-          {role && roleStyle && (
-            <View style={[styles.rolePill, { backgroundColor: roleStyle.bg }]}>
-              <Text style={[styles.roleText, { color: roleStyle.text }]}>
-                {ROLE_LABEL[role] ?? role}
-              </Text>
-            </View>
-          )}
-        </View>
+        <Text style={[styles.heroDate, { color: colors.mutedForeground }]}>
+          {formatDate()}
+        </Text>
       </View>
+
+      {/* User ID card */}
+      <FlipUserCard />
 
       {/* Passport stats grid */}
       <View style={styles.section}>
@@ -805,19 +928,66 @@ function RecentRow({
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 32, gap: 28 },
+  container: { padding: 20, paddingBottom: 32, gap: 24 },
 
-  hero: { gap: 4, paddingTop: 8 },
-  greeting: { fontSize: 13, letterSpacing: 0.3 },
-  title: { fontSize: 34, letterSpacing: -1 },
-  heroMeta: {
+  hero: { gap: 2, paddingTop: 8 },
+  greeting: { fontSize: 15, letterSpacing: 0.2, fontWeight: "600" },
+  heroDate: { fontSize: 13 },
+
+  // ── Flip card ────────────────────────────────────────────────────────────
+  cardWrapper: { height: CARD_HEIGHT },
+  card: {
+    height: CARD_HEIGHT,
+    borderRadius: 22,
+    overflow: "hidden",
+    padding: 20,
+    justifyContent: "space-between",
+  },
+  cardOrb: { position: "absolute", borderRadius: 999 },
+  cardTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
-  date: { fontSize: 13, },
+  cardBrand: {
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 3,
+    color: "#FFFFFF",
+    opacity: 0.65,
+  },
+  cardRolePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  cardRoleText: { fontSize: 11, fontWeight: "600" },
+  cardCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  cardAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FFFFFF15",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF25",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardAvatarText: { fontSize: 22, fontWeight: "700", color: "#FFFFFF" },
+  cardNameBlock: { flex: 1, gap: 3 },
+  cardName: { fontSize: 18, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.3 },
+  cardEmail: { fontSize: 11.5, color: "#FFFFFF70" },
+  cardHintRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  cardHint: { fontSize: 10, color: "#FFFFFF38" },
+  cardBackTitle: { fontSize: 15, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.2 },
+  cardInfoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardInfoLabel: { fontSize: 11, color: "#FFFFFF55", width: 58 },
+  cardInfoValue: { flex: 1, fontSize: 12, color: "#FFFFFFD0", fontWeight: "500" },
+
   rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
   roleText: { fontSize: 11, },
 
