@@ -2,10 +2,12 @@ import { Feather } from "@/components/Icon";
 import {
   type Client,
   type Company,
+  type Passport,
   getListClientsQueryKey,
   getListCompaniesQueryKey,
   useListClients,
   useListCompanies,
+  useListPassports,
 } from "@workspace/api-client-react";
 import React, { useMemo, useState } from "react";
 import {
@@ -111,8 +113,11 @@ export default function BillingDocumentForm({
   const [companyModalVisible, setCompanyModalVisible] = useState(false);
   const [clientModalVisible, setClientModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [employeeModalVisible, setEmployeeModalVisible] = useState(false);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(new Set());
   const [companySearch, setCompanySearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
 
   const { data: companiesRaw = [] } = useListCompanies(undefined, {
     query: { queryKey: getListCompaniesQueryKey() },
@@ -135,6 +140,53 @@ export default function BillingDocumentForm({
   );
 
   const selectedCompany = companies.find((c) => c.id === form.companyId) ?? null;
+
+  const { data: passportsRaw = [] } = useListPassports(
+    form.clientId != null ? { clientId: String(form.clientId) } : undefined,
+    {
+      query: {
+        queryKey: ["passports", "list", { clientId: form.clientId }] as const,
+        enabled: form.clientId != null,
+      },
+    },
+  );
+  const clientEmployees = (passportsRaw as Passport[]).filter(
+    (p) => p.submitted && p.fullName,
+  );
+
+  const filteredEmployees = useMemo(
+    () =>
+      employeeSearch
+        ? clientEmployees.filter((p) =>
+            (p.fullName ?? "").toLowerCase().includes(employeeSearch.toLowerCase()) ||
+            (p.passportNumber ?? "").toLowerCase().includes(employeeSearch.toLowerCase()),
+          )
+        : clientEmployees,
+    [clientEmployees, employeeSearch],
+  );
+
+  function toggleEmployee(id: number) {
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function addSelectedEmployees() {
+    const toAdd = clientEmployees.filter((p) => selectedEmployeeIds.has(p.id));
+    const newItems = toAdd.map((p) => ({
+      description: p.fullName ?? "",
+      detail: p.passportNumber ? `Passport: ${p.passportNumber}` : "",
+      qty: "1",
+      rate: "",
+    }));
+    setF("items", [...form.items, ...newItems]);
+    setSelectedEmployeeIds(new Set());
+    setEmployeeSearch("");
+    setEmployeeModalVisible(false);
+  }
 
   const filteredClients = useMemo(
     () =>
@@ -425,10 +477,28 @@ export default function BillingDocumentForm({
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Label text="Line Items *" />
-          <Pressable onPress={addItem} style={styles.addItemBtn}>
-            <Feather name="plus" size={14} color={colors.primary} />
-            <Text style={[styles.addItemText, { color: colors.primary }]}>Add</Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {form.clientId != null && clientEmployees.length > 0 && (
+              <Pressable
+                onPress={() => {
+                  setSelectedEmployeeIds(new Set());
+                  setEmployeeModalVisible(true);
+                }}
+                style={[styles.addItemBtn, { backgroundColor: colors.primary + "18" }]}
+              >
+                <Feather name="users" size={14} color={colors.primary} />
+                <Text style={[styles.addItemText, { color: colors.primary }]}>
+                  Add employees
+                </Text>
+              </Pressable>
+            )}
+            <Pressable onPress={addItem} style={styles.addItemBtn}>
+              <Feather name="plus" size={14} color={colors.primary} />
+              <Text style={[styles.addItemText, { color: colors.primary }]}>
+                Custom item
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {form.items.map((item, idx) => (
@@ -756,6 +826,175 @@ export default function BillingDocumentForm({
         </View>
       </Modal>
 
+      {/* Employee picker modal */}
+      <Modal
+        visible={employeeModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setEmployeeModalVisible(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalNav, { borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              Add Employees
+            </Text>
+            <Pressable
+              onPress={() => { setEmployeeModalVisible(false); setEmployeeSearch(""); }}
+              hitSlop={12}
+            >
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          <View
+            style={[
+              styles.searchWrap,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="search" size={16} color={colors.mutedForeground} />
+            <TextInput
+              value={employeeSearch}
+              onChangeText={setEmployeeSearch}
+              placeholder="Search by name or passport…"
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.searchInput, { color: colors.foreground }]}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {employeeSearch.length > 0 && (
+              <Pressable onPress={() => setEmployeeSearch("")} hitSlop={8}>
+                <Feather name="x" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            )}
+          </View>
+
+          {/* select-all row */}
+          <Pressable
+            onPress={() => {
+              if (selectedEmployeeIds.size === clientEmployees.length) {
+                setSelectedEmployeeIds(new Set());
+              } else {
+                setSelectedEmployeeIds(new Set(clientEmployees.map((p) => p.id)));
+              }
+            }}
+            style={[
+              styles.selectAllRow,
+              { borderColor: colors.border, backgroundColor: colors.card },
+            ]}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                {
+                  borderColor: colors.primary,
+                  backgroundColor:
+                    selectedEmployeeIds.size === clientEmployees.length && clientEmployees.length > 0
+                      ? colors.primary
+                      : "transparent",
+                },
+              ]}
+            >
+              {selectedEmployeeIds.size === clientEmployees.length && clientEmployees.length > 0 && (
+                <Feather name="check" size={11} color="#fff" />
+              )}
+            </View>
+            <Text style={[styles.selectAllText, { color: colors.foreground }]}>
+              {selectedEmployeeIds.size === clientEmployees.length && clientEmployees.length > 0
+                ? "Deselect all"
+                : `Select all (${clientEmployees.length})`}
+            </Text>
+            {selectedEmployeeIds.size > 0 && (
+              <Text style={[styles.selectedCount, { color: colors.primary }]}>
+                {selectedEmployeeIds.size} selected
+              </Text>
+            )}
+          </Pressable>
+
+          <FlatList
+            data={filteredEmployees}
+            keyExtractor={(p) => String(p.id)}
+            contentContainerStyle={{ padding: 16, gap: 8 }}
+            renderItem={({ item }) => {
+              const checked = selectedEmployeeIds.has(item.id);
+              return (
+                <Pressable
+                  onPress={() => toggleEmployee(item.id)}
+                  style={({ pressed }) => [
+                    styles.employeeRow,
+                    {
+                      backgroundColor: checked ? colors.primary + "14" : colors.card,
+                      borderColor: checked ? colors.primary : colors.border,
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      {
+                        borderColor: checked ? colors.primary : colors.mutedForeground,
+                        backgroundColor: checked ? colors.primary : "transparent",
+                      },
+                    ]}
+                  >
+                    {checked && <Feather name="check" size={11} color="#fff" />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.companyName, { color: colors.foreground }]}
+                      numberOfLines={1}
+                    >
+                      {item.fullName}
+                    </Text>
+                    {item.passportNumber ? (
+                      <Text
+                        style={[styles.clientSub, { color: colors.mutedForeground }]}
+                        numberOfLines={1}
+                      >
+                        {item.passportNumber}
+                        {item.nationality ? ` · ${item.nationality}` : ""}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No employees found
+              </Text>
+            }
+          />
+
+          {/* Footer add button */}
+          <View
+            style={[
+              styles.employeeFooter,
+              { borderTopColor: colors.border, backgroundColor: colors.background },
+            ]}
+          >
+            <Pressable
+              onPress={addSelectedEmployees}
+              disabled={selectedEmployeeIds.size === 0}
+              style={[
+                styles.employeeAddBtn,
+                {
+                  backgroundColor:
+                    selectedEmployeeIds.size > 0 ? colors.primary : colors.muted,
+                },
+              ]}
+            >
+              <Text style={[styles.employeeAddBtnText, { color: selectedEmployeeIds.size > 0 ? colors.primaryForeground : colors.mutedForeground }]}>
+                {selectedEmployeeIds.size > 0
+                  ? `Add ${selectedEmployeeIds.size} employee${selectedEmployeeIds.size > 1 ? "s" : ""}`
+                  : "Select employees above"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Status picker modal */}
       <Modal
         visible={statusModalVisible}
@@ -1075,4 +1314,43 @@ const styles = StyleSheet.create({
   statusRowText: { fontSize: 15 },
   cancelBtn: { marginTop: 8, padding: 14, borderRadius: 12, borderWidth: 1, alignItems: "center" },
   cancelText: { fontSize: 15, },
+  // Employee picker
+  selectAllRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  selectAllText: { flex: 1, fontSize: 14 },
+  selectedCount: { fontSize: 13 },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  employeeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  employeeFooter: {
+    padding: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+  },
+  employeeAddBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  employeeAddBtnText: { fontSize: 15, fontWeight: "600" },
 });
