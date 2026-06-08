@@ -7,6 +7,7 @@ import {
   useUpdateCompany,
 } from "@workspace/api-client-react";
 import * as Haptics from "expo-haptics";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -24,6 +25,29 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 import { useColors } from "@/hooks/useColors";
+
+// ─── Image compression ────────────────────────────────────────────────────────
+
+const MAX_IMAGE_BYTES = 500 * 1024; // 500 KB — matches server-side cap
+
+async function compressForUpload(uri: string): Promise<string> {
+  for (const quality of [0.8, 0.65, 0.5, 0.4]) {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1200 } }],
+      { compress: quality, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+    );
+    const b64 = result.base64 ?? "";
+    const approxBytes = Math.ceil((b64.length * 3) / 4);
+    if (approxBytes <= MAX_IMAGE_BYTES) return `data:image/jpeg;base64,${b64}`;
+  }
+  const last = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 1200 } }],
+    { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+  );
+  return `data:image/jpeg;base64,${last.base64 ?? ""}`;
+}
 
 type EditableField =
   | "name"
@@ -119,15 +143,13 @@ export default function CompanyEditScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      base64: true,
-      quality: 0.6,
       allowsEditing: false,
+      quality: 1,
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    const mimeType = asset.mimeType ?? "image/jpeg";
-    const dataUrl = `data:${mimeType};base64,${asset.base64}`;
     try {
+      const dataUrl = await compressForUpload(asset.uri);
       await brandingMutation.mutateAsync({
         id: companyId,
         data: { [kind]: dataUrl } as Parameters<typeof brandingMutation.mutateAsync>[0]["data"],
