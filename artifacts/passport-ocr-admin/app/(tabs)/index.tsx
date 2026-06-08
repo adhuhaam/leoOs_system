@@ -528,6 +528,7 @@ export default function DashboardScreen() {
       <FlipUserCard />
 
       {/* ── Task Management (above stats for quick visibility) ── */}
+      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Tasks</Text>
@@ -594,7 +595,7 @@ export default function DashboardScreen() {
 
         {/* Quick-add */}
         <View style={{ gap: 8 }}>
-          <View style={[styles.addTaskRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.addTaskRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <TextInput
               style={[styles.addTaskInput, { color: colors.foreground }]}
               placeholder="Add a task…"
@@ -694,7 +695,7 @@ export default function DashboardScreen() {
                   }}
                   style={({ pressed }) => [
                     styles.taskRow,
-                    { backgroundColor: colors.card, shadowColor: "#000", opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.986 : 1 }] },
+                    { backgroundColor: colors.secondary, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.986 : 1 }] },
                     isInProgress && { borderLeftWidth: 3, borderLeftColor: "#F59E0B" },
                   ]}
                 >
@@ -771,26 +772,33 @@ export default function DashboardScreen() {
           </Pressable>
         )}
       </View>
+      </View>
 
-      {/* ── Candidate stat pills (2/row) ── */}
-      {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.primary} size="small" />
+      {/* ── Overview stats card ── */}
+      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
+          </View>
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} size="small" />
+            </View>
+          ) : (
+            <View style={styles.statPillRow}>
+              {passportStats.map((s) => <StatPill key={s.label} stat={s} />)}
+            </View>
+          )}
+          {isAdmin && !adminOverviewLoading && adminStats.length > 0 && (
+            <View style={styles.statPillRow}>
+              {adminStats.map((s) => <StatPill key={s.label} stat={s} />)}
+            </View>
+          )}
         </View>
-      ) : (
-        <View style={styles.statPillRow}>
-          {passportStats.map((s) => <StatPill key={s.label} stat={s} />)}
-        </View>
-      )}
-
-      {/* ── Admin stat pills (2/row) ── */}
-      {isAdmin && !adminOverviewLoading && adminStats.length > 0 && (
-        <View style={styles.statPillRow}>
-          {adminStats.map((s) => <StatPill key={s.label} stat={s} />)}
-        </View>
-      )}
+      </View>
 
       {/* ── Candidates with status filter tabs ── */}
+      <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Candidates</Text>
@@ -827,7 +835,7 @@ export default function DashboardScreen() {
 
         {/* Filtered list */}
         {isLoading ? null : filteredPassports.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.emptyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
             <Feather name="inbox" size={24} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               {uploadFilter === "all" ? "No candidates yet" : `No ${uploadFilter} candidates`}
@@ -841,13 +849,16 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
+      </View>
 
       {/* ── Monthly revenue chart (admin only) ── */}
       {isAdmin && (
-        <BillingChart
-          docs={(billingData ?? []) as BillingDocumentSummary[]}
-          expenses={(expensesData ?? []) as Expense[]}
-        />
+        <View style={[styles.dashCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+          <BillingChart
+            docs={(billingData ?? []) as BillingDocumentSummary[]}
+            expenses={(expensesData ?? []) as Expense[]}
+          />
+        </View>
       )}
     </ScrollView>
 
@@ -1039,7 +1050,7 @@ function CalendarPicker({ value, onChange }: { value: string; onChange: (d: stri
 function StatPill({ stat }: { stat: StatItem }) {
   const colors = useColors();
   return (
-    <View style={[styles.statPill, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+    <View style={[styles.statPill, { backgroundColor: colors.secondary }]}>
       <View style={[styles.statPillIcon, { backgroundColor: stat.color + "18" }]}>
         <Feather name={stat.icon} size={14} color={stat.color} />
       </View>
@@ -1567,8 +1578,7 @@ function RecentRow({
       style={({ pressed }) => [
         styles.recentRow,
         {
-          backgroundColor: colors.card,
-          shadowColor: "#000",
+          backgroundColor: colors.secondary,
           opacity: pressed ? 0.78 : 1,
           transform: [{ scale: pressed ? 0.982 : 1 }],
         },
@@ -1653,6 +1663,14 @@ const styles = StyleSheet.create({
   rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
   roleText: { fontSize: 11 },
 
+  dashCard: {
+    borderRadius: 20,
+    padding: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   section: { gap: 12 },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { fontSize: 17 },
