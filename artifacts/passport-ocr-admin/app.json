@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LEO ADMIN",
+    "name": "Sky Office",
     "slug": "leo-admin",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -50,8 +50,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow LEO ADMIN to access your camera to capture passports.",
-          "photosPermission": "Allow LEO ADMIN to access your photos to upload passport scans."
+          "cameraPermission": "Allow Sky Office to access your camera to capture passports.",
+          "photosPermission": "Allow Sky Office to access your photos to upload passport scans."
         }
       ],
       [

@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "UO5C86IxwfMQLOQRAm2Tx"
+uri = "file://artifacts/passport-ocr-admin/assets/images/icon.png"
+type = "image"
+title = "neon-green-briefcase-icon"
 
 [[outputs]]
 id = "Mf7VMyMT922dqQmV3Ee0B"
