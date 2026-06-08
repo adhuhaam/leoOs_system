@@ -114,9 +114,9 @@ export default function LoaPrintPage() {
     loa.companyRegistrationNumber ?? company?.registrationNumber ?? "";
 
   return (
-    <div className="print-outer bg-slate-100 min-h-screen py-6">
+    <div className="print-outer bg-slate-100 min-h-screen py-2 sm:py-6">
       {/* ── Toolbar (hidden on print) ── */}
-      <div className="no-print max-w-[820px] mx-auto px-4 mb-4 flex items-center justify-between">
+      <div className="no-print max-w-[820px] mx-auto px-3 sm:px-4 mb-2 sm:mb-4 flex items-center justify-between">
         <Link href="/loa">
           <Button variant="outline" size="sm" className="gap-2">
             <ArrowLeft className="h-4 w-4" /> Back
@@ -134,7 +134,7 @@ export default function LoaPrintPage() {
 
       {/* ── A4 document ── */}
       <div className="print-shell max-w-[820px] mx-auto bg-white text-slate-900 shadow-lg">
-        <div className="print-page p-12 text-[11.5px] leading-relaxed font-sans">
+        <div className="print-page px-4 py-6 sm:p-12 text-[11.5px] leading-relaxed font-sans">
 
           {/* ── Company letterhead ── */}
           {letterheadImage ? (
