@@ -40,6 +40,18 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
 
+// expo-secure-store is only available on iOS/Android, not web.
+// These helpers are silent no-ops on web so the rest of the code is uniform.
+async function storeGet(key: string): Promise<string | null> {
+  try { return await SecureStore.getItemAsync(key); } catch { return null; }
+}
+async function storeSet(key: string, value: string): Promise<void> {
+  try { await SecureStore.setItemAsync(key, value); } catch { /* web */ }
+}
+async function storeDelete(key: string): Promise<void> {
+  try { await SecureStore.deleteItemAsync(key); } catch { /* web */ }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
 
@@ -65,13 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // On mount: restore persisted session token from SecureStore and wire it
   // into the request getter so every subsequent API call sends the Bearer.
   useEffect(() => {
-    SecureStore.getItemAsync(TOKEN_KEY)
+    storeGet(TOKEN_KEY)
       .then((token) => {
-        if (token) {
-          setAuthTokenGetter(() => token);
-        }
+        if (token) setAuthTokenGetter(() => token);
       })
-      .catch(() => {})
       .finally(() => setTokenReady(true));
   }, []);
 
@@ -85,10 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Clear any stale token first so the auth check uses fresh credentials.
       setAuthTokenGetter(null);
-      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+      await storeDelete(TOKEN_KEY);
 
       if (token) {
-        await SecureStore.setItemAsync(TOKEN_KEY, token);
+        await storeSet(TOKEN_KEY, token);
         setAuthTokenGetter(() => token);
       }
 
@@ -107,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    const storedToken = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+    const storedToken = await storeGet(TOKEN_KEY);
 
     // Tell the server to destroy the session; include the Bearer so it
     // destroys the correct (original login) session, not a freshly-created
@@ -122,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignore network errors — clear client state regardless.
     }
 
-    await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+    await storeDelete(TOKEN_KEY);
     setAuthTokenGetter(null);
     qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
     qc.clear();

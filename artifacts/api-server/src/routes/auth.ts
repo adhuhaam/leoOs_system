@@ -19,18 +19,26 @@ const router: IRouter = Router();
 // GET /auth/me
 // ---------------------------------------------------------------------------
 
-router.get("/auth/me", (req, res) => {
-  if (!req.session?.authenticated) {
-    res.json({ authenticated: false, userId: null, email: null, name: null, role: null });
-    return;
+router.get("/auth/me", (req, res): void => {
+  const respond = () => {
+    if (!req.session?.authenticated) {
+      res.json({ authenticated: false, userId: null, email: null, name: null, role: null });
+      return;
+    }
+    res.json({
+      authenticated: true,
+      userId: req.session.userId ?? null,
+      email: req.session.userEmail ?? null,
+      name: req.session.userName ?? null,
+      role: req.session.role ?? null,
+    });
+  };
+
+  if (req.session?.authenticated) {
+    respond();
+  } else {
+    populateFromBearerToken(req, () => respond());
   }
-  res.json({
-    authenticated: true,
-    userId: req.session.userId ?? null,
-    email: req.session.userEmail ?? null,
-    name: req.session.userName ?? null,
-    role: req.session.role ?? null,
-  });
 });
 
 // ---------------------------------------------------------------------------

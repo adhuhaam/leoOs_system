@@ -1,3 +1,4 @@
 - [Tesseract.js esbuild + MRZ accuracy](tesseract-esbuild.md) — must be in esbuild externals AND onlyBuiltDependencies; no ocrb.traineddata; trust check digits & recover doc number by edit distance
 - [Xpat MV API](xpat-api.md) — both WorkPermitNumber + PassportNumber required; key hardcoded server-side in xpat.ts; photo/card served as img src from backend proxy routes
 - [RBAC auth system](rbac-auth.md) — users table, 6 roles, superuser seed, Google OAuth pattern, role-aware nav
+- [Mobile Bearer token auth](mobile-bearer-auth.md) — RN has no cookie jar; login must return { token } in body; ALL auth-checking endpoints (including /auth/me) must call populateFromBearerToken(); expo-secure-store crashes on web — use try/catch wrappers
