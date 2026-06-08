@@ -52,8 +52,6 @@ export default function MoreScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const role = user?.role ?? null;
-  const isAdmin = role === "superuser" || role === "admin";
-  const isSuperuser = role === "superuser";
   const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
   const ADMIN_ITEMS: Item[] = [
@@ -163,7 +161,7 @@ export default function MoreScreen() {
       {/* Sign out — inline confirm to avoid Alert (blocked in iframe preview) */}
       {confirmLogout ? (
         <View style={[styles.confirmBox, { backgroundColor: colors.card, borderColor: "#FCA5A5", shadowColor: "#000" }]}>
-          <Text style={[styles.confirmText, { color: colors.foreground }]}>Sign out of LEO OS?</Text>
+          <Text style={[styles.confirmText, { color: colors.foreground }]}>Sign out of LEO ADMIN?</Text>
           <View style={styles.confirmRow}>
             <Pressable
               onPress={() => setConfirmLogout(false)}
@@ -208,7 +206,7 @@ export default function MoreScreen() {
         </Pressable>
       )}
 
-      <Text style={[styles.version, { color: colors.mutedForeground }]}>LEO OS · v1.0</Text>
+      <Text style={[styles.version, { color: colors.mutedForeground }]}>LEO ADMIN · v1.0</Text>
     </ScrollView>
   );
 }

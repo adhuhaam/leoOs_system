@@ -69,7 +69,7 @@ export default function LoginScreen() {
             <View style={[styles.logoWrap, { backgroundColor: colors.primary }]}>
               <Feather name="shield" size={30} color={colors.primaryForeground} />
             </View>
-            <Text style={[styles.wordmark, { color: colors.foreground }]}>LEO OS</Text>
+            <Text style={[styles.wordmark, { color: colors.foreground }]}>LEO ADMIN</Text>
             <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
               Sign in to your account
             </Text>
