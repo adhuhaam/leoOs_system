@@ -42,21 +42,28 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
+
+  // tokenReady gates the auth query: we must load any stored Bearer token
+  // from SecureStore BEFORE the first /auth/me request fires, otherwise a
+  // returning user would briefly appear logged-out.
   const [tokenReady, setTokenReady] = useState(false);
 
+  // enabled: tokenReady — query fires automatically once the SecureStore
+  // check completes (no manual refetch() needed in a separate effect).
   const { data, isLoading: authLoading, refetch } = useGetAuthStatus({
     query: {
       queryKey: getGetAuthStatusQueryKey(),
       retry: false,
       staleTime: 30_000,
-      enabled: false,
+      enabled: tokenReady,
     },
   });
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
 
-  // On mount: restore persisted session token from SecureStore
+  // On mount: restore persisted session token from SecureStore and wire it
+  // into the request getter so every subsequent API call sends the Bearer.
   useEffect(() => {
     SecureStore.getItemAsync(TOKEN_KEY)
       .then((token) => {
@@ -68,20 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setTokenReady(true));
   }, []);
 
-  // Once the token getter is ready, trigger the auth status check
-  useEffect(() => {
-    if (tokenReady) {
-      refetch();
-    }
-  }, [tokenReady, refetch]);
-
   const login = useCallback(
     async (email: string, password: string) => {
       await loginMutation.mutateAsync({ data: { email, password } });
 
-      // Fetch a durable session token so the login survives app restarts
+      // Clear any stale token so the mobile-token fetch and subsequent auth
+      // check rely on the fresh login cookie, not an old/expired Bearer.
+      setAuthTokenGetter(null);
+      await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+
+      // Fetch a durable session token so the login survives app restarts.
+      // The path must include /api — that is the api-server artifact's prefix.
       try {
-        const res = await fetch(`${BASE_URL}/auth/mobile-token`, {
+        const res = await fetch(`${BASE_URL}/api/auth/mobile-token`, {
           credentials: "include",
         });
         if (res.ok) {
@@ -93,10 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch {
-        // Non-fatal — session cookie will work for this session
+        // Non-fatal — the login cookie will keep this session alive for now.
       }
 
-      await qc.invalidateQueries();
+      // Refresh auth state (also wakes up all stale queries).
+      qc.invalidateQueries();
       await refetch();
     },
     [loginMutation, qc, refetch],
@@ -112,19 +119,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     const storedToken = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
 
-    // Tell the server to destroy the session (include Bearer so it destroys
-    // the correct session, not a new one spawned from the cookie path)
+    // Tell the server to destroy the session; include the Bearer so it
+    // destroys the correct (original login) session, not a freshly-created
+    // empty one spawned from the cookie path.
     try {
-      await fetch(`${BASE_URL}/auth/logout`, {
+      await fetch(`${BASE_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
         headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
       });
     } catch {
-      // Ignore network errors — clear client state regardless
+      // Ignore network errors — clear client state regardless.
     }
 
-    // Clear all local auth state
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
     setAuthTokenGetter(null);
     qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
@@ -157,8 +164,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       : null;
 
-    // Keep isLoading true until the SecureStore token has been loaded so the
-    // AuthGate doesn't briefly flash the login screen for returning users.
+    // isLoading stays true until SecureStore is read AND the first auth
+    // check has completed — prevents the AuthGate from flashing the login
+    // screen for a returning user whose token is still being loaded.
     const isLoading = !tokenReady || authLoading;
 
     return { isLoading, isAuthed, user, login, register, logout, refresh };
