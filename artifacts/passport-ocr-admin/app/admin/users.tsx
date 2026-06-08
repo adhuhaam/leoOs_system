@@ -5,10 +5,14 @@ import {
   useUpdateUser,
   useDeleteUser,
   useCreateUser,
+  useListPassports,
   getListUsersQueryKey,
+  getListPassportsQueryKey,
+  type AdminUser,
+  type Passport,
 } from "@workspace/api-client-react";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -45,12 +49,7 @@ type AddUserForm = {
   role: Role;
 };
 
-const EMPTY_FORM: AddUserForm = {
-  email: "",
-  name: "",
-  password: "",
-  role: "agent",
-};
+const EMPTY_FORM: AddUserForm = { email: "", name: "", password: "", role: "agent" };
 
 export default function AdminUsersScreen() {
   const colors = useColors();
@@ -58,6 +57,9 @@ export default function AdminUsersScreen() {
   const qc = useQueryClient();
 
   const { data: users, isLoading, refetch } = useListUsers();
+  const { data: passports } = useListPassports(undefined, {
+    query: { queryKey: getListPassportsQueryKey() },
+  });
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
   const createMutation = useCreateUser();
@@ -66,7 +68,30 @@ export default function AdminUsersScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddUserForm>(EMPTY_FORM);
 
+  // Assign employee modal
+  const [assignTarget, setAssignTarget] = useState<AdminUser | null>(null);
+  const [passportSearch, setPassportSearch] = useState("");
+
   const canManage = me?.role === "superuser" || me?.role === "admin";
+
+  // Build a map of passport id → name for quick lookup in cards
+  const passportMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of passports ?? []) {
+      m.set(String(p.id), p.fullName ?? `#${p.id}`);
+    }
+    return m;
+  }, [passports]);
+
+  const filteredPassports = useMemo(() => {
+    const q = passportSearch.trim().toLowerCase();
+    if (!q) return passports ?? [];
+    return (passports ?? []).filter(
+      (p) =>
+        (p.fullName ?? "").toLowerCase().includes(q) ||
+        (p.passportNumber ?? "").toLowerCase().includes(q),
+    );
+  }, [passports, passportSearch]);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -138,19 +163,34 @@ export default function AdminUsersScreen() {
     ]);
   }
 
+  async function handleAssignPassport(passport: Passport) {
+    if (!assignTarget) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: assignTarget.id,
+        data: { linkedEntityId: String(passport.id) },
+      });
+      await qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      setAssignTarget(null);
+      setPassportSearch("");
+    } catch {
+      Alert.alert("Failed", "Could not assign employee. Please try again.");
+    }
+  }
+
+  async function handleUnlinkEmployee(userId: number) {
+    try {
+      await updateMutation.mutateAsync({ id: userId, data: { linkedEntityId: null } });
+      await qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+    } catch {
+      Alert.alert("Failed", "Could not unlink employee.");
+    }
+  }
+
   async function handleAddUser() {
-    if (!addForm.email.trim()) {
-      Alert.alert("Required", "Email is required.");
-      return;
-    }
-    if (!addForm.name.trim()) {
-      Alert.alert("Required", "Name is required.");
-      return;
-    }
-    if (!addForm.password.trim()) {
-      Alert.alert("Required", "Password is required.");
-      return;
-    }
+    if (!addForm.email.trim()) { Alert.alert("Required", "Email is required."); return; }
+    if (!addForm.name.trim()) { Alert.alert("Required", "Name is required."); return; }
+    if (!addForm.password.trim()) { Alert.alert("Required", "Password is required."); return; }
     try {
       await createMutation.mutateAsync({
         data: {
@@ -205,6 +245,7 @@ export default function AdminUsersScreen() {
           {(users ?? []).map((u) => {
             const isSuperuser = u.role === "superuser";
             const canActOnUser = !isSuperuser || me?.role === "superuser";
+            const linkedName = u.linkedEntityId ? passportMap.get(u.linkedEntityId) : null;
 
             return (
               <View
@@ -222,22 +263,46 @@ export default function AdminUsersScreen() {
                   </View>
                 </View>
 
-                {/* Status */}
+                {/* Status row */}
                 <View style={styles.statusRow}>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: u.isApproved ? "#22C55E" : "#F59E0B" },
-                    ]}
-                  />
+                  <View style={[styles.statusDot, { backgroundColor: u.isApproved ? "#22C55E" : "#F59E0B" }]} />
                   <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
                     {u.isApproved ? "Approved" : "Pending approval"}
                   </Text>
                 </View>
 
+                {/* Linked employee badge */}
+                {linkedName ? (
+                  <View style={[styles.linkedRow, { backgroundColor: "#10B98112", borderColor: "#10B98133" }]}>
+                    <Feather name="link" size={12} color="#059669" />
+                    <Text style={styles.linkedName} numberOfLines={1}>{linkedName}</Text>
+                    {canActOnUser && (
+                      <Pressable
+                        onPress={() => handleUnlinkEmployee(u.id)}
+                        hitSlop={8}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+                      >
+                        <Feather name="x" size={13} color="#059669" />
+                      </Pressable>
+                    )}
+                  </View>
+                ) : u.linkedEntityId ? (
+                  <View style={[styles.linkedRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                    <Feather name="link" size={12} color={colors.mutedForeground} />
+                    <Text style={[styles.linkedName, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      Employee #{u.linkedEntityId}
+                    </Text>
+                    {canActOnUser && (
+                      <Pressable onPress={() => handleUnlinkEmployee(u.id)} hitSlop={8}>
+                        <Feather name="x" size={13} color={colors.mutedForeground} />
+                      </Pressable>
+                    )}
+                  </View>
+                ) : null}
+
                 {/* Actions */}
                 <View style={[styles.actions, { borderTopColor: colors.border }]}>
-                  {/* Role button — read-only label for superusers visible to non-superusers */}
+                  {/* Role */}
                   {canActOnUser ? (
                     <Pressable
                       onPress={() => showRolePicker(u.id, u.name || u.email, u.role)}
@@ -253,7 +318,23 @@ export default function AdminUsersScreen() {
                     </View>
                   )}
 
-                  {/* Approve / Revoke — hidden for superusers unless actor is superuser */}
+                  {/* Assign employee */}
+                  {canActOnUser && canManage ? (
+                    <Pressable
+                      onPress={() => { setAssignTarget(u); setPassportSearch(""); }}
+                      style={({ pressed }) => [styles.actionBtn, { opacity: pressed ? 0.7 : 1 }]}
+                    >
+                      <Feather name="link" size={14} color="#0D9488" />
+                      <Text style={[styles.actionText, { color: "#0D9488" }]}>Assign</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.actionBtn, { opacity: 0.35 }]}>
+                      <Feather name="link" size={14} color={colors.mutedForeground} />
+                      <Text style={[styles.actionText, { color: colors.mutedForeground }]}>Assign</Text>
+                    </View>
+                  )}
+
+                  {/* Approve / Revoke */}
                   {canActOnUser ? (
                     !u.isApproved ? (
                       <Pressable
@@ -279,7 +360,7 @@ export default function AdminUsersScreen() {
                     </View>
                   )}
 
-                  {/* Delete — hidden for superusers unless actor is superuser */}
+                  {/* Delete */}
                   {canActOnUser ? (
                     <Pressable
                       onPress={() => confirmDelete(u.id, u.name || u.email)}
@@ -307,6 +388,100 @@ export default function AdminUsersScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* ── Assign Employee Modal ── */}
+      <Modal
+        visible={assignTarget !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { setAssignTarget(null); setPassportSearch(""); }}
+      >
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Pressable
+              onPress={() => { setAssignTarget(null); setPassportSearch(""); }}
+              hitSlop={10}
+            >
+              <Text style={[styles.modalCancel, { color: colors.mutedForeground }]}>Cancel</Text>
+            </Pressable>
+            <View style={{ flex: 1, alignItems: "center" }}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Assign Employee</Text>
+              {assignTarget && (
+                <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  → {assignTarget.name || assignTarget.email}
+                </Text>
+              )}
+            </View>
+            <View style={{ width: 56 }} />
+          </View>
+
+          {/* Search */}
+          <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+            <View style={[styles.searchBox, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Feather name="search" size={16} color={colors.mutedForeground} />
+              <TextInput
+                value={passportSearch}
+                onChangeText={setPassportSearch}
+                placeholder="Search by name or passport number…"
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="none"
+                style={[styles.searchInput, { color: colors.foreground }]}
+              />
+              {passportSearch.length > 0 && (
+                <Pressable onPress={() => setPassportSearch("")} hitSlop={8}>
+                  <Feather name="x" size={15} color={colors.mutedForeground} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.pickerList}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {filteredPassports.length === 0 && (
+              <View style={styles.center}>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No employees found</Text>
+              </View>
+            )}
+            {filteredPassports.map((p) => (
+              <Pressable
+                key={p.id}
+                onPress={() => handleAssignPassport(p)}
+                style={({ pressed }) => [
+                  styles.pickerRow,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                {/* Avatar initials */}
+                <View style={[styles.pickerAvatar, { backgroundColor: colors.secondary }]}>
+                  <Text style={[styles.pickerAvatarText, { color: colors.foreground }]}>
+                    {(p.fullName ?? "#")
+                      .split(" ").filter(Boolean).slice(0, 2)
+                      .map((w: string) => w[0] ?? "").join("").toUpperCase() || "?"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[styles.pickerName, { color: colors.foreground }]} numberOfLines={1}>
+                    {p.fullName ?? "—"}
+                  </Text>
+                  {p.passportNumber && (
+                    <Text style={[styles.pickerPassport, { color: colors.mutedForeground }]}>
+                      {p.passportNumber}
+                    </Text>
+                  )}
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       {/* ── Add User Modal ── */}
       <Modal
@@ -354,14 +529,7 @@ export default function AdminUsersScreen() {
                   keyboardType={f.keyboard ?? "default"}
                   autoCapitalize={f.keyboard === "email-address" ? "none" : "words"}
                   secureTextEntry={f.secure}
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: colors.card,
-                      color: colors.foreground,
-                      borderColor: colors.border,
-                    },
-                  ]}
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
                 />
               </View>
             ))}
@@ -377,22 +545,13 @@ export default function AdminUsersScreen() {
                     style={[
                       styles.roleChip,
                       {
-                        backgroundColor:
-                          addForm.role === r
-                            ? roleColor(r) + "22"
-                            : colors.secondary,
-                        borderColor:
-                          addForm.role === r ? roleColor(r) : colors.border,
+                        backgroundColor: addForm.role === r ? roleColor(r) + "22" : colors.secondary,
+                        borderColor: addForm.role === r ? roleColor(r) : colors.border,
                         borderWidth: 1,
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.roleChipText,
-                        { color: addForm.role === r ? roleColor(r) : colors.mutedForeground },
-                      ]}
-                    >
+                    <Text style={[styles.roleChipText, { color: addForm.role === r ? roleColor(r) : colors.mutedForeground }]}>
                       {r}
                     </Text>
                   </Pressable>
@@ -416,8 +575,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: { fontSize: 17, },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 17 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 40 },
   list: { padding: 16, gap: 12, paddingBottom: 32 },
 
   card: {
@@ -431,36 +590,47 @@ const styles = StyleSheet.create({
   },
   cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cardInfo: { flex: 1, gap: 2 },
-  cardName: { fontSize: 15, },
-  cardEmail: { fontSize: 13, },
+  cardName: { fontSize: 15 },
+  cardEmail: { fontSize: 13 },
 
   roleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  roleBadgeText: { fontSize: 11, },
+  roleBadgeText: { fontSize: 11 },
 
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
   statusText: { fontSize: 12, flex: 1 },
 
+  linkedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  linkedName: { flex: 1, fontSize: 12, color: "#059669" },
+
   actions: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 10,
-    gap: 4,
+    gap: 2,
   },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 4,
     paddingVertical: 6,
   },
-  actionText: { fontSize: 12, },
+  actionText: { fontSize: 11 },
 
   empty: { alignItems: "center", gap: 12, paddingVertical: 60 },
-  emptyText: { fontSize: 15, },
+  emptyText: { fontSize: 15 },
 
-  // Modal
+  // Modal shared
   modalSafe: { flex: 1 },
   modalHeader: {
     flexDirection: "row",
@@ -470,9 +640,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  modalTitle: { fontSize: 17, },
-  modalCancel: { fontSize: 16, },
-  modalSave: { fontSize: 16, },
+  modalTitle: { fontSize: 17 },
+  modalSubtitle: { fontSize: 12, marginTop: 1 },
+  modalCancel: { fontSize: 16, width: 56 },
+  modalSave: { fontSize: 16 },
   modalBody: { padding: 20, gap: 16, paddingBottom: 40 },
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 11, letterSpacing: 0.5 },
@@ -485,10 +656,42 @@ const styles = StyleSheet.create({
     height: 48,
   },
   roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 },
-  roleChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  roleChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  roleChipText: { fontSize: 13 },
+
+  // Assign employee modal
+  searchWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  roleChipText: { fontSize: 13, },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  pickerList: { padding: 16, gap: 10, paddingBottom: 32 },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pickerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerAvatarText: { fontSize: 15, fontWeight: "600" },
+  pickerName: { fontSize: 15, fontWeight: "500" },
+  pickerPassport: { fontSize: 12 },
 });
