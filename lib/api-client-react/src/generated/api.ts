@@ -41,6 +41,9 @@ import type {
   ExtensionToken,
   GetAuthStatus200,
   GetXpatWorkPermitParams,
+  GoogleAuth200,
+  GoogleAuthInput,
+  GoogleClientIds,
   HealthStatus,
   ListBillingDocumentsParams,
   ListClientsParams,
@@ -484,6 +487,92 @@ export const useLogout = <
   TContext
 > => {
   return useMutation(getLogoutMutationOptions(options));
+};
+
+/**
+ * @summary Sign in or register with a Google ID token
+ */
+export const getGoogleAuthUrl = () => {
+  return `/api/auth/google`;
+};
+
+export const googleAuth = async (
+  googleAuthInput: GoogleAuthInput,
+  options?: RequestInit,
+): Promise<GoogleAuth200 | void> => {
+  return customFetch<GoogleAuth200 | void>(getGoogleAuthUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(googleAuthInput),
+  });
+};
+
+export const getGoogleAuthMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof googleAuth>>,
+    TError,
+    { data: BodyType<GoogleAuthInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof googleAuth>>,
+  TError,
+  { data: BodyType<GoogleAuthInput> },
+  TContext
+> => {
+  const mutationKey = ["googleAuth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof googleAuth>>,
+    { data: BodyType<GoogleAuthInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return googleAuth(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GoogleAuthMutationResult = NonNullable<
+  Awaited<ReturnType<typeof googleAuth>>
+>;
+export type GoogleAuthMutationBody = BodyType<GoogleAuthInput>;
+export type GoogleAuthMutationError = ErrorType<void>;
+
+/**
+ * @summary Sign in or register with a Google ID token
+ */
+export const useGoogleAuth = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof googleAuth>>,
+    TError,
+    { data: BodyType<GoogleAuthInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof googleAuth>>,
+  TError,
+  { data: BodyType<GoogleAuthInput> },
+  TContext
+> => {
+  return useMutation(getGoogleAuthMutationOptions(options));
 };
 
 /**
@@ -1373,6 +1462,81 @@ export const useUpdateSystemSettings = <
 > => {
   return useMutation(getUpdateSystemSettingsMutationOptions(options));
 };
+
+/**
+ * @summary Get public Google OAuth client IDs (no auth required — used by mobile login screen)
+ */
+export const getGetGoogleClientIdsUrl = () => {
+  return `/api/settings/google-client-ids`;
+};
+
+export const getGoogleClientIds = async (
+  options?: RequestInit,
+): Promise<GoogleClientIds> => {
+  return customFetch<GoogleClientIds>(getGetGoogleClientIdsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGoogleClientIdsQueryKey = () => {
+  return [`/api/settings/google-client-ids`] as const;
+};
+
+export const getGetGoogleClientIdsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGoogleClientIds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGoogleClientIds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGoogleClientIdsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGoogleClientIds>>
+  > = ({ signal }) => getGoogleClientIds({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGoogleClientIds>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGoogleClientIdsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGoogleClientIds>>
+>;
+export type GetGoogleClientIdsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get public Google OAuth client IDs (no auth required — used by mobile login screen)
+ */
+
+export function useGetGoogleClientIds<
+  TData = Awaited<ReturnType<typeof getGoogleClientIds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGoogleClientIds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGoogleClientIdsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all passport records

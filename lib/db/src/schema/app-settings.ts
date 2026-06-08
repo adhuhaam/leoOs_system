@@ -32,6 +32,16 @@ export const appSettingsTable = pgTable("app_settings", {
   // Pi or any host without the Replit environment.
   openaiApiKey: text("openai_api_key"),
 
+  // Google OAuth client IDs (stored in DB so superusers can configure via UI).
+  // googleClientId     — Web client ID (used for backend token verification).
+  // googleClientSecret — Web client secret (needed by some OAuth flows).
+  // googleClientIdIos  — iOS client ID (bundle-specific, for Expo / native iOS).
+  // googleClientIdAndroid — Android client ID.
+  googleClientId: text("google_client_id"),
+  googleClientSecret: text("google_client_secret"),
+  googleClientIdIos: text("google_client_id_ios"),
+  googleClientIdAndroid: text("google_client_id_android"),
+
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

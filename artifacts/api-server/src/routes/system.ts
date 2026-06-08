@@ -51,6 +51,10 @@ function publicShape(row: typeof appSettingsTable.$inferSelect) {
     logoImage: row.logoImage,
     hasCustomPassword: row.passwordHash != null,
     hasOpenAiApiKey: row.openaiApiKey != null,
+    googleClientId: row.googleClientId ?? null,
+    googleClientSecret: row.googleClientSecret ?? null,
+    googleClientIdIos: row.googleClientIdIos ?? null,
+    googleClientIdAndroid: row.googleClientIdAndroid ?? null,
   };
 }
 
@@ -109,6 +113,10 @@ router.patch("/system/settings", async (req, res): Promise<void> => {
   if (data.logoImage !== undefined) patch.logoImage = data.logoImage ?? null;
   if (data.openaiApiKey !== undefined)
     patch.openaiApiKey = data.openaiApiKey === null ? null : (data.openaiApiKey?.trim() || null);
+  if ("googleClientId" in data) patch.googleClientId = trimOrNull(data.googleClientId as string | null);
+  if ("googleClientSecret" in data) patch.googleClientSecret = trimOrNull(data.googleClientSecret as string | null);
+  if ("googleClientIdIos" in data) patch.googleClientIdIos = trimOrNull(data.googleClientIdIos as string | null);
+  if ("googleClientIdAndroid" in data) patch.googleClientIdAndroid = trimOrNull(data.googleClientIdAndroid as string | null);
 
   await readSettings(); // ensure row exists
 

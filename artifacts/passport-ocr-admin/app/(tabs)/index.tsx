@@ -32,6 +32,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -160,9 +161,13 @@ function FlipUserCard() {
         <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#6366F10D" }]} />
         <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#0EA5E90B" }]} />
 
-        {/* brand + contactless symbol */}
+        {/* logo + contactless symbol */}
         <View style={styles.cardTopRow}>
-          <Text style={styles.cardBrand}>LEO  OS</Text>
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={styles.cardLogo}
+            resizeMode="contain"
+          />
           <View style={{ transform: [{ rotate: "90deg" }] }}>
             <Feather name="wifi" size={20} color="#FFFFFF25" />
           </View>
@@ -467,94 +472,7 @@ export default function DashboardScreen() {
       {/* ── Credit card ── */}
       <FlipUserCard />
 
-      {/* ── Compact candidate stat pills ── */}
-      {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.primary} size="small" />
-        </View>
-      ) : (
-        <View style={styles.statPillRow}>
-          {passportStats.map((s) => <StatPill key={s.label} stat={s} />)}
-        </View>
-      )}
-
-      {/* ── Compact admin stat pills ── */}
-      {isAdmin && !adminOverviewLoading && adminStats.length > 0 && (
-        <View style={styles.statPillRow}>
-          {adminStats.map((s) => <StatPill key={s.label} stat={s} />)}
-        </View>
-      )}
-
-      {/* ── Quick actions (no section label) ── */}
-      <View style={styles.actionsRow}>
-        {canSeeCapture && (
-          <ActionButton icon="camera" label="Capture" onPress={() => router.push("/(tabs)/upload")} />
-        )}
-        {canSeeMaster && (
-          <ActionButton icon="users" label="Employees" onPress={() => router.push("/(tabs)/master")} />
-        )}
-        {canSeeBilling && (
-          <ActionButton icon="file-text" label="Billing" onPress={() => router.push("/(tabs)/billing")} />
-        )}
-        <ActionButton icon="briefcase" label="Companies" onPress={() => router.push("/companies")} />
-      </View>
-
-      {/* ── Candidates with status filter tabs ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Candidates</Text>
-          {passports.length > 8 && (
-            <Pressable onPress={() => router.push("/(tabs)/master")}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Tab bar */}
-        <View style={[styles.uploadFilterRow, { backgroundColor: colors.secondary }]}>
-          {([
-            { key: "all",        label: "All",        count: passports.length,                              color: colors.foreground },
-            { key: "processing", label: "Processing",  count: (passportStats[1]?.value ?? 0) as number,     color: "#F59E0B" },
-            { key: "active",     label: "Active",      count: (passportStats[2]?.value ?? 0) as number,     color: "#10B981" },
-            { key: "attention",  label: "Attention",   count: (passportStats[3]?.value ?? 0) as number,     color: "#EF4444" },
-          ] as const).map((tab) => (
-            <Pressable
-              key={tab.key}
-              onPress={() => setUploadFilter(tab.key as UploadFilter)}
-              style={[
-                styles.uploadFilterBtn,
-                uploadFilter === tab.key && { backgroundColor: colors.card, shadowColor: "#000" },
-              ]}
-            >
-              <Text style={[styles.uploadFilterCount, { color: tab.color }]}>{tab.count}</Text>
-              <Text style={[styles.uploadFilterLabel, {
-                color: uploadFilter === tab.key ? colors.foreground : colors.mutedForeground,
-              }]}>{tab.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Filtered list */}
-        {isLoading ? null : filteredPassports.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="inbox" size={24} color={colors.mutedForeground} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              {uploadFilter === "all" ? "No candidates yet" : `No ${uploadFilter} candidates`}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.recentList}>
-            {filteredPassports.slice(0, 8).map((p) => (
-              <RecentRow key={p.id} passport={p} onPress={() => router.push(`/passport/${p.id}`)} />
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* ── Monthly revenue chart (admin only) ── */}
-      {isAdmin && <BillingChart docs={(billingData ?? []) as BillingDocumentSummary[]} />}
-
-      {/* ── Task Management ──────────────────────────────────────────── */}
+      {/* ── Task Management (above stats for quick visibility) ── */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Tasks</Text>
@@ -687,6 +605,79 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
+
+      {/* ── Candidate stat pills (2/row) ── */}
+      {isLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={colors.primary} size="small" />
+        </View>
+      ) : (
+        <View style={styles.statPillRow}>
+          {passportStats.map((s) => <StatPill key={s.label} stat={s} />)}
+        </View>
+      )}
+
+      {/* ── Admin stat pills (2/row) ── */}
+      {isAdmin && !adminOverviewLoading && adminStats.length > 0 && (
+        <View style={styles.statPillRow}>
+          {adminStats.map((s) => <StatPill key={s.label} stat={s} />)}
+        </View>
+      )}
+
+      {/* ── Candidates with status filter tabs ── */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Candidates</Text>
+          {passports.length > 8 && (
+            <Pressable onPress={() => router.push("/(tabs)/master")}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Tab bar */}
+        <View style={[styles.uploadFilterRow, { backgroundColor: colors.secondary }]}>
+          {([
+            { key: "all",        label: "All",        count: passports.length,                              color: colors.foreground },
+            { key: "processing", label: "Processing",  count: (passportStats[1]?.value ?? 0) as number,     color: "#F59E0B" },
+            { key: "active",     label: "Active",      count: (passportStats[2]?.value ?? 0) as number,     color: "#10B981" },
+            { key: "attention",  label: "Attention",   count: (passportStats[3]?.value ?? 0) as number,     color: "#EF4444" },
+          ] as const).map((tab) => (
+            <Pressable
+              key={tab.key}
+              onPress={() => setUploadFilter(tab.key as UploadFilter)}
+              style={[
+                styles.uploadFilterBtn,
+                uploadFilter === tab.key && { backgroundColor: colors.card, shadowColor: "#000" },
+              ]}
+            >
+              <Text style={[styles.uploadFilterCount, { color: tab.color }]}>{tab.count}</Text>
+              <Text style={[styles.uploadFilterLabel, {
+                color: uploadFilter === tab.key ? colors.foreground : colors.mutedForeground,
+              }]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Filtered list */}
+        {isLoading ? null : filteredPassports.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="inbox" size={24} color={colors.mutedForeground} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              {uploadFilter === "all" ? "No candidates yet" : `No ${uploadFilter} candidates`}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.recentList}>
+            {filteredPassports.slice(0, 8).map((p) => (
+              <RecentRow key={p.id} passport={p} onPress={() => router.push(`/passport/${p.id}`)} />
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* ── Monthly revenue chart (admin only) ── */}
+      {isAdmin && <BillingChart docs={(billingData ?? []) as BillingDocumentSummary[]} />}
     </ScrollView>
 
     {/* Edit task modal */}
@@ -983,6 +974,7 @@ const styles = StyleSheet.create({
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardBrand: { fontSize: 13, fontWeight: "700", letterSpacing: 3, color: "#FFFFFF", opacity: 0.6 },
+  cardLogo: { width: 38, height: 38, tintColor: "#FFFFFF" },
   // EMV chip
   cardChipRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   cardChip: {
@@ -1024,15 +1016,15 @@ const styles = StyleSheet.create({
   cardHint: { fontSize: 10, color: "#FFFFFF38" },
 
   // ── Compact stat pills ────────────────────────────────────────────────────
-  statPillRow: { flexDirection: "row", gap: 8 },
+  statPillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   statPill: {
-    flex: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 10,
-    flexDirection: "row", alignItems: "center", gap: 8,
+    width: "47%", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12,
+    flexDirection: "row", alignItems: "center", gap: 10,
     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
-  statPillIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  statPillValue: { fontSize: 18, fontWeight: "700", letterSpacing: -0.5 },
-  statPillLabel: { fontSize: 9, marginTop: 1 },
+  statPillIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  statPillValue: { fontSize: 20, fontWeight: "700", letterSpacing: -0.5 },
+  statPillLabel: { fontSize: 10, marginTop: 1 },
 
   rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
   roleText: { fontSize: 11 },

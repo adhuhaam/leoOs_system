@@ -54,6 +54,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-auth-session": "^56.0.13",
     "expo-clipboard": "~8.0.8",
     "expo-device": "~8.0.10",
     "expo-document-picker": "~14.0.8",

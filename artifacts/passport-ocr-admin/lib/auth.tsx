@@ -3,6 +3,7 @@ import {
   getGetAuthStatusQueryKey,
   setAuthTokenGetter,
   useGetAuthStatus,
+  useGoogleAuth,
   useLogin,
   useRegister,
 } from "@workspace/api-client-react";
@@ -30,6 +31,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
+  const googleAuthMutation = useGoogleAuth();
 
   useEffect(() => {
     storeGet(TOKEN_KEY)
@@ -108,6 +111,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await registerMutation.mutateAsync({ data: { email, password, name } });
     },
     [registerMutation],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      const result = await googleAuthMutation.mutateAsync({ data: { idToken } });
+      const token = (result as { token?: string })?.token;
+
+      setAuthTokenGetter(null);
+      tokenRef.current = null;
+      await storeDelete(TOKEN_KEY);
+
+      if (token) {
+        tokenRef.current = token;
+        await storeSet(TOKEN_KEY, token);
+        setAuthTokenGetter(() => token);
+      }
+
+      setForceLoggedOut(false);
+      qc.invalidateQueries();
+      await refetch();
+    },
+    [googleAuthMutation, qc, refetch],
   );
 
   const logout = useCallback(async () => {
@@ -162,8 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const isLoading = !tokenReady || authLoading;
 
-    return { isLoading, isAuthed, user, login, register, logout, refresh };
-  }, [tokenReady, authLoading, forceLoggedOut, data, login, register, logout, refresh]);
+    return { isLoading, isAuthed, user, login, register, loginWithGoogle, logout, refresh };
+  }, [tokenReady, authLoading, forceLoggedOut, data, login, register, loginWithGoogle, logout, refresh]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
