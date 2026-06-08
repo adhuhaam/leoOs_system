@@ -772,60 +772,105 @@ function StatPill({ stat }: { stat: StatItem }) {
   );
 }
 
+type ChartTab = "invoices" | "revenue";
+
 function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
   const colors = useColors();
+  const [tab, setTab] = useState<ChartTab>("invoices");
 
   const months = useMemo(() => {
-    const arr: { key: string; label: string; revenue: number }[] = [];
+    const arr: { key: string; label: string; count: number; revenue: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setDate(1);
       d.setMonth(d.getMonth() - i);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const label = d.toLocaleString("en", { month: "short" });
-      arr.push({ key, label, revenue: 0 });
+      arr.push({ key, label, count: 0, revenue: 0 });
     }
     for (const doc of docs) {
+      const created = (doc.createdAt ?? "").slice(0, 7);
+      const bucket = arr.find((m) => m.key === created);
+      if (!bucket) continue;
+      bucket.count += 1;
       if (doc.status === "payment_received" || doc.status === "completed") {
-        const created = (String(((doc as unknown) as Record<string, unknown>).createdAt ?? "") || "").slice(0, 7);
-        const bucket = arr.find((m) => m.key === created);
-        if (bucket) bucket.revenue += Number(doc.subtotal) || 0;
+        bucket.revenue += Number(doc.subtotal) || 0;
       }
     }
     return arr;
   }, [docs]);
 
-  const maxRev = Math.max(...months.map((m) => m.revenue), 1);
   const BAR_MAX_H = 72;
+  const totalCount = months.reduce((s, m) => s + m.count, 0);
   const totalRevenue = months.reduce((s, m) => s + m.revenue, 0);
+
+  const values = months.map((m) => (tab === "invoices" ? m.count : m.revenue));
+  const maxVal = Math.max(...values, 1);
+
+  function fmtVal(v: number) {
+    if (tab === "invoices") return v > 0 ? String(v) : "";
+    if (v === 0) return "";
+    return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(Math.round(v));
+  }
+
+  const COLOR_HIGH = "#6366F1";
+  const COLOR_MID  = "#818CF8";
+  const COLOR_LOW  = "#A5B4FC";
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Monthly Revenue</Text>
-        <Text style={[styles.seeAll, { color: colors.mutedForeground }]}>{fmtMVR(totalRevenue)}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Monthly Billing</Text>
       </View>
+
+      {/* Summary pills */}
+      <View style={styles.chartSummaryRow}>
+        <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
+          <Text style={[styles.chartSummaryVal, { color: "#6366F1" }]}>{totalCount}</Text>
+          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Invoices Created</Text>
+        </View>
+        <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
+          <Text style={[styles.chartSummaryVal, { color: "#10B981" }]}>{fmtMVR(totalRevenue)}</Text>
+          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Payment Received</Text>
+        </View>
+      </View>
+
+      {/* Tab toggle */}
+      <View style={[styles.chartTabRow, { backgroundColor: colors.secondary }]}>
+        {(["invoices", "revenue"] as ChartTab[]).map((t) => (
+          <Pressable
+            key={t}
+            onPress={() => setTab(t)}
+            style={[
+              styles.chartTab,
+              tab === t && { backgroundColor: colors.card, shadowColor: "#000" },
+            ]}
+          >
+            <Text style={[
+              styles.chartTabText,
+              { color: tab === t ? "#6366F1" : colors.mutedForeground },
+            ]}>
+              {t === "invoices" ? "Invoices Created" : "Payment Received"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Bars */}
       <View style={[styles.chartCard, { backgroundColor: colors.card, shadowColor: "#000" }]}>
         <View style={styles.chartBars}>
-          {months.map((m) => {
-            const pct = m.revenue / maxRev;
+          {months.map((m, idx) => {
+            const v = values[idx];
+            const pct = v / maxVal;
             const barH = Math.max(4, pct * BAR_MAX_H);
+            const barColor = pct > 0.6 ? COLOR_HIGH : pct > 0.2 ? COLOR_MID : COLOR_LOW;
             return (
               <View key={m.key} style={styles.chartCol}>
                 <Text style={[styles.chartValLabel, { color: colors.mutedForeground }]}>
-                  {m.revenue > 0
-                    ? m.revenue >= 1000
-                      ? `${(m.revenue / 1000).toFixed(0)}K`
-                      : String(Math.round(m.revenue))
-                    : ""}
+                  {fmtVal(v)}
                 </Text>
                 <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
-                  <View
-                    style={[
-                      styles.chartBar,
-                      { height: barH, backgroundColor: pct > 0.6 ? "#6366F1" : pct > 0.2 ? "#818CF8" : "#A5B4FC" },
-                    ]}
-                  />
+                  <View style={[styles.chartBar, { height: barH, backgroundColor: barColor }]} />
                 </View>
                 <Text style={[styles.chartMonthLabel, { color: colors.mutedForeground }]}>{m.label}</Text>
               </View>
@@ -1021,6 +1066,21 @@ const styles = StyleSheet.create({
   uploadFilterLabel: { fontSize: 9, marginTop: 2 },
 
   // ── Billing chart ─────────────────────────────────────────────────────────
+  chartSummaryRow: { flexDirection: "row", gap: 10 },
+  chartSummaryPill: {
+    flex: 1, borderRadius: 14, padding: 14, gap: 2,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  chartSummaryVal: { fontSize: 18, fontWeight: "700", letterSpacing: -0.3 },
+  chartSummaryLbl: { fontSize: 11 },
+  chartTabRow: {
+    flexDirection: "row", borderRadius: 12, padding: 3, gap: 2,
+  },
+  chartTab: {
+    flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1,
+  },
+  chartTabText: { fontSize: 12, fontWeight: "600" },
   chartCard: {
     borderRadius: 18, padding: 16,
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
