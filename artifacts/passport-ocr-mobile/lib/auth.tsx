@@ -77,29 +77,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      await loginMutation.mutateAsync({ data: { email, password } });
+      // POST /auth/login returns { token } — the session ID — directly in the
+      // response body. React Native has no persistent cookie jar, so we store
+      // the token in SecureStore and attach it as a Bearer on every request.
+      const result = await loginMutation.mutateAsync({ data: { email, password } });
+      const token = (result as { token?: string })?.token;
 
-      // Clear any stale token so the mobile-token fetch and subsequent auth
-      // check rely on the fresh login cookie, not an old/expired Bearer.
+      // Clear any stale token first so the auth check uses fresh credentials.
       setAuthTokenGetter(null);
       await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
 
-      // Fetch a durable session token so the login survives app restarts.
-      // The path must include /api — that is the api-server artifact's prefix.
-      try {
-        const res = await fetch(`${BASE_URL}/api/auth/mobile-token`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const json = (await res.json()) as { token?: string };
-          if (json.token) {
-            await SecureStore.setItemAsync(TOKEN_KEY, json.token);
-            const t = json.token;
-            setAuthTokenGetter(() => t);
-          }
-        }
-      } catch {
-        // Non-fatal — the login cookie will keep this session alive for now.
+      if (token) {
+        await SecureStore.setItemAsync(TOKEN_KEY, token);
+        setAuthTokenGetter(() => token);
       }
 
       // Refresh auth state (also wakes up all stale queries).

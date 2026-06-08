@@ -886,6 +886,10 @@ export type GetAuthStatus200 = {
   role?: string | null;
 };
 
+export type Login200 = {
+  token: string;
+};
+
 export type ListPassportsParams = {
   search?: string;
   nationality?: string;

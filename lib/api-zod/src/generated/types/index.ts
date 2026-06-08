@@ -54,6 +54,7 @@ export * from "./loaOptionCategory";
 export * from "./loaOptionInput";
 export * from "./loaOptionInputCategory";
 export * from "./loaUpdate";
+export * from "./login200";
 export * from "./loginInput";
 export * from "./passport";
 export * from "./passportStats";

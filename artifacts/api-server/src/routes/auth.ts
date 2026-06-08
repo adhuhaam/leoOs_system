@@ -138,7 +138,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
         res.status(500).json({ error: "Failed to log in" });
         return;
       }
-      res.sendStatus(204);
+      // Return the session ID so mobile clients can use it as a Bearer token
+      // without relying on cookies (React Native has no persistent cookie jar).
+      res.json({ token: req.session.id });
     });
   });
 });

@@ -57,6 +57,7 @@ import type {
   LoaOption,
   LoaOptionInput,
   LoaUpdate,
+  Login200,
   LoginInput,
   Passport,
   PassportStats,
@@ -333,8 +334,8 @@ export const getLoginUrl = () => {
 export const login = async (
   loginInput: LoginInput,
   options?: RequestInit,
-): Promise<void> => {
-  return customFetch<void>(getLoginUrl(), {
+): Promise<Login200> => {
+  return customFetch<Login200>(getLoginUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },

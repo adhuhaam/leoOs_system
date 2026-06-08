@@ -47,6 +47,10 @@ export const LoginBody = zod.object({
   password: zod.string().min(1),
 });
 
+export const LoginResponse = zod.object({
+  token: zod.string(),
+});
+
 /**
  * @summary Authenticate with a Google ID token
  */
