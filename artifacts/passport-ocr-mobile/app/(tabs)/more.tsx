@@ -5,9 +5,9 @@ import {
   useLogout,
 } from "@workspace/api-client-react";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,7 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
 
 type Item = {
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   label: string;
   detail?: string;
   route?: string;
@@ -55,38 +55,29 @@ export default function MoreScreen() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const logoutMutation = useLogout();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const role = user?.role ?? null;
   const isAdmin = role === "superuser" || role === "admin";
   const isSuperuser = role === "superuser";
-
   const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
   const ADMIN_ITEMS: Item[] = [
-    ...(isAdmin ? [{ icon: "users" as const, label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" }] : []),
-    ...(isSuperuser ? [{ icon: "settings" as const, label: "System Settings", detail: "Configure Google OAuth & more", route: "/admin/system-settings" }] : []),
+    ...(isAdmin ? [{ icon: "users", label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" }] : []),
+    ...(isSuperuser ? [{ icon: "settings", label: "System Settings", detail: "Configure Google OAuth & more", route: "/admin/system-settings" }] : []),
   ];
 
-  function handleLogout() {
-    Alert.alert("Sign out?", "You will return to the login screen.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await logoutMutation.mutateAsync();
-          } catch {
-            // ignore — clear client state regardless
-          }
-          // Remove auth query first so AuthGate sees unauthenticated
-          // immediately and doesn't bounce the user back from /login
-          qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
-          qc.clear();
-          router.replace("/login");
-        },
-      },
-    ]);
+  async function doLogout() {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch {
+      // ignore server errors — clear client state regardless
+    }
+    // Remove auth query before clearing so AuthGate immediately sees
+    // unauthenticated and doesn't bounce the user back from /login
+    qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
+    qc.clear();
+    router.replace("/login");
   }
 
   function ItemRow({ item, idx }: { item: Item; idx: number }) {
@@ -104,7 +95,7 @@ export default function MoreScreen() {
         ]}
       >
         <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
-          <Feather name={item.icon} size={18} color={colors.foreground} />
+          <Feather name={item.icon as never} size={18} color={colors.foreground} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.rowLabel, { color: colors.foreground }]}>{item.label}</Text>
@@ -176,23 +167,53 @@ export default function MoreScreen() {
         </>
       )}
 
-      {/* Sign out */}
-      <Pressable
-        onPress={handleLogout}
-        disabled={logoutMutation.isPending}
-        style={({ pressed }) => [
-          styles.logoutBtn,
-          {
-            backgroundColor: colors.card,
-            borderColor: "#FCA5A5",
-            opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.82 : 1,
-            shadowColor: "#000",
-          },
-        ]}
-      >
-        <Feather name="log-out" size={17} color={colors.destructive} />
-        <Text style={[styles.logoutText, { color: colors.destructive }]}>Sign out</Text>
-      </Pressable>
+      {/* Sign out — inline confirm to avoid Alert (blocked in iframe preview) */}
+      {confirmLogout ? (
+        <View style={[styles.confirmBox, { backgroundColor: colors.card, borderColor: "#FCA5A5", shadowColor: "#000" }]}>
+          <Text style={[styles.confirmText, { color: colors.foreground }]}>Sign out of LEO OS?</Text>
+          <View style={styles.confirmRow}>
+            <Pressable
+              onPress={() => setConfirmLogout(false)}
+              style={({ pressed }) => [
+                styles.confirmCancel,
+                { backgroundColor: colors.secondary, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <Text style={[styles.confirmCancelText, { color: colors.foreground }]}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={doLogout}
+              disabled={logoutMutation.isPending}
+              style={({ pressed }) => [
+                styles.confirmSignOut,
+                { opacity: logoutMutation.isPending ? 0.5 : pressed ? 0.82 : 1 },
+              ]}
+            >
+              {logoutMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.confirmSignOutText}>Sign out</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => setConfirmLogout(true)}
+          style={({ pressed }) => [
+            styles.logoutBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: "#FCA5A5",
+              opacity: pressed ? 0.82 : 1,
+              shadowColor: "#000",
+            },
+          ]}
+        >
+          <Feather name="log-out" size={17} color={colors.destructive} />
+          <Text style={[styles.logoutText, { color: colors.destructive }]}>Sign out</Text>
+        </Pressable>
+      )}
 
       <Text style={[styles.version, { color: colors.mutedForeground }]}>LEO OS · v1.0</Text>
     </ScrollView>
@@ -275,6 +296,35 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  confirmBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 8,
+    gap: 14,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  confirmText: { fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  confirmRow: { flexDirection: "row", gap: 10 },
+  confirmCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  confirmCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  confirmSignOut: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+  },
+  confirmSignOutText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
 
   version: {
     fontSize: 11,
