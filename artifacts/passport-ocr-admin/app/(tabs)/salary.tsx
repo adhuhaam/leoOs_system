@@ -531,14 +531,14 @@ export default function SalaryScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>BASIC SALARY (MVR) *</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                  style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.mutedForeground }]}
                   placeholder="0.00"
                   placeholderTextColor={colors.mutedForeground}
                   keyboardType="decimal-pad"
                   value={form.basicSalary}
-                  onChangeText={(v) => setForm((p) => ({ ...p, basicSalary: v }))}
+                  editable={false}
                 />
-                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>Agency salary from passport</Text>
+                <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>Set on the passport record · edit there to change</Text>
               </View>
 
               {/* Allowances */}

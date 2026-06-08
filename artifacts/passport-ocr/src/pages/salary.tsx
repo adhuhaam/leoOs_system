@@ -231,10 +231,10 @@ function SalaryFormDialog({
                   step="0.01"
                   placeholder="0.00"
                   value={form.basicSalary}
-                  onChange={(e) => setForm((p) => ({ ...p, basicSalary: e.target.value }))}
-                  className="h-9"
+                  readOnly
+                  className="h-9 bg-muted cursor-not-allowed opacity-75"
                 />
-                <p className="text-[10px] text-muted-foreground">Agency salary from passport</p>
+                <p className="text-[10px] text-muted-foreground">Set on the passport record · edit there to change</p>
               </div>
               {field("foodAllowance", "Food Allowance")}
               {field("transportAllowance", "Transport Allowance")}
