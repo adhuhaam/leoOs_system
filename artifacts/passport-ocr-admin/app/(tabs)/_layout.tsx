@@ -4,14 +4,27 @@ import React from "react";
 import { Platform, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 /**
- * LEO ADMIN — all tabs are always visible.
- * Only admin and superuser roles can log in, so no role-based hiding is needed.
+ * Tab visibility by role:
+ *
+ *  Tab        superuser  admin  agent  client  company  employee
+ *  Dashboard  ✓          ✓      ✓      ✓       ✓        ✓
+ *  Master     ✓          ✓      ✓      ✓       ✓        –
+ *  Process    ✓          ✓      ✓      –       –        –
+ *  Billing    ✓          ✓      –      ✓       ✓        –
+ *  More       ✓          ✓      ✓      ✓       ✓        ✓
  */
+const CAN_SEE_MASTER  = new Set(["superuser", "admin", "agent", "client", "company"]);
+const CAN_SEE_UPLOAD  = new Set(["superuser", "admin", "agent"]);
+const CAN_SEE_BILLING = new Set(["superuser", "admin", "client", "company"]);
+
 export default function TabLayout() {
   const colors = useColors();
+  const { user } = useAuth();
   const isWeb = Platform.OS === "web";
+  const role = user?.role ?? "";
 
   const dot = (color: string, focused: boolean) =>
     focused ? (
@@ -71,10 +84,12 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="master"
         options={{
           title: "Master",
+          href: CAN_SEE_MASTER.has(role) ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="users" size={22} color={color} />
@@ -83,10 +98,12 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="upload"
         options={{
           title: "Process",
+          href: CAN_SEE_UPLOAD.has(role) ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
@@ -114,10 +131,12 @@ export default function TabLayout() {
           tabBarLabel: () => null,
         }}
       />
+
       <Tabs.Screen
         name="billing"
         options={{
           title: "Billing",
+          href: CAN_SEE_BILLING.has(role) ? undefined : null,
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: "center" }}>
               <Feather name="file-text" size={22} color={color} />
@@ -126,6 +145,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="more"
         options={{

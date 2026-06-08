@@ -1459,7 +1459,6 @@ components:
         hasOpenAiApiKey:
           type: boolean
           description: True if a user-supplied OpenAI API key is stored in the database.
-
     SystemSettingsInput:
       type: object
       properties:
@@ -1502,7 +1501,6 @@ components:
           type: string
           nullable: true
           description: Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.
-
     LoaOption:
       type: object
       required: [id, companyId, category, value, createdAt]

@@ -41,8 +41,6 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
 
-const ADMIN_ROLES = new Set(["admin", "superuser"]);
-
 // expo-secure-store is only available on iOS/Android, not web.
 // These helpers are silent no-ops on web so the rest of the code is uniform.
 async function storeGet(key: string): Promise<string | null> {
@@ -100,33 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setForceLoggedOut(false);
       qc.invalidateQueries();
-      const { data: freshData } = await refetch();
-
-      // ── Admin-only guard ──────────────────────────────────────────────────
-      // LEO ADMIN is restricted to admin and superuser roles only.
-      // If the logged-in user has any other role, force-logout immediately
-      // and throw an error so the login screen can display it.
-      const freshRole = (freshData as { role?: string | null } | undefined)?.role;
-      if (!freshRole || !ADMIN_ROLES.has(freshRole)) {
-        setForceLoggedOut(true);
-        tokenRef.current = null;
-        setAuthTokenGetter(null);
-        await storeDelete(TOKEN_KEY);
-        try {
-          await fetch(`${BASE_URL}/api/auth/logout`, {
-            method: "POST",
-            credentials: "include",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
-        } catch { /* ignore */ }
-        qc.removeQueries({ predicate: () => true });
-        throw Object.assign(
-          new Error(
-            "This app is for admin users only. Please use the LEO OS app instead.",
-          ),
-          { adminOnly: true },
-        );
-      }
+      await refetch();
     },
     [loginMutation, qc, refetch],
   );

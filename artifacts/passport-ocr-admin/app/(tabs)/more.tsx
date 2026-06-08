@@ -55,11 +55,12 @@ export default function MoreScreen() {
   const role = user?.role ?? null;
   const roleStyle = role ? (ROLE_COLOR[role] ?? { bg: colors.secondary, text: colors.mutedForeground }) : null;
 
-  const ADMIN_ITEMS: Item[] = [
+  const isAdmin = role === "admin" || role === "superuser";
+  const ADMIN_ITEMS: Item[] = isAdmin ? [
     { icon: "users", label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" },
     { icon: "shield", label: "Permissions", detail: "Role-based access control", route: "/admin/permissions" },
     { icon: "settings", label: "System Settings", detail: "System configuration", route: "/admin/system-settings" },
-  ];
+  ] : [];
 
   async function doLogout() {
     setLoggingOut(true);
