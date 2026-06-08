@@ -138,7 +138,7 @@ function SalaryFormDialog({
           notes: existing.notes ?? "",
           status: existing.status as "draft" | "confirmed",
         }
-      : EMPTY_FORM,
+      : { ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "" },
   );
 
   // Reset form when dialog opens with new data

@@ -677,7 +677,7 @@ export default function SalaryScreen() {
               {filteredPassports.map((p) => {
                 const initials = (p.fullName ?? "?").split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0] ?? "").join("").toUpperCase();
                 return (
-                  <TouchableOpacity key={p.id} onPress={() => { setSelectedPassport(p); setEmployeePickerOpen(false); }} style={[styles.empRow, { borderBottomColor: colors.border }]}>
+                  <TouchableOpacity key={p.id} onPress={() => { setSelectedPassport(p); setForm((prev) => ({ ...prev, basicSalary: p.agencySalary ?? prev.basicSalary })); setEmployeePickerOpen(false); }} style={[styles.empRow, { borderBottomColor: colors.border }]}>
                     <View style={[styles.empAvatar, { backgroundColor: colors.secondary }]}>
                       <Text style={[styles.empAvatarText, { color: colors.foreground }]}>{initials}</Text>
                     </View>
