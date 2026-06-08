@@ -1301,7 +1301,7 @@ function SalaryPickerDialog({
       description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
       detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
       qty: r.daysWorked && r.daysWorked > 0 ? String(r.daysWorked) : "1",
-      rate: r.clientSalary ?? r.netSalary ?? "0",
+      rate: (Number(r.clientSalary) > 0 ? r.clientSalary : r.netSalary) ?? "0",
     }));
     onAdd(items, chosen.map((r) => r.id));
   };

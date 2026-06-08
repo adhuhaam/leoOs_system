@@ -71,6 +71,7 @@ function fmtMVR(val: string | number | null | undefined): string {
 type SalaryFormData = {
   daysWorked: string;
   basicSalary: string;
+  clientSalary: string;
   foodAllowance: string;
   transportAllowance: string;
   otherAllowances: string;
@@ -83,6 +84,7 @@ type SalaryFormData = {
 const EMPTY_FORM: SalaryFormData = {
   daysWorked: "0",
   basicSalary: "",
+  clientSalary: "0",
   foodAllowance: "0",
   transportAllowance: "0",
   otherAllowances: "0",
@@ -130,6 +132,7 @@ function SalaryFormDialog({
       ? {
           daysWorked: String(existing.daysWorked ?? 0),
           basicSalary: existing.basicSalary,
+          clientSalary: existing.clientSalary ?? "0",
           foodAllowance: existing.foodAllowance,
           transportAllowance: existing.transportAllowance,
           otherAllowances: existing.otherAllowances,
@@ -138,7 +141,7 @@ function SalaryFormDialog({
           notes: existing.notes ?? "",
           status: existing.status as "draft" | "confirmed",
         }
-      : { ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "" },
+      : { ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? "0" },
   );
 
   // Reset form when dialog opens with new data
@@ -224,17 +227,28 @@ function SalaryFormDialog({
             <h4 className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Earnings</h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Basic Salary *</Label>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Employee Salary (MVR) *</Label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   placeholder="0.00"
                   value={form.basicSalary}
-                  readOnly
-                  className="h-9 bg-muted cursor-not-allowed opacity-75"
+                  onChange={(e) => setForm((p) => ({ ...p, basicSalary: e.target.value }))}
+                  className="h-9"
                 />
-                <p className="text-[10px] text-muted-foreground">Set on the passport record · edit there to change</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Client Billing Rate (MVR)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.clientSalary}
+                  onChange={(e) => setForm((p) => ({ ...p, clientSalary: e.target.value }))}
+                  className="h-9"
+                />
               </div>
               {field("foodAllowance", "Food Allowance")}
               {field("transportAllowance", "Transport Allowance")}

@@ -27,7 +27,7 @@ function computeNet(data: {
 
 function salaryShape(
   r: typeof salaryRecordsTable.$inferSelect,
-  passport?: { fullName: string | null; passportNumber: string | null; clientSalary: string | null } | null,
+  passport?: { fullName: string | null; passportNumber: string | null } | null,
 ) {
   return {
     id: r.id,
@@ -42,6 +42,7 @@ function salaryShape(
     deductions: r.deductions,
     otherExpenses: r.otherExpenses,
     netSalary: r.netSalary,
+    clientSalary: r.clientSalary,
     invoiceId: r.invoiceId ?? null,
     notes: r.notes,
     status: r.status,
@@ -49,7 +50,6 @@ function salaryShape(
     updatedAt: r.updatedAt.toISOString(),
     employeeName: passport?.fullName ?? null,
     passportNumber: passport?.passportNumber ?? null,
-    clientSalary: passport?.clientSalary ?? null,
   };
 }
 
@@ -74,7 +74,6 @@ router.get("/salary-records", async (req, res) => {
           record: salaryRecordsTable,
           fullName: passportsTable.fullName,
           passportNumber: passportsTable.passportNumber,
-          clientSalary: passportsTable.clientSalary,
         })
         .from(salaryRecordsTable)
         .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
@@ -92,7 +91,7 @@ router.get("/salary-records", async (req, res) => {
 
       return res.json(
         rows.map((r) =>
-          salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber, clientSalary: r.clientSalary }),
+          salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber }),
         ),
       );
     }
@@ -114,7 +113,6 @@ router.get("/salary-records", async (req, res) => {
       record: salaryRecordsTable,
       fullName: passportsTable.fullName,
       passportNumber: passportsTable.passportNumber,
-      clientSalary: passportsTable.clientSalary,
     })
     .from(salaryRecordsTable)
     .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
@@ -123,7 +121,7 @@ router.get("/salary-records", async (req, res) => {
 
   return res.json(
     rows.map((r) =>
-      salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber, clientSalary: r.clientSalary }),
+      salaryShape(r.record, { fullName: r.fullName, passportNumber: r.passportNumber }),
     ),
   );
 });
@@ -134,6 +132,7 @@ const CreateSalarySchema = z.object({
   year: z.number().int(),
   daysWorked: z.number().int().min(0).default(0),
   basicSalary: z.string().default("0"),
+  clientSalary: z.string().default("0"),
   foodAllowance: z.string().default("0"),
   transportAllowance: z.string().default("0"),
   otherAllowances: z.string().default("0"),
@@ -160,6 +159,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
         year: data.year,
         daysWorked: data.daysWorked,
         basicSalary: data.basicSalary,
+        clientSalary: data.clientSalary,
         foodAllowance: data.foodAllowance,
         transportAllowance: data.transportAllowance,
         otherAllowances: data.otherAllowances,
@@ -173,7 +173,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
 
     const passport = await db.query.passportsTable.findFirst({
       where: eq(passportsTable.id, data.passportId),
-      columns: { fullName: true, passportNumber: true, clientSalary: true },
+      columns: { fullName: true, passportNumber: true },
     });
 
     return res.status(201).json(salaryShape(row, passport));
@@ -189,6 +189,7 @@ router.post("/salary-records", requireRole("superuser", "admin"), async (req, re
 const UpdateSalarySchema = z.object({
   daysWorked: z.number().int().min(0).optional(),
   basicSalary: z.string().optional(),
+  clientSalary: z.string().optional(),
   foodAllowance: z.string().optional(),
   transportAllowance: z.string().optional(),
   otherAllowances: z.string().optional(),
@@ -225,7 +226,7 @@ router.patch("/salary-records/:id", requireRole("superuser", "admin"), async (re
 
   const passport = await db.query.passportsTable.findFirst({
     where: eq(passportsTable.id, updated.passportId),
-    columns: { fullName: true, passportNumber: true, clientSalary: true },
+    columns: { fullName: true, passportNumber: true },
   });
 
   return res.json(salaryShape(updated, passport));

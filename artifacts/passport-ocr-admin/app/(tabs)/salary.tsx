@@ -60,6 +60,7 @@ function StatusBadge({ status, colors }: { status: string; colors: ReturnType<ty
 type SalaryForm = {
   daysWorked: string;
   basicSalary: string;
+  clientSalary: string;
   foodAllowance: string;
   transportAllowance: string;
   otherAllowances: string;
@@ -72,6 +73,7 @@ type SalaryForm = {
 const EMPTY_FORM: SalaryForm = {
   daysWorked: "",
   basicSalary: "",
+  clientSalary: "0",
   foodAllowance: "0",
   transportAllowance: "0",
   otherAllowances: "0",
@@ -233,6 +235,7 @@ export default function SalaryScreen() {
       setForm({
         daysWorked: String(existing.daysWorked ?? ""),
         basicSalary: existing.basicSalary,
+        clientSalary: existing.clientSalary ?? "0",
         foodAllowance: existing.foodAllowance,
         transportAllowance: existing.transportAllowance,
         otherAllowances: existing.otherAllowances,
@@ -242,7 +245,7 @@ export default function SalaryScreen() {
         status: existing.status as "draft" | "confirmed",
       });
     } else {
-      setForm({ ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "" });
+      setForm({ ...EMPTY_FORM, basicSalary: passport.agencySalary ?? "", clientSalary: passport.clientSalary ?? "0" });
     }
     setFormTarget({ passport, existing });
   }
@@ -262,6 +265,7 @@ export default function SalaryScreen() {
           data: {
             daysWorked: parseInt(form.daysWorked) || 0,
             basicSalary: form.basicSalary,
+            clientSalary: form.clientSalary || "0",
             foodAllowance: form.foodAllowance || "0",
             transportAllowance: form.transportAllowance || "0",
             otherAllowances: form.otherAllowances || "0",
@@ -279,6 +283,7 @@ export default function SalaryScreen() {
             year: formYear,
             daysWorked: parseInt(form.daysWorked) || 0,
             basicSalary: form.basicSalary,
+            clientSalary: form.clientSalary || "0",
             foodAllowance: form.foodAllowance || "0",
             transportAllowance: form.transportAllowance || "0",
             otherAllowances: form.otherAllowances || "0",
@@ -636,20 +641,30 @@ export default function SalaryScreen() {
                   />
                 </View>
 
-                {/* Basic Salary — read-only from passport */}
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>BASIC SALARY (MVR)</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.mutedForeground }]}
-                    placeholder="0.00"
-                    placeholderTextColor={colors.mutedForeground}
-                    keyboardType="decimal-pad"
-                    value={form.basicSalary}
-                    editable={false}
-                  />
-                  <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 2 }}>
-                    Agency salary from passport · edit there to change
-                  </Text>
+                {/* Employee salary */}
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE SALARY (MVR)</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="decimal-pad"
+                      value={form.basicSalary}
+                      onChangeText={(v) => setForm((p) => ({ ...p, basicSalary: v }))}
+                    />
+                  </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR)</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="decimal-pad"
+                      value={form.clientSalary}
+                      onChangeText={(v) => setForm((p) => ({ ...p, clientSalary: v }))}
+                    />
+                  </View>
                 </View>
 
                 {/* Allowances */}

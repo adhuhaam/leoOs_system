@@ -24,4 +24,5 @@ export interface CreateSalaryRecord {
   otherExpenses?: string;
   notes?: string | null;
   status?: string;
+  clientSalary?: string;
 }

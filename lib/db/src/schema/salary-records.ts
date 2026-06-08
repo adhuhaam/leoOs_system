@@ -20,6 +20,7 @@ export const salaryRecordsTable = pgTable(
     deductions: numeric("deductions", { precision: 14, scale: 2 }).notNull().default("0"),
     otherExpenses: numeric("other_expenses", { precision: 14, scale: 2 }).notNull().default("0"),
     netSalary: numeric("net_salary", { precision: 14, scale: 2 }).notNull().default("0"),
+    clientSalary: numeric("client_salary", { precision: 14, scale: 2 }).notNull().default("0"),
     invoiceId: integer("invoice_id").references(() => billingDocumentsTable.id, { onDelete: "set null" }),
     daysWorked: integer("days_worked").notNull().default(0),
     notes: text("notes"),

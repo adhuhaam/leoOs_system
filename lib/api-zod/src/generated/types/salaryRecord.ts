@@ -26,5 +26,5 @@ export interface SalaryRecord {
   updatedAt?: string;
   employeeName?: string | null;
   passportNumber?: string | null;
-  clientSalary?: string | null;
+  clientSalary?: string;
 }

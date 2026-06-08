@@ -18,4 +18,5 @@ export interface UpdateSalaryRecord {
   invoiceId?: number | null;
   notes?: string | null;
   status?: string;
+  clientSalary?: string;
 }

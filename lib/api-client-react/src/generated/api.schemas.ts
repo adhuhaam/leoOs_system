@@ -973,7 +973,7 @@ export interface SalaryRecord {
   updatedAt?: string;
   employeeName?: string | null;
   passportNumber?: string | null;
-  clientSalary?: string | null;
+  clientSalary?: string;
 }
 
 export interface CreateSalaryRecord {
@@ -994,6 +994,7 @@ export interface CreateSalaryRecord {
   otherExpenses?: string;
   notes?: string | null;
   status?: string;
+  clientSalary?: string;
 }
 
 export interface UpdateSalaryRecord {
@@ -1008,6 +1009,7 @@ export interface UpdateSalaryRecord {
   invoiceId?: number | null;
   notes?: string | null;
   status?: string;
+  clientSalary?: string;
 }
 
 export type GetAuthStatus200 = {

@@ -2642,7 +2642,7 @@ components:
         updatedAt: { type: string }
         employeeName: { type: string, nullable: true }
         passportNumber: { type: string, nullable: true }
-        clientSalary: { type: string, nullable: true }
+        clientSalary: { type: string }
 
     CreateSalaryRecord:
       type: object
@@ -2660,6 +2660,7 @@ components:
         otherExpenses: { type: string }
         notes: { type: string, nullable: true }
         status: { type: string }
+        clientSalary: { type: string }
 
     UpdateSalaryRecord:
       type: object
@@ -2674,4 +2675,5 @@ components:
         invoiceId: { type: integer, nullable: true }
         notes: { type: string, nullable: true }
         status: { type: string }
+        clientSalary: { type: string }
 

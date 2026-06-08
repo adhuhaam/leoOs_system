@@ -1674,7 +1674,7 @@ export const ListSalaryRecordsResponseItem = zod.object({
   updatedAt: zod.string().optional(),
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
-  clientSalary: zod.string().nullish(),
+  clientSalary: zod.string().optional(),
 });
 export const ListSalaryRecordsResponse = zod.array(
   ListSalaryRecordsResponseItem,
@@ -1700,6 +1700,7 @@ export const CreateSalaryRecordBody = zod.object({
   otherExpenses: zod.string().optional(),
   notes: zod.string().nullish(),
   status: zod.string().optional(),
+  clientSalary: zod.string().optional(),
 });
 
 /**
@@ -1722,6 +1723,7 @@ export const UpdateSalaryRecordBody = zod.object({
   invoiceId: zod.number().nullish(),
   notes: zod.string().nullish(),
   status: zod.string().optional(),
+  clientSalary: zod.string().optional(),
 });
 
 export const UpdateSalaryRecordResponse = zod.object({
@@ -1744,7 +1746,7 @@ export const UpdateSalaryRecordResponse = zod.object({
   updatedAt: zod.string().optional(),
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
-  clientSalary: zod.string().nullish(),
+  clientSalary: zod.string().optional(),
 });
 
 /**
