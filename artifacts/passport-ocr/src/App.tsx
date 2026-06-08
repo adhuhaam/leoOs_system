@@ -25,6 +25,7 @@ import EmployeeProfilePage from "@/pages/employee-profile";
 import UsersPage from "@/pages/users";
 import PermissionsPage from "@/pages/permissions";
 import ProfilePage from "@/pages/profile";
+import UserProfilePage from "@/pages/user-profile";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function Router() {
   return (
     <Switch>
       {/* Fully public — no auth gate, no sidebar */}
+      <Route path="/u/:userId" component={UserProfilePage} />
       <Route path="/loa/:id/print" component={LoaPrintPage} />
       <Route path="/billing/:id/print" component={BillingPrintPage} />
       <Route path="/expenses/:id/print" component={ExpenseVoucherPrintPage} />

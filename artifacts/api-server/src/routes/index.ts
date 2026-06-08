@@ -16,6 +16,7 @@ import xpatRouter from "./xpat";
 import adminUsersRouter from "./admin-users";
 import adminPermissionsRouter from "./admin-permissions";
 import publicReadsRouter from "./public-reads";
+import publicProfileRouter from "./public-profile";
 import { permissionsMiddleware } from "../lib/permissions";
 
 const router: IRouter = Router();
@@ -23,6 +24,7 @@ const router: IRouter = Router();
 // Public routes (no auth required)
 router.use(healthRouter);
 router.use(authRouter);
+router.use(publicProfileRouter);
 // /system/settings GET is public so the login screen can show the right brand
 // name & logo. The PATCH inside this router self-checks for auth + role.
 router.use(systemRouter);

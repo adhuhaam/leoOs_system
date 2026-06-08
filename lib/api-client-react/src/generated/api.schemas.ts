@@ -893,6 +893,15 @@ export interface TaskUpdate {
   position?: number;
 }
 
+export interface PublicUserProfile {
+  id: number;
+  name: string;
+  role: string;
+  designation?: string | null;
+  phone?: string | null;
+  companyName?: string | null;
+}
+
 export interface XpatWorkPermit {
   /** @nullable */
   fullName?: string | null;

@@ -24,6 +24,7 @@ import {
   useListTasks,
   useUpdateTask,
 } from "@workspace/api-client-react";
+import QRCode from "react-native-qrcode-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -140,11 +141,18 @@ type EditDraft = { id: number; title: string; notes: string; priority: string; d
 // ── Flip user card (credit-card proportions) ──────────────────────────────────
 const CARD_HEIGHT = 210;
 
+const CARD_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+
 function FlipUserCard() {
   const { user } = useAuth();
   const colors = useColors();
   const isBack = useRef(false);
   const flipAnim = useSharedValue(0);
+
+  const { data: companiesData } = useListCompanies(undefined, {
+    query: { queryKey: getListCompaniesQueryKey(), staleTime: 5 * 60_000 },
+  });
+  const companyName = (companiesData ?? []).find((c) => c.id === user?.companyId)?.name ?? null;
 
   const initials = (user?.name ?? "?")
     .split(" ").filter(Boolean).slice(0, 2)
@@ -154,6 +162,10 @@ function FlipUserCard() {
   const rStyle = user?.role
     ? (ROLE_COLOR[user.role] ?? { bg: "#FFFFFF18", text: "#FFFFFF99" })
     : { bg: "#FFFFFF18", text: "#FFFFFF99" };
+
+  const qrUrl = CARD_DOMAIN && user?.id
+    ? `https://${CARD_DOMAIN}/u/${user.id}`
+    : null;
 
   function toggle() {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -184,18 +196,39 @@ function FlipUserCard() {
         <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#4ADE8010" }]} />
         <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#2DD4BF0B" }]} />
 
-        {/* contactless symbol */}
+        {/* top-right: QR code or contactless symbol */}
         <View style={styles.cardTopRow}>
-          <View style={{ transform: [{ rotate: "90deg" }] }}>
-            <Feather name="wifi" size={20} color="#FFFFFF25" />
-          </View>
+          {qrUrl ? (
+            <View style={styles.cardQrWrap}>
+              <QRCode
+                value={qrUrl}
+                size={52}
+                color="#FFFFFF"
+                backgroundColor="transparent"
+              />
+            </View>
+          ) : (
+            <View style={{ transform: [{ rotate: "90deg" }] }}>
+              <Feather name="wifi" size={20} color="#FFFFFF25" />
+            </View>
+          )}
         </View>
 
-        {/* user name display */}
+        {/* user name + designation + company (absolute, left side) */}
         <View style={styles.cardNameDisplay}>
-          <Text style={styles.cardDisplayName} numberOfLines={2}>
+          <Text style={styles.cardDisplayName} numberOfLines={1}>
             {(user?.name ?? "").toUpperCase()}
           </Text>
+          {(user?.designation || companyName) ? (
+            <View style={{ marginTop: 4, gap: 1 }}>
+              {user?.designation ? (
+                <Text style={styles.cardSubText} numberOfLines={1}>{user.designation}</Text>
+              ) : null}
+              {companyName ? (
+                <Text style={styles.cardSubText} numberOfLines={1}>{companyName}</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {/* spacer pushes bottom content down */}
@@ -1649,8 +1682,18 @@ const styles = StyleSheet.create({
   },
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
-  cardNameDisplay: { position: "absolute", left: 14, top: 16, right: 60, zIndex: 1 },
-  cardDisplayName: { fontSize: 20, fontWeight: "700", color: "#FFFFFF", letterSpacing: 1.2, lineHeight: 26 },
+  cardQrWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF12",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 2,
+  },
+  cardNameDisplay: { position: "absolute", left: 14, top: 16, right: 72, zIndex: 1 },
+  cardDisplayName: { fontSize: 18, fontWeight: "700", color: "#FFFFFF", letterSpacing: 1.0, lineHeight: 24 },
+  cardSubText: { fontSize: 10, color: "#FFFFFF70", letterSpacing: 0.3 },
   cardBottom: { gap: 6 },
   // card number dots
   cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },

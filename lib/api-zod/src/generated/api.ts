@@ -8,6 +8,22 @@
 import * as zod from "zod";
 
 /**
+ * @summary Get public user profile (no auth required)
+ */
+export const GetPublicUserProfileParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const GetPublicUserProfileResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  role: zod.string(),
+  designation: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  companyName: zod.string().nullish(),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */

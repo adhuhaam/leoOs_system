@@ -67,6 +67,7 @@ import type {
   Password,
   PasswordInput,
   PasswordUpdate,
+  PublicUserProfile,
   RegisterInput,
   RolePermission,
   SystemSettings,
@@ -88,6 +89,95 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Get public user profile (no auth required)
+ */
+export const getGetPublicUserProfileUrl = (userId: number) => {
+  return `/api/u/${userId}`;
+};
+
+export const getPublicUserProfile = async (
+  userId: number,
+  options?: RequestInit,
+): Promise<PublicUserProfile> => {
+  return customFetch<PublicUserProfile>(getGetPublicUserProfileUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicUserProfileQueryKey = (userId: number) => {
+  return [`/api/u/${userId}`] as const;
+};
+
+export const getGetPublicUserProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicUserProfile>>,
+  TError = ErrorType<void>,
+>(
+  userId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicUserProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPublicUserProfileQueryKey(userId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicUserProfile>>
+  > = ({ signal }) =>
+    getPublicUserProfile(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicUserProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicUserProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicUserProfile>>
+>;
+export type GetPublicUserProfileQueryError = ErrorType<void>;
+
+/**
+ * @summary Get public user profile (no auth required)
+ */
+
+export function useGetPublicUserProfile<
+  TData = Awaited<ReturnType<typeof getPublicUserProfile>>,
+  TError = ErrorType<void>,
+>(
+  userId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicUserProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicUserProfileQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * Returns server health status

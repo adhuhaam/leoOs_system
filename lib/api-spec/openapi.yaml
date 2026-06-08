@@ -33,6 +33,27 @@ tags:
   - name: xpat
     description: Maldives Xpat MV work permit lookup (proxy)
 paths:
+  /u/{userId}:
+    get:
+      operationId: getPublicUserProfile
+      tags: [auth]
+      summary: Get public user profile (no auth required)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Public user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicUserProfile"
+        "404":
+          description: User not found
+
   /healthz:
     get:
       operationId: healthCheck
@@ -2459,6 +2480,26 @@ components:
         dueDate: { type: string, nullable: true }
         parentId: { type: integer, nullable: true }
         position: { type: integer }
+
+    PublicUserProfile:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        designation:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        companyName:
+          type: string
+          nullable: true
 
     XpatWorkPermit:
       type: object
