@@ -1,10 +1,13 @@
 import { Feather } from "@/components/Icon";
+import { CalendarPicker } from "@/components/CalendarPicker";
+import { useColors } from "@/hooks/useColors";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   type Expense,
   type ExpenseCategory,
   getListExpenseCategoriesQueryKey,
   getListExpensesQueryKey,
+  useCreateExpenseCategory,
   useDeleteExpense,
   useListExpenseCategories,
   useListExpenses,
@@ -23,7 +26,13 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
-import { useColors } from "@/hooks/useColors";
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDate(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d} ${MONTHS_SHORT[Number(m) - 1]} ${y}`;
+}
 
 export default function ExpenseDetailScreen() {
   const colors = useColors();
@@ -46,6 +55,12 @@ export default function ExpenseDetailScreen() {
   const [expenseDate, setExpenseDate] = useState("");
   const [remarks, setRemarks] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [showCal, setShowCal] = useState(false);
+
+  // Quick-add category
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const createCategoryMutation = useCreateExpenseCategory();
 
   useEffect(() => {
     if (expense && !hydrated) {
@@ -59,6 +74,20 @@ export default function ExpenseDetailScreen() {
 
   const updateMutation = useUpdateExpense();
   const deleteMutation = useDeleteExpense();
+
+  async function handleAddCategory() {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    try {
+      const created = await createCategoryMutation.mutateAsync({ data: { name } });
+      await qc.invalidateQueries({ queryKey: getListExpenseCategoriesQueryKey() });
+      setCategoryId((created as ExpenseCategory).id);
+      setNewCategoryName("");
+      setAddingCategory(false);
+    } catch (err) {
+      Alert.alert("Could not create category", err instanceof Error ? err.message : "Please try again.");
+    }
+  }
 
   async function handleSave() {
     if (!expense || categoryId == null || !amount) return;
@@ -151,11 +180,7 @@ export default function ExpenseDetailScreen() {
               <Text
                 style={[
                   styles.chipText,
-                  {
-                    color: active
-                      ? colors.primaryForeground
-                      : colors.secondaryForeground,
-                  },
+                  { color: active ? colors.primaryForeground : colors.secondaryForeground },
                 ]}
               >
                 {c.name}
@@ -163,7 +188,50 @@ export default function ExpenseDetailScreen() {
             </Pressable>
           );
         })}
+
+        {/* Quick-add chip */}
+        {!addingCategory ? (
+          <Pressable
+            onPress={() => setAddingCategory(true)}
+            style={[styles.chip, styles.addCategoryChip, { borderColor: colors.primary, backgroundColor: colors.primary + "12" }]}
+          >
+            <Feather name="plus" size={13} color={colors.primary} />
+            <Text style={[styles.chipText, { color: colors.primary }]}>New</Text>
+          </Pressable>
+        ) : null}
       </View>
+
+      {/* Inline new-category input */}
+      {addingCategory && (
+        <View style={[styles.newCatRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            value={newCategoryName}
+            onChangeText={setNewCategoryName}
+            placeholder="Category name…"
+            placeholderTextColor={colors.mutedForeground}
+            autoFocus
+            style={[styles.newCatInput, { color: colors.foreground }]}
+            returnKeyType="done"
+            onSubmitEditing={handleAddCategory}
+          />
+          <Pressable
+            onPress={handleAddCategory}
+            disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+            style={[styles.newCatBtn, { backgroundColor: colors.primary, opacity: newCategoryName.trim() ? 1 : 0.4 }]}
+          >
+            {createCategoryMutation.isPending
+              ? <ActivityIndicator size="small" color={colors.primaryForeground} />
+              : <Feather name="check" size={16} color={colors.primaryForeground} />}
+          </Pressable>
+          <Pressable
+            onPress={() => { setAddingCategory(false); setNewCategoryName(""); }}
+            hitSlop={8}
+            style={styles.newCatCancel}
+          >
+            <Feather name="x" size={16} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
+      )}
 
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
         AMOUNT (MVR)
@@ -186,21 +254,28 @@ export default function ExpenseDetailScreen() {
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
         DATE
       </Text>
-      <TextInput
-        value={expenseDate}
-        onChangeText={setExpenseDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.mutedForeground}
-        autoCapitalize="none"
-        style={[
-          styles.input,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-            color: colors.foreground,
-          },
-        ]}
-      />
+      <Pressable
+        onPress={() => setShowCal((v) => !v)}
+        style={[styles.dateTrigger, { backgroundColor: colors.card, borderColor: expenseDate ? colors.primary : colors.border }]}
+      >
+        <Feather name="calendar" size={16} color={expenseDate ? colors.primary : colors.mutedForeground} />
+        <Text style={[styles.dateTriggerText, { color: expenseDate ? colors.foreground : colors.mutedForeground, flex: 1 }]}>
+          {expenseDate ? fmtDate(expenseDate) : "Pick date"}
+        </Text>
+        {expenseDate ? (
+          <Pressable onPress={(e) => { e.stopPropagation?.(); setExpenseDate(""); setShowCal(false); }} hitSlop={8}>
+            <Feather name="x" size={14} color={colors.mutedForeground} />
+          </Pressable>
+        ) : (
+          <Feather name={showCal ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
+        )}
+      </Pressable>
+      {showCal && (
+        <CalendarPicker
+          value={expenseDate}
+          onChange={(d) => { setExpenseDate(d); if (d) setShowCal(false); }}
+        />
+      )}
 
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
         REMARKS
@@ -269,11 +344,7 @@ export default function ExpenseDetailScreen() {
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 8, paddingBottom: 40 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  fieldLabel: {
-    fontSize: 11,
-    letterSpacing: 0.6,
-    marginTop: 10,
-  },
+  fieldLabel: { fontSize: 11, letterSpacing: 0.6, marginTop: 10 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 12,
@@ -281,7 +352,31 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  chipText: { fontSize: 13, },
+  chipText: { fontSize: 13 },
+  addCategoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  newCatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+    marginTop: 4,
+  },
+  newCatInput: { flex: 1, fontSize: 14, padding: 0 },
+  newCatBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  newCatCancel: { padding: 4 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -289,6 +384,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
+  dateTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateTriggerText: { fontSize: 15 },
   btn: {
     flexDirection: "row",
     alignItems: "center",
@@ -298,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 16,
   },
-  btnText: { fontSize: 15, },
+  btnText: { fontSize: 15 },
   destructiveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -309,6 +414,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 8,
   },
-  destructiveText: { fontSize: 14, },
-  errorText: { fontSize: 14, textAlign: "center", },
+  destructiveText: { fontSize: 14 },
+  errorText: { fontSize: 14, textAlign: "center" },
 });

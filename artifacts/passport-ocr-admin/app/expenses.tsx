@@ -31,6 +31,13 @@ function formatMVR(s: string | number): string {
   })}`;
 }
 
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d} ${MONTHS_SHORT[Number(m) - 1]} ${y}`;
+}
+
 export default function ExpensesScreen() {
   const colors = useColors();
   const [search, setSearch] = useState("");
@@ -250,7 +257,7 @@ function ExpenseRow({
         ) : null}
         {expense.expenseDate ? (
           <Text style={[styles.rowDate, { color: colors.mutedForeground }]}>
-            {expense.expenseDate}
+            {fmtDate(expense.expenseDate)}
           </Text>
         ) : null}
       </View>
