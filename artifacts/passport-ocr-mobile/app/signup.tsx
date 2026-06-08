@@ -52,7 +52,7 @@ export default function SignupScreen() {
       await register(email.trim(), password, name.trim());
       setStep("pending");
     } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = (err as { status?: number })?.status;
       if (status === 409) {
         setError("This email address is already registered.");
       } else {

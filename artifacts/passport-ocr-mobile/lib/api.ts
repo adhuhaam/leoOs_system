@@ -1,4 +1,4 @@
-import type { Passport } from "@workspace/api-client-react";
+import { getAuthToken, type Passport } from "@workspace/api-client-react";
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
@@ -18,10 +18,15 @@ export async function uploadPassportFile(file: PickedFile): Promise<Passport> {
     type: file.mimeType,
   } as unknown as Blob);
 
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const res = await fetch(`${BASE_URL}/api/passports/upload`, {
     method: "POST",
     body: formData,
     credentials: "include",
+    headers,
   });
 
   if (!res.ok) {

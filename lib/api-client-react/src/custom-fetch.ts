@@ -44,6 +44,16 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
 }
 
+/**
+ * Return the current bearer token (or null if none is set / getter returns null).
+ * Use this when you need to attach the auth token to a manual fetch call
+ * (e.g. multipart uploads) that bypasses the generated API client.
+ */
+export async function getAuthToken(): Promise<string | null> {
+  if (!_authTokenGetter) return null;
+  return _authTokenGetter() ?? null;
+}
+
 function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
