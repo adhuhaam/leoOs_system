@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getGetXpatWorkPermitQueryKey,
   getListCompaniesQueryKey,
@@ -184,7 +184,6 @@ function PickerModal<T extends string>({
                     styles.pickerLabel,
                     {
                       color: active ? colors.primary : colors.foreground,
-                      fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
                     },
                   ]}
                 >
@@ -654,7 +653,7 @@ function PassportCard({
             <Feather name="briefcase" size={10} color={colors.mutedForeground} style={{ marginTop: 1 }} />
             <Text style={[styles.companyText, { color: colors.mutedForeground }]} numberOfLines={1}>
               {companyName ? (
-                <Text style={{ color: colors.foreground, fontFamily: "Inter_500Medium" }}>
+                <Text style={{ color: colors.foreground, }}>
                   {companyName}
                 </Text>
               ) : (
@@ -683,7 +682,7 @@ function PassportCard({
                 {xpat.workPermitExpiry ? (
                   <Text style={[styles.wpExpiry, { color: colors.mutedForeground }]}>
                     Exp:{" "}
-                    <Text style={{ color: colors.foreground, fontFamily: "Inter_500Medium" }}>
+                    <Text style={{ color: colors.foreground, }}>
                       {formatDate(xpat.workPermitExpiry)}
                     </Text>
                   </Text>
@@ -697,7 +696,7 @@ function PassportCard({
             {dobLabel ? (
               <Text style={[styles.dobText, { color: colors.mutedForeground }]}>
                 DOB:{" "}
-                <Text style={{ fontFamily: "Inter_500Medium", color: colors.foreground }}>
+                <Text style={{ color: colors.foreground }}>
                   {dobLabel}
                 </Text>
               </Text>
@@ -729,7 +728,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
 
@@ -754,7 +752,7 @@ const styles = StyleSheet.create({
     maxWidth: 150,
   },
   chipDot: { width: 7, height: 7, borderRadius: 3.5 },
-  chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  chipText: { fontSize: 12, },
   clearBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -764,13 +762,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  clearText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  clearText: { fontSize: 11, },
 
   // List
   listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 10 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
-  listCount: { fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 10, letterSpacing: 0.2 },
-  loadingText: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 8 },
+  listCount: { fontSize: 12, marginBottom: 10, letterSpacing: 0.2 },
+  loadingText: { fontSize: 13, marginTop: 8 },
 
   // Card
   card: {
@@ -802,7 +800,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   avatarImg: { width: 48, height: 48 },
-  avatarInitials: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  avatarInitials: { fontSize: 15, },
 
   cardContent: { flex: 1, gap: 4 },
   cardTopRow: {
@@ -811,7 +809,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
-  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold", flex: 1 },
+  cardName: { fontSize: 15, flex: 1 },
 
   editBtn: {
     width: 30,
@@ -822,8 +820,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  cardNums: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  wpNum: { fontFamily: "Inter_400Regular", opacity: 0.7 },
+  cardNums: { fontSize: 12, },
+  wpNum: { opacity: 0.7 },
 
   badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   statusBadge: {
@@ -836,19 +834,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusDotSm: { width: 5, height: 5, borderRadius: 2.5 },
-  statusBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  natText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  statusBadgeText: { fontSize: 10, },
+  natText: { fontSize: 11, },
 
   companyRow: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
-  companyText: { fontSize: 11, fontFamily: "Inter_400Regular", flex: 1 },
+  companyText: { fontSize: 11, flex: 1 },
 
   wpRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   wpLoadingSkeleton: { height: 18, width: 60, borderRadius: 6 },
   wpBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  wpBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  wpExpiry: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  dobText: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  noWpText: { fontSize: 10, fontFamily: "Inter_400Regular", fontStyle: "italic" },
+  wpBadgeText: { fontSize: 10, },
+  wpExpiry: { fontSize: 11, },
+  dobText: { fontSize: 11, },
+  noWpText: { fontSize: 10, fontStyle: "italic" },
 
   // Picker modal
   modalOverlay: {
@@ -878,7 +876,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
     paddingHorizontal: 20,
     paddingBottom: 10,
   },
@@ -900,13 +897,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  cancelText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  cancelText: { fontSize: 15, },
 
   // Other
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  emptyTitle: { fontSize: 17, },
+  emptyText: { fontSize: 14, textAlign: "center" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
 });

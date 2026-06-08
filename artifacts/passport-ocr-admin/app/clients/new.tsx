@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListClientsQueryKey,
   useCreateClient,
@@ -175,16 +175,15 @@ export default function NewClientScreen() {
 const styles = StyleSheet.create({
   container: { padding: 20, gap: 14, paddingBottom: 40 },
   fieldGroup: { gap: 6 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  label: { fontSize: 11, letterSpacing: 0.5 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
-  saveBtn: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  saveBtn: { fontSize: 16, },
   primaryBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -194,5 +193,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 12,
   },
-  primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  primaryBtnText: { fontSize: 15, },
 });

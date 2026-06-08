@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type BillingDocumentSummary,
   getListBillingDocumentsQueryKey,
@@ -424,7 +424,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
   tabRow: {
@@ -440,7 +439,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  tabText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  tabText: { fontSize: 12, },
   listContent: { padding: 16, gap: 12 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
   card: {
@@ -467,30 +466,30 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
   },
-  kindText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.6 },
+  kindText: { fontSize: 10, letterSpacing: 0.6 },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
     borderWidth: 1,
   },
-  statusText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  docNumber: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  customer: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  companyName: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 6 },
+  statusText: { fontSize: 10, },
+  docNumber: { fontSize: 13, },
+  customer: { fontSize: 16, },
+  companyName: { fontSize: 12, marginBottom: 6 },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  dateText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  amount: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  longPressHint: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: 4, textAlign: "right" },
+  dateText: { fontSize: 12, },
+  amount: { fontSize: 15, },
+  longPressHint: { fontSize: 10, marginTop: 4, textAlign: "right" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  emptyTitle: { fontSize: 17, },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
   fab: {
     position: "absolute",
     bottom: 24,
@@ -520,8 +519,8 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 4,
   },
-  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 2 },
-  modalSubtitle: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 8 },
+  modalTitle: { fontSize: 17, marginBottom: 2 },
+  modalSubtitle: { fontSize: 12, marginBottom: 8 },
   modalOptions: { gap: 6 },
   optionRow: {
     flexDirection: "row",
@@ -540,5 +539,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  cancelText: { fontSize: 15, },
 });

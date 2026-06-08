@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListUsers,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  headerTitle: { fontSize: 17, },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { padding: 16, gap: 12, paddingBottom: 32 },
 
@@ -431,15 +431,15 @@ const styles = StyleSheet.create({
   },
   cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cardInfo: { flex: 1, gap: 2 },
-  cardName: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  cardEmail: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  cardName: { fontSize: 15, },
+  cardEmail: { fontSize: 13, },
 
   roleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  roleBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  roleBadgeText: { fontSize: 11, },
 
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
-  statusText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
+  statusText: { fontSize: 12, flex: 1 },
 
   actions: {
     flexDirection: "row",
@@ -455,10 +455,10 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 6,
   },
-  actionText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  actionText: { fontSize: 12, },
 
   empty: { alignItems: "center", gap: 12, paddingVertical: 60 },
-  emptyText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  emptyText: { fontSize: 15, },
 
   // Modal
   modalSafe: { flex: 1 },
@@ -470,19 +470,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  modalCancel: { fontSize: 16, fontFamily: "Inter_400Regular" },
-  modalSave: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  modalTitle: { fontSize: 17, },
+  modalCancel: { fontSize: 16, },
+  modalSave: { fontSize: 16, },
   modalBody: { padding: 20, gap: 16, paddingBottom: 40 },
   fieldGroup: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  fieldLabel: { fontSize: 11, letterSpacing: 0.5 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
     height: 48,
   },
   roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 },
@@ -491,5 +490,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-  roleChipText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  roleChipText: { fontSize: 13, },
 });

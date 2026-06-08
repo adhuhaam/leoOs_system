@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListLoaQueryKey,
   type Loa,
@@ -66,11 +66,10 @@ function Field({
 
 const fieldStyles = StyleSheet.create({
   wrap: { gap: 4 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.6 },
-  value: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  label: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
+  value: { fontSize: 15, },
   input: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -93,7 +92,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 const sectionStyles = StyleSheet.create({
   wrap: { gap: 8 },
-  title: { fontSize: 11, fontFamily: "Inter_700Bold", textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 4 },
+  title: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.8, paddingHorizontal: 4 },
   card: {
     borderRadius: 18,
     padding: 18,
@@ -188,7 +187,7 @@ export default function LoaDetailScreen() {
   if (isLoading || !loa || !form) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_500Medium" }}>
+        <Text style={{ color: colors.mutedForeground, }}>
           {isLoading ? "Loading…" : "LOA not found"}
         </Text>
       </View>
@@ -303,6 +302,6 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 10,
   },
-  actionBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  actionBtnText: { fontSize: 14, },
   container: { padding: 20, gap: 24, paddingBottom: 40 },
 });

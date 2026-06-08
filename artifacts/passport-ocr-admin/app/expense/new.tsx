@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   type ExpenseCategory,
@@ -132,7 +132,6 @@ export default function NewExpenseScreen() {
             borderColor: colors.border,
             color: colors.foreground,
             fontSize: 22,
-            fontFamily: "Inter_700Bold",
           },
         ]}
       />
@@ -208,7 +207,6 @@ const styles = StyleSheet.create({
   container: { padding: 20, gap: 8, paddingBottom: 40 },
   fieldLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.6,
     marginTop: 10,
   },
@@ -219,15 +217,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  chipText: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  helper: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  chipText: { fontSize: 13, },
+  helper: { fontSize: 13, },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
   btn: {
     flexDirection: "row",
@@ -238,5 +235,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 16,
   },
-  btnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  btnText: { fontSize: 15, },
 });

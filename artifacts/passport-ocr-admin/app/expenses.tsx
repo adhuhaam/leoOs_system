@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type Expense,
   type ExpenseCategory,
@@ -270,8 +270,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  totalLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
-  totalValue: { fontSize: 22, fontFamily: "Inter_700Bold", marginTop: 2 },
+  totalLabel: { fontSize: 11, letterSpacing: 0.5 },
+  totalValue: { fontSize: 22, marginTop: 2 },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
   },
-  addBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  addBtnText: { fontSize: 13, },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -295,7 +295,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
   chipRow: {
@@ -311,7 +310,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  chipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  chipText: { fontSize: 12, },
   listContent: { padding: 16, gap: 10 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
   row: {
@@ -326,14 +325,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  rowCategory: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  rowRemarks: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  rowDate: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  rowAmount: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  rowCategory: { fontSize: 15, },
+  rowRemarks: { fontSize: 12, },
+  rowDate: { fontSize: 11, },
+  rowAmount: { fontSize: 16, },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  emptyTitle: { fontSize: 17, },
+  emptyText: { fontSize: 14, textAlign: "center" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
 });

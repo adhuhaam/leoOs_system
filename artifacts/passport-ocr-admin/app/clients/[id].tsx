@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type Client,
   type BillingDocumentSummary,
@@ -405,9 +405,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  name: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  subtext: { fontSize: 12, fontFamily: "Inter_500Medium", marginTop: 1 },
+  avatarText: { fontSize: 18, },
+  name: { fontSize: 16, },
+  subtext: { fontSize: 12, marginTop: 1 },
   quickActions: { flexDirection: "row", gap: 8 },
   quickBtn: {
     width: 36,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   tabBtnActive: {},
-  tabBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  tabBtnText: { fontSize: 13, },
   tabCount: {
     minWidth: 20,
     paddingHorizontal: 5,
@@ -443,11 +443,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  tabCountText: { fontSize: 10, fontFamily: "Inter_700Bold" },
+  tabCountText: { fontSize: 10, },
   listContent: { padding: 16, gap: 10 },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 13, textAlign: "center", fontFamily: "Inter_500Medium" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  emptyTitle: { fontSize: 17, },
+  emptyText: { fontSize: 13, textAlign: "center", },
+  errorText: { fontSize: 14, textAlign: "center", },
   // candidate row
   candidateRow: {
     flexDirection: "row",
@@ -464,9 +464,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  candidateName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  candidateMeta: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 1 },
-  expiryText: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  candidateName: { fontSize: 14, },
+  candidateMeta: { fontSize: 11, marginTop: 1 },
+  expiryText: { fontSize: 10, },
   // billing row
   billingRow: {
     flexDirection: "row",
@@ -488,14 +488,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  billingNumber: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  billingDate: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
-  billingAmount: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  billingNumber: { fontSize: 13, },
+  billingDate: { fontSize: 11, marginTop: 2 },
+  billingAmount: { fontSize: 13, },
   statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
     borderWidth: 1,
   },
-  statusText: { fontSize: 9, fontFamily: "Inter_600SemiBold" },
+  statusText: { fontSize: 9, },
 });

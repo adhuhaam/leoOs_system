@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useChangePassword } from "@workspace/api-client-react";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -191,7 +191,7 @@ export default function ProfileScreen() {
                   size={14}
                   color={passwordsMatch ? "#10B981" : "#EF4444"}
                 />
-                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: passwordsMatch ? "#10B981" : "#EF4444" }}>
+                <Text style={{ fontSize: 12, color: passwordsMatch ? "#10B981" : "#EF4444" }}>
                   {passwordsMatch ? "Passwords match" : "Passwords do not match"}
                 </Text>
               </View>
@@ -253,7 +253,7 @@ const PasswordField = React.forwardRef<
   const colors = useColors();
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_700Bold", color: colors.mutedForeground, letterSpacing: 0.6 }}>
+      <Text style={{ fontSize: 11, color: colors.mutedForeground, letterSpacing: 0.6 }}>
         {label}
       </Text>
       <View
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: 8,
   },
-  screenTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  screenTitle: { fontSize: 17, },
 
   avatarCard: {
     flexDirection: "row",
@@ -317,20 +317,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitials: { fontSize: 24, fontFamily: "Inter_700Bold" },
-  userName: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  userEmail: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  avatarInitials: { fontSize: 24, },
+  userName: { fontSize: 17, },
+  userEmail: { fontSize: 12, },
   rolePill: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
   },
-  roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  roleText: { fontSize: 11, },
 
   section: { gap: 4 },
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  sectionSubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  sectionTitle: { fontSize: 17, },
+  sectionSubtitle: { fontSize: 13, lineHeight: 18 },
 
   form: { gap: 14 },
   inputRow: {
@@ -345,7 +345,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
 
@@ -357,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
   },
-  successText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  successText: { fontSize: 13, },
 
   saveBtn: {
     paddingVertical: 16,
@@ -365,5 +364,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  saveBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  saveBtnText: { fontSize: 16, },
 });

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListBillingDocumentsQueryKey,
   getListClientsQueryKey,
@@ -86,7 +86,7 @@ const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
 type StatItem = {
   label: string;
   value: string | number;
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   color: string;
   sub?: string;
 };
@@ -700,7 +700,7 @@ function ActionButton({
   label,
   onPress,
 }: {
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   label: string;
   onPress: () => void;
 }) {
@@ -808,8 +808,8 @@ const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 32, gap: 28 },
 
   hero: { gap: 4, paddingTop: 8 },
-  greeting: { fontSize: 13, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
-  title: { fontSize: 34, fontFamily: "Inter_700Bold", letterSpacing: -1 },
+  greeting: { fontSize: 13, letterSpacing: 0.3 },
+  title: { fontSize: 34, letterSpacing: -1 },
   heroMeta: {
     flexDirection: "row",
     alignItems: "center",
@@ -817,9 +817,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     flexWrap: "wrap",
   },
-  date: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  date: { fontSize: 13, },
   rolePill: { paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999 },
-  roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  roleText: { fontSize: 11, },
 
   section: { gap: 12 },
   sectionHeader: {
@@ -827,8 +827,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  sectionTitle: { fontSize: 17, },
+  seeAll: { fontSize: 13, },
 
   loadingBox: { height: 120, alignItems: "center", justifyContent: "center" },
 
@@ -853,12 +853,11 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 26,
-    fontFamily: "Inter_700Bold",
     letterSpacing: -0.5,
     marginTop: 2,
   },
-  statLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  statSub: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: -2 },
+  statLabel: { fontSize: 12, },
+  statSub: { fontSize: 10, marginTop: -2 },
 
   actionsRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
@@ -881,7 +880,6 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
     textAlign: "center",
   },
 
@@ -904,10 +902,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  recentInitials: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  recentInitials: { fontSize: 15, },
   recentContent: { flex: 1, gap: 2 },
-  recentName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  recentNum: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  recentName: { fontSize: 14, },
+  recentNum: { fontSize: 12, },
 
   statusPill: {
     flexDirection: "row",
@@ -918,7 +916,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
-  statusPillText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  statusPillText: { fontSize: 10, },
 
   emptyCard: {
     alignItems: "center",
@@ -929,24 +927,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
   },
-  emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  emptyTitle: { fontSize: 16, },
   emptyText: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
 
   // ── Task styles ──────────────────────────────────────────────────────────
   taskCountBadge: {
-    fontSize: 12, fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
     paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999,
   },
   taskStatRow: { flexDirection: "row", gap: 8 },
   taskStatChip: {
     flex: 1, borderRadius: 12, padding: 10, alignItems: "center", gap: 2,
   },
-  taskStatVal: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  taskStatLbl: { fontSize: 9, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  taskStatVal: { fontSize: 20, },
+  taskStatLbl: { fontSize: 9, textTransform: "uppercase" },
 
   taskFilterRow: {
     flexDirection: "row", padding: 3, gap: 2,
@@ -955,20 +952,20 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10,
     shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 0,
   },
-  taskFilterText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  taskFilterText: { fontSize: 12, },
 
   addTaskRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 14, paddingRight: 6, paddingVertical: 6,
   },
-  addTaskInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 6 },
+  addTaskInput: { flex: 1, fontSize: 15, paddingVertical: 6 },
   addTaskBtn: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 
   taskEmpty: {
     alignItems: "center", justifyContent: "center", gap: 8,
     padding: 28, borderRadius: 16, borderWidth: 1, borderStyle: "dashed",
   },
-  taskEmptyText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  taskEmptyText: { fontSize: 13, },
 
   taskList: { gap: 8 },
   taskRow: {
@@ -983,15 +980,15 @@ const styles = StyleSheet.create({
   },
   taskBody: { flex: 1, gap: 4 },
   taskTitleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  taskTitle: { flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  taskTitle: { flex: 1, fontSize: 14, },
   taskDoneText: { textDecorationLine: "line-through", opacity: 0.5 },
-  taskNotes: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  taskNotes: { fontSize: 12, },
   taskMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   priorityBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  priorityText: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  priorityText: { fontSize: 10, textTransform: "uppercase" },
   dueBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  dueText: { fontSize: 10, fontFamily: "Inter_500Medium" },
-  subtaskCount: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  dueText: { fontSize: 10, },
+  subtaskCount: { fontSize: 10, },
   taskDeleteBtn: { padding: 4 },
 
   editModal: { flex: 1 },
@@ -999,14 +996,14 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  editCancel: { fontSize: 15, fontFamily: "Inter_400Regular" },
-  editTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  editSave: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  editCancel: { fontSize: 15, },
+  editTitle: { fontSize: 17, },
+  editSave: { fontSize: 15, },
   editBody: { padding: 20, gap: 8, paddingBottom: 40 },
-  editLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 8 },
-  editInput: { fontSize: 15, fontFamily: "Inter_400Regular", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  editLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 8 },
+  editInput: { fontSize: 15, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
   editMultiline: { minHeight: 80, textAlignVertical: "top", paddingTop: 12 },
   priorityRow: { flexDirection: "row", gap: 8 },
   priorityPill: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12 },
-  priorityPillText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  priorityPillText: { fontSize: 13, },
 });

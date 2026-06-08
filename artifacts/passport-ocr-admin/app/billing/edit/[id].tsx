@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 
 import BillingDocumentForm, {
   type BillingFormState,
@@ -131,7 +131,7 @@ export default function EditBillingDocumentScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
 });

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListPasswordsQueryKey,
@@ -450,7 +450,6 @@ function PasswordRow({
               styles.fieldValue,
               {
                 color: colors.foreground,
-                fontFamily: revealed ? "Inter_500Medium" : "Inter_700Bold",
                 letterSpacing: revealed ? 0 : 2,
               },
             ]}
@@ -958,10 +957,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "flex-start",
   },
-  statValue: { fontSize: 22, fontFamily: "Inter_700Bold", lineHeight: 26 },
+  statValue: { fontSize: 22, lineHeight: 26 },
   statLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.5,
     textTransform: "uppercase",
     marginTop: 2,
@@ -980,7 +978,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
   listContent: { padding: 16, paddingBottom: 110, gap: 12 },
@@ -1007,11 +1004,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sectionAvatarText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  sectionAvatarText: { fontSize: 11, },
   sectionTitle: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_700Bold",
     flexShrink: 1,
   },
   sectionBadge: {
@@ -1021,7 +1017,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sectionBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  sectionBadgeText: { fontSize: 11, },
   row: {
     padding: 14,
     borderRadius: 14,
@@ -1037,14 +1033,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ownerAvatarText: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  ownerAvatarText: { fontSize: 13, },
   ownerLabel: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  ownerName: { fontSize: 15, fontFamily: "Inter_700Bold", marginTop: 1 },
+  ownerName: { fontSize: 15, marginTop: 1 },
   rowActions: { flexDirection: "row", gap: 6 },
   actionBtn: {
     width: 32,
@@ -1058,12 +1053,11 @@ const styles = StyleSheet.create({
   fieldBlock: { gap: 4 },
   fieldLabel: {
     fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   fieldValueRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  fieldValue: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  fieldValue: { flex: 1, fontSize: 14, },
   iconBtn: { padding: 6, borderRadius: 6 },
   fab: {
     position: "absolute",
@@ -1086,17 +1080,16 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 24,
   },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  emptyTitle: { fontSize: 17, },
   emptyText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     maxWidth: 280,
     lineHeight: 20,
   },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1105,20 +1098,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  modalTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  modalCancel: { fontSize: 15, fontFamily: "Inter_500Medium" },
-  modalSave: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 16, },
+  modalCancel: { fontSize: 15, },
+  modalSave: { fontSize: 15, },
   modalBody: { padding: 16, gap: 14 },
   formField: { gap: 6 },
   formLabel: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
   helperText: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
   input: {
@@ -1127,7 +1118,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
   },
   passwordInputRow: {
     flexDirection: "row",
@@ -1140,7 +1130,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
   },
   pickerBtn: {
     flexDirection: "row",
@@ -1158,11 +1147,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pickerAvatarText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  pickerAvatarText: { fontSize: 11, },
   pickerValue: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
   pickerList: { padding: 16, gap: 8 },
   pickerOption: {
@@ -1181,17 +1169,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pickerOptionAvatarText: { fontSize: 12, fontFamily: "Inter_700Bold" },
-  pickerOptionLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  pickerOptionAvatarText: { fontSize: 12, },
+  pickerOptionLabel: { fontSize: 15, },
   pickerOptionMeta: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
   pickerEmpty: { padding: 24, alignItems: "center" },
   pickerEmptyText: {
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
 });

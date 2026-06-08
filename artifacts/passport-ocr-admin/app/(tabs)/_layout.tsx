@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, View } from "react-native";
@@ -49,7 +49,6 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: colors.background },
         headerTitleStyle: {
           color: colors.foreground,
-          fontFamily: "Inter_700Bold",
           fontSize: 17,
         },
         headerShadowVisible: false,
@@ -65,7 +64,6 @@ export default function TabLayout() {
           ...(isWeb ? { height: 72 } : {}),
         },
         tabBarLabelStyle: {
-          fontFamily: "Inter_600SemiBold",
           fontSize: 10,
           marginTop: -2,
         },

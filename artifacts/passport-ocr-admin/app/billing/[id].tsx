@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type BillingDocument,
   type BillingItem,
@@ -424,7 +424,6 @@ function TotalRow({
           styles.totalLabel,
           {
             color: bold ? colors.foreground : colors.mutedForeground,
-            fontFamily: bold ? "Inter_700Bold" : "Inter_500Medium",
           },
         ]}
       >
@@ -435,7 +434,6 @@ function TotalRow({
           styles.totalValue,
           {
             color: colors.foreground,
-            fontFamily: bold ? "Inter_700Bold" : "Inter_600SemiBold",
             fontSize: bold ? 18 : 14,
           },
         ]}
@@ -461,9 +459,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  kindText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
-  docNumber: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  muted: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  kindText: { fontSize: 11, letterSpacing: 0.8 },
+  docNumber: { fontSize: 22, },
+  muted: { fontSize: 12, },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -476,7 +474,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  statusText: { fontSize: 11, },
   changeStatusBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -486,12 +484,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  changeStatusText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  changeStatusText: { fontSize: 11, },
   card: { padding: 16, borderRadius: 14, borderWidth: 1, gap: 10 },
   fieldRow: { gap: 4 },
-  fieldLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 0.6 },
-  fieldValue: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  sectionTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", marginTop: 6 },
+  fieldLabel: { fontSize: 10, letterSpacing: 0.6 },
+  fieldValue: { fontSize: 14, },
+  sectionTitle: { fontSize: 14, marginTop: 6 },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -500,9 +498,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
   },
-  itemDesc: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  itemMeta: { fontSize: 12, fontFamily: "Inter_500Medium", marginTop: 2 },
-  itemTotal: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  itemDesc: { fontSize: 14, },
+  itemMeta: { fontSize: 12, marginTop: 2 },
+  itemTotal: { fontSize: 14, },
   totals: { padding: 16, borderRadius: 14, borderWidth: 1, gap: 8 },
   totalRow: {
     flexDirection: "row",
@@ -512,9 +510,9 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 13 },
   totalValue: { fontSize: 14 },
   totalDivider: { height: 1, marginVertical: 4 },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
   // modal
   modalOverlay: {
     flex: 1,
@@ -529,8 +527,8 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 4,
   },
-  modalTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 2 },
-  modalSubtitle: { fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 8 },
+  modalTitle: { fontSize: 17, marginBottom: 2 },
+  modalSubtitle: { fontSize: 12, marginBottom: 8 },
   modalOptions: { gap: 6 },
   optionRow: {
     flexDirection: "row",
@@ -549,5 +547,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  cancelText: { fontSize: 15, },
 });

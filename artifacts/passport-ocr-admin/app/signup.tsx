@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -259,7 +259,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <Text
         style={{
           fontSize: 12,
-          fontFamily: "Inter_600SemiBold",
           color: colors.mutedForeground,
           letterSpacing: 0.3,
         }}
@@ -278,8 +277,8 @@ const styles = StyleSheet.create({
 
   backBtn: { marginBottom: 8, alignSelf: "flex-start" },
   headerWrap: { gap: 8, marginBottom: 28 },
-  title: { fontSize: 28, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  title: { fontSize: 28, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, lineHeight: 20 },
 
   form: { gap: 14 },
   errorBox: {
@@ -290,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
   },
-  errorText: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#EF4444", flex: 1 },
+  errorText: { fontSize: 13, color: "#EF4444", flex: 1 },
 
   inputRow: {
     flexDirection: "row",
@@ -301,14 +300,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", padding: 0 },
+  input: { flex: 1, fontSize: 16, padding: 0 },
 
   primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 4 },
-  primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  primaryBtnText: { fontSize: 16, },
 
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 24, flexWrap: "wrap" },
-  footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  footerLink: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  footerText: { fontSize: 14, },
+  footerLink: { fontSize: 14, },
 
   pendingWrap: {
     flex: 1,
@@ -325,10 +324,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
-  pendingTitle: { fontSize: 24, fontFamily: "Inter_700Bold", textAlign: "center" },
+  pendingTitle: { fontSize: 24, textAlign: "center" },
   pendingBody: {
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     lineHeight: 22,
     maxWidth: 320,

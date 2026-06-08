@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileName: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  profileSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  profileName: { fontSize: 15, },
+  profileSub: { fontSize: 12, },
   rolePill: {
     alignSelf: "flex-start",
     paddingHorizontal: 8,
@@ -245,10 +245,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginTop: 2,
   },
-  roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  roleText: { fontSize: 11, },
 
   groupHeader: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
-  groupLabel: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
+  groupLabel: { fontSize: 11, letterSpacing: 0.8 },
 
   group: {
     borderRadius: 18,
@@ -272,8 +272,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rowLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  rowDetail: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  rowLabel: { fontSize: 15, },
+  rowDetail: { fontSize: 12, marginTop: 1 },
 
   logoutBtn: {
     flexDirection: "row",
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  logoutText: { fontSize: 15, },
 
   confirmBox: {
     borderRadius: 16,
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  confirmText: { fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  confirmText: { fontSize: 14, textAlign: "center" },
   confirmRow: { flexDirection: "row", gap: 10 },
   confirmCancel: {
     flex: 1,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  confirmCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  confirmCancelText: { fontSize: 14, },
   confirmSignOut: {
     flex: 1,
     paddingVertical: 12,
@@ -318,11 +318,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#EF4444",
   },
-  confirmSignOutText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  confirmSignOutText: { fontSize: 14, color: "#fff" },
 
   version: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     marginTop: 8,
   },

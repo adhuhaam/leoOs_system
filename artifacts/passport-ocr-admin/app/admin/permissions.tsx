@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListPermissionsQueryKey,
   useListPermissions,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   roleTabs: { maxHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth },
   roleTabsContent: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   roleTab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
-  roleTabText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  roleTabText: { fontSize: 13, },
 
   container: { padding: 16, gap: 14, paddingBottom: 40 },
 
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
   },
-  roleHeaderText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  roleHeaderText: { fontSize: 14, },
 
   headerRow: {
     flexDirection: "row",
@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 0,
   },
-  headerModule: { flex: 1, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
-  headerPerm: { width: 56, textAlign: "center", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  headerModule: { flex: 1, fontSize: 11, textTransform: "uppercase" },
+  headerPerm: { width: 56, textAlign: "center", fontSize: 11, textTransform: "uppercase" },
 
   table: {
     borderRadius: 18,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  modLabel: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  modLabel: { flex: 1, fontSize: 14, },
   switch: { width: 56, transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
 
   saveBar: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  saveHint: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  saveHint: { fontSize: 13, },
   saveBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  saveBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  saveBtnText: { fontSize: 14, color: "#fff" },
 });

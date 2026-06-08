@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListLoaQueryKey,
   type Loa,
@@ -230,9 +230,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  searchInput: { flex: 1, fontSize: 15, },
 
-  countText: { fontSize: 12, fontFamily: "Inter_500Medium", marginHorizontal: 20, marginBottom: 8 },
+  countText: { fontSize: 12, marginHorizontal: 20, marginBottom: 8 },
 
   list: { paddingHorizontal: 16, paddingBottom: 100, gap: 10 },
 
@@ -254,11 +254,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  avatarText: { fontSize: 15, },
   cardContent: { flex: 1, gap: 2 },
-  candidateName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  cardSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  cardDate: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  candidateName: { fontSize: 15, },
+  cardSub: { fontSize: 12, },
+  cardDate: { fontSize: 11, marginTop: 2 },
   cardActions: { flexDirection: "row", alignItems: "center", gap: 4 },
   actionBtn: { padding: 6 },
 
@@ -272,8 +272,8 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     marginTop: 20,
   },
-  emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  emptyTitle: { fontSize: 16, },
+  emptyText: { fontSize: 13, textAlign: "center" },
 
   fab: {
     position: "absolute",

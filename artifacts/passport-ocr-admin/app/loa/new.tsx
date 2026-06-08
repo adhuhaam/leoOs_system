@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   getListLoaQueryKey,
   type Company,
@@ -87,8 +87,8 @@ function Field({
 
 const fieldSt = StyleSheet.create({
   wrap: { gap: 5 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.6 },
-  input: { fontSize: 15, fontFamily: "Inter_400Regular", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  label: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 },
+  input: { fontSize: 15, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   multilineInput: { minHeight: 80, textAlignVertical: "top", paddingTop: 10 },
 });
 
@@ -144,11 +144,11 @@ function PickerModal<T>({
 const pmSt = StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, borderBottomWidth: StyleSheet.hairlineWidth },
-  title: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  title: { fontSize: 17, },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, margin: 16, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  searchInput: { flex: 1, fontSize: 15, },
   item: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  itemLabel: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  itemLabel: { fontSize: 15, },
 });
 
 export default function NewLoaScreen() {
@@ -365,16 +365,16 @@ export default function NewLoaScreen() {
             <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.summaryTitle, { color: colors.foreground }]}>Summary</Text>
               <Text style={[styles.summaryRow, { color: colors.mutedForeground }]}>
-                <Text style={{ fontFamily: "Inter_600SemiBold" }}>Candidate:</Text> {form.candidateName || "—"}
+                <Text style={{ }}>Candidate:</Text> {form.candidateName || "—"}
               </Text>
               <Text style={[styles.summaryRow, { color: colors.mutedForeground }]}>
-                <Text style={{ fontFamily: "Inter_600SemiBold" }}>Company:</Text> {form.companyName || "—"}
+                <Text style={{ }}>Company:</Text> {form.companyName || "—"}
               </Text>
               <Text style={[styles.summaryRow, { color: colors.mutedForeground }]}>
-                <Text style={{ fontFamily: "Inter_600SemiBold" }}>Job Title:</Text> {form.jobTitle || "—"}
+                <Text style={{ }}>Job Title:</Text> {form.jobTitle || "—"}
               </Text>
               <Text style={[styles.summaryRow, { color: colors.mutedForeground }]}>
-                <Text style={{ fontFamily: "Inter_600SemiBold" }}>Salary:</Text> {form.basicSalary || "—"}
+                <Text style={{ }}>Salary:</Text> {form.basicSalary || "—"}
               </Text>
             </View>
           </View>
@@ -442,13 +442,13 @@ const styles = StyleSheet.create({
   stepItem: { alignItems: "center", gap: 4, flex: 1 },
   stepLine: { height: 2, width: 20, borderRadius: 1 },
   stepCircle: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  stepNum: { fontSize: 12, fontFamily: "Inter_700Bold" },
-  stepLabel: { fontSize: 9, fontFamily: "Inter_500Medium", textAlign: "center" },
+  stepNum: { fontSize: 12, },
+  stepLabel: { fontSize: 9, textAlign: "center" },
 
   container: { padding: 20, paddingBottom: 20 },
   stepContent: { gap: 16 },
 
-  sectionTitle: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  sectionTitle: { fontSize: 15, },
   pickerBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -457,13 +457,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  pickerText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  pickerText: { flex: 1, fontSize: 15, },
   infoBox: { padding: 12, borderRadius: 10, gap: 2 },
-  infoText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  infoText: { fontSize: 12, },
 
   summaryCard: { borderRadius: 14, padding: 16, gap: 8, borderWidth: 1, marginTop: 8 },
-  summaryTitle: { fontSize: 14, fontFamily: "Inter_700Bold", marginBottom: 4 },
-  summaryRow: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  summaryTitle: { fontSize: 14, marginBottom: 4 },
+  summaryRow: { fontSize: 13, },
 
   bottomBar: {
     flexDirection: "row",
@@ -480,6 +480,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   navBtnPrimary: {},
-  navBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  navBtnTextPrimary: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  navBtnText: { fontSize: 15, },
+  navBtnTextPrimary: { fontSize: 15, color: "#fff" },
 });

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  wordmark: { fontSize: 30, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
-  tagline: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  wordmark: { fontSize: 30, letterSpacing: -0.5 },
+  tagline: { fontSize: 15, },
 
   errorBanner: {
     flexDirection: "row",
@@ -196,14 +196,13 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
     color: "#DC2626",
     lineHeight: 18,
   },
 
   form: { gap: 16 },
   fieldWrap: { gap: 6 },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 0.3 },
+  label: { fontSize: 12, letterSpacing: 0.3 },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -213,12 +212,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", padding: 0 },
+  input: { flex: 1, fontSize: 16, padding: 0 },
 
   primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 4 },
-  primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  primaryBtnText: { fontSize: 16, },
 
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 28, flexWrap: "wrap" },
-  footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  footerLink: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  footerText: { fontSize: 14, },
+  footerLink: { fontSize: 14, },
 });

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -359,15 +359,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  saveBtn: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  headerTitle: { fontSize: 17, },
+  saveBtn: { fontSize: 15, },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  restrictedText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  restrictedText: { fontSize: 15, },
   body: { padding: 20, gap: 4, paddingBottom: 40 },
   section: { gap: 6 },
   sectionLabel: {
     fontSize: 11,
-    fontFamily: "Inter_700Bold",
     letterSpacing: 0.8,
     paddingHorizontal: 4,
     paddingTop: 12,
@@ -381,8 +380,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   fieldWrap: { paddingHorizontal: 16, paddingVertical: 12 },
-  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
-  fieldInput: { fontSize: 15, fontFamily: "Inter_400Regular", minHeight: 24 },
+  fieldLabel: { fontSize: 11, marginBottom: 4 },
+  fieldInput: { fontSize: 15, minHeight: 24 },
   fieldMultiline: { minHeight: 64, textAlignVertical: "top" },
   saveBar: {
     marginTop: 16,
@@ -391,5 +390,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  saveBarText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  saveBarText: { fontSize: 15, color: "#fff" },
 });

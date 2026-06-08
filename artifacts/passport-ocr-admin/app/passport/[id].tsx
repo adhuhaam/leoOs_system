@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   type Client,
@@ -328,7 +328,7 @@ const pickerStyles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  title: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  title: { fontSize: 16, },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,7 +339,7 @@ const pickerStyles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", padding: 0 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   option: {
     flexDirection: "row",
     alignItems: "center",
@@ -348,7 +348,7 @@ const pickerStyles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  optionLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
+  optionLabel: { flex: 1, fontSize: 15, },
   statusDot: {
     width: 30,
     height: 30,
@@ -969,7 +969,7 @@ const sectionHeaderStyles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 6,
   },
-  text: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+  text: { fontSize: 11, letterSpacing: 0.8 },
 });
 
 function InfoRow({
@@ -985,13 +985,12 @@ function InfoRow({
 }) {
   return (
     <View style={{ gap: 4 }}>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground }}>
+      <Text style={{ fontSize: 11, color: colors.mutedForeground }}>
         {label.toUpperCase()}
       </Text>
       <Text
         style={{
           fontSize: 13,
-          fontFamily: "Inter_400Regular",
           color: isError ? colors.destructive : colors.foreground,
           lineHeight: 18,
         }}
@@ -1017,18 +1016,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  statusLabel:   { fontSize: 15, fontFamily: "Inter_700Bold" },
-  statusHint:    { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
+  statusLabel:   { fontSize: 15, },
+  statusHint:    { fontSize: 11, marginTop: 1 },
 
   fieldGroup: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  fieldLabel: { fontSize: 11, letterSpacing: 0.5 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
 
   selectRow: {
@@ -1041,7 +1039,7 @@ const styles = StyleSheet.create({
     height: 48,
     gap: 8,
   },
-  selectText: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
+  selectText: { flex: 1, fontSize: 15, },
 
   primaryBtn: {
     flexDirection: "row",
@@ -1051,7 +1049,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
-  primaryBtnText:  { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  primaryBtnText:  { fontSize: 15, },
   destructiveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1061,10 +1059,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
-  destructiveText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  errorText:  { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  destructiveText: { fontSize: 14, },
+  errorText:  { fontSize: 14, textAlign: "center", },
   retryBtn:   { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText:  { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText:  { fontSize: 14 },
 });
 
 const xpatStyles = StyleSheet.create({
@@ -1074,7 +1072,7 @@ const xpatStyles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
   },
-  loadingText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  loadingText: { fontSize: 13, },
 
   heroCard: {
     flexDirection: "row",
@@ -1097,8 +1095,8 @@ const xpatStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  empName: { fontSize: 15, fontFamily: "Inter_700Bold", lineHeight: 20 },
-  empSub:  { fontSize: 13, fontFamily: "Inter_400Regular" },
+  empName: { fontSize: 15, lineHeight: 20 },
+  empSub:  { fontSize: 13, },
   validBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1109,7 +1107,7 @@ const xpatStyles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 2,
   },
-  validText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  validText: { fontSize: 12, },
 
   detailCard: {
     borderRadius: 14,
@@ -1124,10 +1122,10 @@ const xpatStyles = StyleSheet.create({
     paddingVertical: 10,
     gap: 12,
   },
-  detailLabel: { fontSize: 12, fontFamily: "Inter_500Medium", flex: 1 },
-  detailValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 2, textAlign: "right" },
+  detailLabel: { fontSize: 12, flex: 1 },
+  detailValue: { fontSize: 13, flex: 2, textAlign: "right" },
 
-  cardLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  cardLabel: { fontSize: 11, letterSpacing: 0.5 },
   cardThumbWrap: {
     borderRadius: 12,
     borderWidth: 1,
@@ -1144,7 +1142,6 @@ const xpatStyles = StyleSheet.create({
   cardOverlayText: {
     color: "#fff",
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
   },
 
   cardModalOverlay: {

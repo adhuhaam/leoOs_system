@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   useGetPassport,
   useUpdatePassport,
@@ -148,8 +148,8 @@ const siStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  num: { fontSize: 9, fontFamily: "Inter_700Bold" },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  num: { fontSize: 9, },
+  label: { fontSize: 11, },
 });
 
 // ─── OptionPickerField ────────────────────────────────────────────────────────
@@ -336,9 +336,9 @@ function OptionPickerField({
 const fpStyles = StyleSheet.create({
   group: { gap: 5 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  toggle: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  noOptionsHint: { fontSize: 11, color: "#d97706", fontFamily: "Inter_400Regular" },
+  label: { fontSize: 12, },
+  toggle: { fontSize: 11, },
+  noOptionsHint: { fontSize: 11, color: "#d97706", },
   selector: {
     flexDirection: "row",
     alignItems: "center",
@@ -349,15 +349,14 @@ const fpStyles = StyleSheet.create({
     borderWidth: 1,
     gap: 6,
   },
-  value: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  placeholder: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  value: { fontSize: 14, },
+  placeholder: { fontSize: 14, },
   input: {
     paddingHorizontal: 12,
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
   },
   overlay: { flex: 1, backgroundColor: "#00000066", justifyContent: "flex-end" },
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, maxHeight: "60%" },
@@ -368,14 +367,14 @@ const fpStyles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
-  sheetTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  sheetTitle: { fontSize: 15, },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  optionText: { fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
+  optionText: { fontSize: 14, flex: 1 },
 });
 
 // ─── TextField ────────────────────────────────────────────────────────────────
@@ -426,14 +425,13 @@ function TextField({
 
 const tfStyles = StyleSheet.create({
   group: { gap: 5 },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  label: { fontSize: 12, },
   input: {
     paddingHorizontal: 12,
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
   },
   multiline: { height: 76, paddingTop: 10 },
 });
@@ -561,7 +559,7 @@ function CompanyPicker({
 
 const cpStyles = StyleSheet.create({
   group: { gap: 5 },
-  label: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  label: { fontSize: 12, },
   selector: {
     flexDirection: "row",
     alignItems: "center",
@@ -572,8 +570,8 @@ const cpStyles = StyleSheet.create({
     borderWidth: 1,
     gap: 8,
   },
-  name: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  meta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  name: { fontSize: 14, },
+  meta: { fontSize: 12, marginTop: 2 },
   overlay: { flex: 1, backgroundColor: "#00000066", justifyContent: "flex-end" },
   sheet: {
     borderTopLeftRadius: 16,
@@ -588,15 +586,15 @@ const cpStyles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
-  sheetTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  sheetTitle: { fontSize: 15, },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  optionName: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  optionMeta: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  optionName: { fontSize: 14, },
+  optionMeta: { fontSize: 12, marginTop: 2 },
 });
 
 // ─── SectionHeader ────────────────────────────────────────────────────────────
@@ -607,7 +605,7 @@ function SectionHeader({
   iconColor,
   colors,
 }: {
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   label: string;
   iconColor: string;
   colors: ReturnType<typeof useColors>;
@@ -622,7 +620,7 @@ function SectionHeader({
 
 const shStyles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  label: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1.4 },
+  label: { fontSize: 10, letterSpacing: 1.4 },
 });
 
 // ─── AssignStep ───────────────────────────────────────────────────────────────
@@ -929,8 +927,8 @@ const dsStyles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  title: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  sub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 3 },
+  title: { fontSize: 15, },
+  sub: { fontSize: 13, marginTop: 3 },
   actions: { flexDirection: "row", gap: 10 },
   btn: {
     flex: 1,
@@ -942,7 +940,7 @@ const dsStyles = StyleSheet.create({
     borderRadius: 12,
   },
   outline: { borderWidth: 1 },
-  btnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  btnText: { fontSize: 14, },
   reset: {
     flexDirection: "row",
     alignItems: "center",
@@ -950,7 +948,7 @@ const dsStyles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
-  resetText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  resetText: { fontSize: 13, },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -1440,8 +1438,8 @@ const styles = StyleSheet.create({
   container: { padding: 20, gap: 20, paddingBottom: 48 },
   header: { gap: 8 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  title: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  subtitle: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  title: { fontSize: 22, },
+  subtitle: { fontSize: 12, },
   body: { gap: 14 },
   // File preview
   preview: {
@@ -1462,11 +1460,11 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 24,
   },
-  pdfName: { fontSize: 16, fontFamily: "Inter_600SemiBold", textAlign: "center" },
-  pdfMeta: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  pdfName: { fontSize: 16, textAlign: "center" },
+  pdfMeta: { fontSize: 12, },
   dropHint: { alignItems: "center", gap: 10 },
-  dropText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  dropSub: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  dropText: { fontSize: 15, },
+  dropSub: { fontSize: 12, },
   clearBtn: {
     position: "absolute",
     top: 10,
@@ -1488,7 +1486,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
-  captureBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  captureBtnText: { fontSize: 14, },
   // Primary button
   primaryBtn: {
     flexDirection: "row",
@@ -1498,7 +1496,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 14,
   },
-  primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  primaryBtnText: { fontSize: 15, },
   // Outline button
   outlineBtn: {
     flexDirection: "row",
@@ -1509,7 +1507,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
-  outlineBtnText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  outlineBtnText: { fontSize: 14, },
   // Status card
   statusCard: {
     flexDirection: "row",
@@ -1519,19 +1517,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  statusTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  statusSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 },
+  statusTitle: { fontSize: 14, },
+  statusSub: { fontSize: 12, marginTop: 3 },
   // Extracted data
   extractedCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   extractedHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  extractedTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 },
+  extractedTitle: { fontSize: 13, flex: 1 },
   aiBadge: {
     backgroundColor: "#d1fae5",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  aiBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#059669" },
+  aiBadgeText: { fontSize: 10, color: "#059669" },
   dataRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1540,9 +1538,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
   },
-  dataLabel: { fontSize: 11, fontFamily: "Inter_500Medium", width: 88, flexShrink: 0 },
-  dataValue: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, textAlign: "right" },
-  mono: { fontFamily: "Inter_700Bold", fontSize: 12 },
+  dataLabel: { fontSize: 11, width: 88, flexShrink: 0 },
+  dataValue: { fontSize: 13, flex: 1, textAlign: "right" },
+  mono: { fontSize: 12 },
   // Footer row (back + submit)
   footerRow: { flexDirection: "row", gap: 10, marginTop: 4 },
 });

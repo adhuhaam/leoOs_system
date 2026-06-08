@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type Client,
   getListClientsQueryKey,
@@ -195,7 +195,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
   listContent: { padding: 16, gap: 10, paddingBottom: 100 },
@@ -216,15 +215,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  name: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  detail: { fontSize: 12, fontFamily: "Inter_500Medium", marginTop: 2 },
+  avatarText: { fontSize: 16, },
+  name: { fontSize: 15, },
+  detail: { fontSize: 12, marginTop: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  emptyTitle: { fontSize: 17, },
+  emptyText: { fontSize: 13, textAlign: "center" },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
   fab: {
     position: "absolute",
     right: 20,

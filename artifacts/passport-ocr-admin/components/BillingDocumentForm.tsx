@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import {
   type Company,
   getListCompaniesQueryKey,
@@ -628,7 +628,6 @@ export default function BillingDocumentForm({
                       styles.statusRowText,
                       {
                         color: active ? colors.primary : colors.foreground,
-                        fontFamily: active ? "Inter_700Bold" : "Inter_500Medium",
                         flex: 1,
                       },
                     ]}
@@ -722,7 +721,7 @@ function TotalRow({
       <Text
         style={[
           styles.totalLabel,
-          { color: bold ? colors.foreground : colors.mutedForeground, fontFamily: bold ? "Inter_700Bold" : "Inter_500Medium" },
+          { color: bold ? colors.foreground : colors.mutedForeground, },
         ]}
       >
         {label}
@@ -730,7 +729,7 @@ function TotalRow({
       <Text
         style={[
           styles.totalValue,
-          { color: colors.foreground, fontFamily: bold ? "Inter_700Bold" : "Inter_600SemiBold", fontSize: bold ? 18 : 14 },
+          { color: colors.foreground, fontSize: bold ? 18 : 14 },
         ]}
       >
         {value}
@@ -749,14 +748,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   row2: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  label: { fontSize: 11, letterSpacing: 0.5 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
   kindRow: { flexDirection: "row", gap: 10 },
   kindBtn: {
@@ -769,7 +767,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
   },
-  kindBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  kindBtnText: { fontSize: 14, },
   pickerBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -779,7 +777,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 8,
   },
-  pickerBtnText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  pickerBtnText: { fontSize: 15, },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -790,7 +788,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 46,
   },
-  toggleLabel: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  toggleLabel: { fontSize: 15, },
   addItemBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -798,7 +796,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  addItemText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  addItemText: { fontSize: 13, },
   itemCard: {
     borderWidth: 1,
     borderRadius: 14,
@@ -811,7 +809,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  itemNum: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  itemNum: { fontSize: 12, },
   amountBox: {
     borderWidth: 1,
     borderRadius: 12,
@@ -820,7 +818,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
     justifyContent: "center",
   },
-  amountText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  amountText: { fontSize: 13, },
   totalsBox: {
     borderWidth: 1,
     borderRadius: 14,
@@ -844,7 +842,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 8,
   },
-  submitText: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  submitText: { fontSize: 15, },
   // Company modal
   modalContainer: { flex: 1 },
   modalNav: {
@@ -854,7 +852,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
   },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 18, },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -869,7 +867,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     padding: 0,
   },
   companyRow: {
@@ -881,8 +878,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
   },
-  companyName: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
-  emptyText: { textAlign: "center", marginTop: 20, fontSize: 14, fontFamily: "Inter_500Medium" },
+  companyName: { flex: 1, fontSize: 15, },
+  emptyText: { textAlign: "center", marginTop: 20, fontSize: 14, },
   // Status modal
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   sheet: {
@@ -893,7 +890,7 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 6,
   },
-  sheetTitle: { fontSize: 17, fontFamily: "Inter_700Bold", marginBottom: 6 },
+  sheetTitle: { fontSize: 17, marginBottom: 6 },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -904,5 +901,5 @@ const styles = StyleSheet.create({
   },
   statusRowText: { fontSize: 15 },
   cancelBtn: { marginTop: 8, padding: 14, borderRadius: 12, borderWidth: 1, alignItems: "center" },
-  cancelText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  cancelText: { fontSize: 15, },
 });

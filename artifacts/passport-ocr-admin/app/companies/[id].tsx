@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@/components/Icon";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListCompaniesQueryKey,
@@ -407,14 +407,13 @@ const styles = StyleSheet.create({
   container: { padding: 20, gap: 14, paddingBottom: 40 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   fieldGroup: { gap: 6 },
-  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  fieldLabel: { fontSize: 11, letterSpacing: 0.5 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
   primaryBtn: {
     flexDirection: "row",
@@ -425,10 +424,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginTop: 12,
   },
-  primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
+  primaryBtnText: { fontSize: 15, },
+  errorText: { fontSize: 14, textAlign: "center", },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  retryText: { fontSize: 14 },
   // branding
   brandingCard: {
     borderWidth: 1,
@@ -442,12 +441,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  brandingSectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  brandingHint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: -4 },
+  brandingSectionTitle: { fontSize: 15, },
+  brandingHint: { fontSize: 11, marginTop: -4 },
   imageSlot: { gap: 8 },
   imageSlotHeader: { gap: 2 },
-  imageSlotLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
-  imageSlotHint: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  imageSlotLabel: { fontSize: 10, letterSpacing: 0.5 },
+  imageSlotHint: { fontSize: 11, },
   imagePreviewWrap: {
     borderWidth: 1,
     borderRadius: 10,
@@ -466,7 +465,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  imagePlaceholderText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  imagePlaceholderText: { fontSize: 12, },
   imageActions: { flexDirection: "row", gap: 8 },
   imageBtn: {
     flexDirection: "row",
@@ -477,5 +476,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
   },
-  imageBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  imageBtnText: { fontSize: 13, },
 });
