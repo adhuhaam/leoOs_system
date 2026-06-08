@@ -118,9 +118,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     const storedToken = await storeGet(TOKEN_KEY);
 
-    // Tell the server to destroy the session; include the Bearer so it
-    // destroys the correct (original login) session, not a freshly-created
-    // empty one spawned from the cookie path.
+    // 1. Synchronously mark as unauthenticated in the query cache FIRST.
+    //    This prevents the AuthGate race condition where qc.clear() wipes the
+    //    cache, triggers a background refetch, and a re-render between the
+    //    clear and the refetch landing sees isAuthed=true → redirects to "/".
+    qc.setQueryData(getGetAuthStatusQueryKey(), { authenticated: false });
+    setAuthTokenGetter(null);
+
+    // 2. Clear persisted token — client is now fully unauthenticated.
+    await storeDelete(TOKEN_KEY);
+
+    // 3. Tell the server to destroy the session (best-effort).
     try {
       await fetch(`${BASE_URL}/api/auth/logout`, {
         method: "POST",
@@ -128,13 +136,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
       });
     } catch {
-      // Ignore network errors — clear client state regardless.
+      // Ignore network errors — client state is already cleared.
     }
 
-    await storeDelete(TOKEN_KEY);
-    setAuthTokenGetter(null);
-    qc.removeQueries({ queryKey: getGetAuthStatusQueryKey() });
-    qc.clear();
+    // 4. Clear all other cached API data (passports, companies, etc.) so the
+    //    next user doesn't see stale data.  Do NOT use qc.clear() — it would
+    //    wipe the { authenticated: false } we just set and immediately trigger
+    //    a refetch that could race against the login redirect.
+    qc.removeQueries({
+      predicate: (q) => q.queryKey[0] !== "/api/auth/me",
+    });
   }, [qc]);
 
   const refresh = useCallback(async () => {
