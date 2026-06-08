@@ -266,8 +266,9 @@ router.get("/loa/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   const letterheadBuf = decodeDataUrl(letterheadImage);
   const signatureBuf = decodeDataUrl(signatureImage);
 
-  // A4: 595.28 x 841.89 points
-  const doc = new PDFDocument({ size: "A4", margin: 60, info: { Title: "Letter of Appointment" } });
+  // A4: 595.28 × 841.89 points.  10 mm margin ≈ 28.35 pt — use 30 pt.
+  const M = 30; // margin
+  const doc = new PDFDocument({ size: "A4", margins: { top: M, bottom: M, left: M, right: M }, info: { Title: "Letter of Appointment" } });
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
@@ -276,117 +277,124 @@ router.get("/loa/:id/pdf", requireAuth, async (req, res): Promise<void> => {
   );
   doc.pipe(res);
 
-  // ─── Letterhead image (centered, capped width) ───────────────────────────
+  const pageW = doc.page.width - M * 2; // ≈ 535 pt
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  const rule = (color = "#CBD5E1", w = 0.4) => {
+    doc.moveTo(M, doc.y).lineTo(M + pageW, doc.y)
+      .strokeColor(color).lineWidth(w).stroke().strokeColor("#000000").lineWidth(1);
+  };
+
+  const fmtDate = (v: string | null | undefined) => {
+    const s = (v ?? "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : (s || "—");
+  };
+
+  const sectionHeader = (label: string) => {
+    doc.font("Helvetica-Bold").fontSize(10).fillColor("#0f172a").text(label, { lineGap: 1 });
+    rule("#CBD5E1", 0.4);
+    doc.moveDown(0.2);
+  };
+
+  const field = (label: string, value: string | null | undefined) => {
+    const val = (value ?? "").trim() || "—";
+    doc
+      .font("Helvetica-Bold").fontSize(9).fillColor("#1e293b")
+      .text(`${label}: `, { continued: true, lineGap: 1 })
+      .font("Helvetica").fillColor("#334155")
+      .text(val, { lineGap: 1 });
+    doc.fillColor("#000000");
+  };
+
+  const gap = () => doc.moveDown(0.12);
+  const sectionGap = () => doc.moveDown(0.7);
+
+  // ─── Letterhead image (full content-width) ───────────────────────────────
   if (letterheadBuf) {
     try {
-      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-      const maxW = Math.min(pageWidth, 360);
-      const imgX = doc.page.margins.left + (pageWidth - maxW) / 2;
-      const imgY = doc.y;
-      doc.image(letterheadBuf, imgX, imgY, { fit: [maxW, 90], align: "center" });
-      doc.y = imgY + 90;
-      doc.moveDown(1);
+      doc.image(letterheadBuf, M, M, { fit: [pageW, 66] });
+      doc.y = M + 66;
     } catch (err) {
       req.log.warn({ err }, "Failed to embed company letterhead — skipping");
     }
   }
 
+  rule("#CBD5E1", 0.5);
+  doc.moveDown(0.5);
+
   // ─── Title ───────────────────────────────────────────────────────────────
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(14)
-    .text("LETTER OF APPOINTMENT", { align: "center" })
-    .moveDown(1.5);
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  const sectionHeader = (label: string) => {
-    doc.font("Helvetica-Bold").fontSize(11).text(label, { align: "left" }).moveDown(0.3);
-  };
-
-  const field = (label: string, value: string | null | undefined) => {
-    const val = (value ?? "").trim();
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .text(`${label}: `, { continued: true })
-      .font("Helvetica")
-      .text(val);
-  };
-
-  const lineGap = () => doc.moveDown(0.25);
-
-  const fmtDate = (v: string | null | undefined) => {
-    const s = (v ?? "").trim();
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
-  };
+  const tY = doc.y;
+  rule("#94A3B8", 0.5);
+  doc.font("Helvetica-Bold").fontSize(12).fillColor("#0f172a")
+    .text("LETTER OF APPOINTMENT", M, tY + 5, { align: "center", width: pageW });
+  doc.moveDown(0.25);
+  rule("#94A3B8", 0.5);
+  doc.moveDown(0.7);
+  doc.fillColor("#000000");
 
   // ─── 1. Employer ──────────────────────────────────────────────────────────
   sectionHeader("1. Details of Employer;");
-  field("Name", loa.companyName); lineGap();
-  field("Address", loa.companyAddress); lineGap();
-  field("Contact Details / Email address", loa.companyEmail); lineGap();
-  field("Phone Number", loa.companyPhone); lineGap();
-  field("Country of origin", loa.companyCountry); lineGap();
-  field("Registration Number/ID Card", loa.companyRegistrationNumber);
-  doc.moveDown(1);
+  field("Name", loa.companyName); gap();
+  field("Address", loa.companyAddress); gap();
+  field("Contact Details / Email address", loa.companyEmail); gap();
+  field("Phone Number", loa.companyPhone); gap();
+  field("Country of origin", loa.companyCountry); gap();
+  field("Registration Number / ID Card", loa.companyRegistrationNumber);
+  sectionGap();
 
   // ─── 2. Employee ──────────────────────────────────────────────────────────
   sectionHeader("2. Details of Employee;");
-  field("Name", loa.candidateName); lineGap();
-  field("Permanent Address", loa.candidateAddress); lineGap();
-  field("Nationality", loa.candidateNationality); lineGap();
-  field("Date of Birth", fmtDate(loa.candidateDateOfBirth)); lineGap();
-  field("Passport Number", loa.candidatePassportNumber); lineGap();
+  field("Name", loa.candidateName); gap();
+  field("Permanent Address", loa.candidateAddress); gap();
+  field("Nationality", loa.candidateNationality); gap();
+  field("Date of Birth", fmtDate(loa.candidateDateOfBirth)); gap();
+  field("Passport Number", loa.candidatePassportNumber); gap();
   field("Emergency Contact Details (name and contact number)", loa.candidateEmergencyContact);
-  doc.moveDown(1);
+  sectionGap();
 
-  // ─── 4. Employment (sample skips section 3) ──────────────────────────────
+  // ─── 4. Employment ────────────────────────────────────────────────────────
   sectionHeader("4. Details of Employment;");
-  field("Job Title / Occupation", loa.jobTitle); lineGap();
-  doc.font("Helvetica-Bold").fontSize(10).text("Work Type : ", { continued: true })
-    .font("Helvetica").text((loa.workType ?? "").trim()); lineGap();
-  field("Basic Salary (USD)", loa.basicSalary); lineGap();
-  field("Date of Salary payment", loa.salaryPaymentDate);
-  doc.moveDown(0.8);
-  field("Work site", loa.workSite); lineGap();
-  field("Date of Commence", loa.dateOfCommence?.trim() || "Date of Arrival"); lineGap();
-  field("Job Description", loa.jobDescription?.trim() || "Job Description will be given the time of signing the contract"); lineGap();
-  field(
-    "Working Hours",
-    loa.workingHours?.trim() ||
-      "09:00 to 17:00 Saturday to Sunday * even though Friday is a holiday, your work may require your attendance to work due to the nature of business."
-  ); lineGap();
-  field("Work Status (Permanent / Contract)", loa.workStatus?.trim() || "Contract based"); lineGap();
-  field(
-    "Contract Duration (if Contracted employee)",
-    loa.contractDuration?.trim() || "Contract will be for 2 years, Probation period is 3 months"
-  );
-  doc.moveDown(1.2);
+  field("Job Title / Occupation", loa.jobTitle); gap();
+  field("Work Type", loa.workType); gap();
+  field("Basic Salary (USD)", loa.basicSalary); gap();
+  field("Date of Salary payment", loa.salaryPaymentDate?.trim() || "End of each month"); gap();
+  field("Work site", loa.workSite); gap();
+  field("Date of Commence", loa.dateOfCommence?.trim() || "Date of Arrival"); gap();
+  field("Job Description", loa.jobDescription?.trim() || "Job Description will be given the time of signing the contract"); gap();
+  field("Working Hours", loa.workingHours?.trim() || "09:00 to 17:00 Saturday to Sunday"); gap();
+  field("Work Status (Permanent / Contract)", loa.workStatus?.trim() || "Contract based"); gap();
+  field("Contract Duration (if Contracted employee)", loa.contractDuration?.trim() || "Contract will be for 2 years, Probation period is 3 months");
+  sectionGap();
 
-  // ─── Signatory ──────────────────────────────────────────────────────────
-  doc.font("Helvetica-Bold").fontSize(11).text("Details of Signatory;").moveDown(0.3);
-  field("Name", loa.signatoryName); lineGap();
+  // ─── Signatory ───────────────────────────────────────────────────────────
+  sectionHeader("Details of Signatory;");
+  field("Name", loa.signatoryName); gap();
   field("Designation", loa.signatoryDesignation);
-  doc.moveDown(2);
+  doc.moveDown(0.7);
 
-  // ─── Signature line ─────────────────────────────────────────────────────
+  // ─── Signature block ─────────────────────────────────────────────────────
   if (signatureBuf) {
-    doc.font("Helvetica-Bold").fontSize(10).text("Signature: ", { continued: false });
     try {
       const sigY = doc.y;
-      doc.image(signatureBuf, doc.page.margins.left + 10, sigY, { fit: [160, 50] });
-      doc.y = sigY + 55;
+      doc.image(signatureBuf, M, sigY, { fit: [110, 36] });
+      doc.y = sigY + 38;
     } catch (err) {
       req.log.warn({ err }, "Failed to embed company signature — skipping");
-      doc.moveDown(2);
+      doc.moveDown(1.5);
     }
   } else {
-    doc.moveDown(1);
-    field("Signature", "");
-    doc.moveDown(0.6);
+    // placeholder underline for wet signature
+    doc.moveTo(M, doc.y + 18).lineTo(M + 130, doc.y + 18)
+      .strokeColor("#94A3B8").lineWidth(0.5).stroke().strokeColor("#000000").lineWidth(1);
+    doc.moveDown(1.6);
   }
+
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#0f172a").text(loa.signatoryName ?? "");
+  doc.font("Helvetica").fontSize(9).fillColor("#334155").text(loa.signatoryDesignation ?? "");
+  doc.moveDown(0.3);
   field("Date", fmtDate(loa.signatureDate));
+  doc.fillColor("#000000");
 
   doc.end();
 });
