@@ -22,7 +22,7 @@ function FieldRow({
   value: string | null | undefined;
 }) {
   return (
-    <div className="flex flex-wrap gap-x-1 text-[11px] leading-snug py-[3px]">
+    <div className="print-field-row flex flex-wrap gap-x-1 text-[11px] leading-snug py-[3px]">
       <span className="font-semibold text-slate-800 shrink-0">{label}:</span>
       <span className="text-slate-700">{(value ?? "").trim() || "—"}</span>
     </div>
@@ -83,7 +83,7 @@ export default function LoaPrintPage() {
   // Print-only stylesheet — same technique as billing-print.tsx.
   useEffect(() => {
     const css = `
-      @page { size: A4 portrait; margin: 14mm; }
+      @page { size: A4 portrait; margin: 10mm; }
       @media print {
         html, body {
           background: white !important;
@@ -109,19 +109,47 @@ export default function LoaPrintPage() {
         }
         .print-page {
           padding: 0 !important;
-          font-size: 10pt !important;
-          line-height: 1.5 !important;
+          font-size: 9pt !important;
+          line-height: 1.35 !important;
+        }
+        .print-letterhead {
+          margin-bottom: 4pt !important;
         }
         .print-letterhead img {
-          max-width: 100% !important;
+          display: block !important;
           width: 100% !important;
+          max-width: 100% !important;
           height: auto !important;
-          max-height: 80pt !important;
+          max-height: 52pt !important;
           object-fit: contain !important;
+          object-position: center !important;
+        }
+        .print-title {
+          margin: 5pt 0 !important;
+        }
+        .print-title h1 {
+          font-size: 10pt !important;
+          padding: 3pt 12pt !important;
         }
         .print-section-header {
+          font-size: 9pt !important;
+          margin-top: 7pt !important;
+          margin-bottom: 1pt !important;
+          padding-bottom: 1pt !important;
           break-after: avoid !important;
           page-break-after: avoid !important;
+        }
+        .print-field-row {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          line-height: 1.3 !important;
+        }
+        .print-signature {
+          margin-top: 6pt !important;
+        }
+        .print-signature img {
+          max-height: 28pt !important;
+          max-width: 120pt !important;
         }
       }
     `;
@@ -204,7 +232,7 @@ export default function LoaPrintPage() {
           )}
 
           {/* ── Title ── */}
-          <div className="text-center my-5">
+          <div className="print-title text-center my-5">
             <h1 className="text-[15px] font-bold uppercase tracking-widest text-slate-900 border-y border-slate-300 py-2 inline-block px-6">
               Letter of Appointment
             </h1>
@@ -289,7 +317,7 @@ export default function LoaPrintPage() {
           <FieldRow label="Designation" value={signatoryDesignation} />
 
           {/* ── Signature block ── */}
-          <div className="mt-8">
+          <div className="print-signature mt-8">
             {signatureImage ? (
               <img
                 src={signatureImage}
@@ -297,7 +325,7 @@ export default function LoaPrintPage() {
                 className="max-h-16 max-w-[180px] object-contain mb-1"
               />
             ) : (
-              <div className="border-b border-slate-400 w-48 mb-1 h-10" />
+              <div className="border-b border-slate-400 w-48 mb-1 h-8" />
             )}
             <p className="text-[11px] font-semibold text-slate-900">
               {signatoryName}
