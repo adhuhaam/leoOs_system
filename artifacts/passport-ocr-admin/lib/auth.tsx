@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetch(`${BASE_URL}/api/auth/logout`, {
             method: "POST",
             credentials: "include",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
         } catch { /* ignore */ }
         qc.removeQueries({ predicate: () => true });
