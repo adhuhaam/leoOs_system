@@ -17,6 +17,7 @@ import {
   Image,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -53,21 +54,48 @@ function isWpValid(v: string | null | undefined): boolean {
   return v?.toLowerCase() === "valid";
 }
 
-type StatusFilter = "all" | "completed" | "processing" | "failed";
+type StatusFilter =
+  | "all"
+  | "processing"
+  | "applied"
+  | "approved"
+  | "ticket_issued"
+  | "arrived"
+  | "employed"
+  | "handedover"
+  | "completed"
+  | "return_back_from_worksite"
+  | "incomplete"
+  | "cancelled"
+  | "terminated"
+  | "lost"
+  | "failed";
+
 type NationalityFilter = "all" | "bangladesh" | "india" | "nepal";
 
-const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "completed", label: "Completed" },
-  { key: "processing", label: "Processing" },
-  { key: "failed", label: "Failed" },
+const STATUS_FILTERS: { key: StatusFilter; label: string; color: string }[] = [
+  { key: "all",                       label: "All",          color: "#64748B" },
+  { key: "processing",                label: "Processing",   color: "#F59E0B" },
+  { key: "applied",                   label: "Applied",      color: "#8B5CF6" },
+  { key: "approved",                  label: "Approved",     color: "#6366F1" },
+  { key: "ticket_issued",             label: "Ticket Issued",color: "#A78BFA" },
+  { key: "arrived",                   label: "Arrived",      color: "#3B82F6" },
+  { key: "employed",                  label: "Employed",     color: "#0EA5E9" },
+  { key: "handedover",                label: "Handed Over",  color: "#06B6D4" },
+  { key: "completed",                 label: "Completed",    color: "#10B981" },
+  { key: "return_back_from_worksite", label: "Returned",     color: "#F97316" },
+  { key: "incomplete",                label: "Incomplete",   color: "#EF4444" },
+  { key: "failed",                    label: "Failed",       color: "#DC2626" },
+  { key: "cancelled",                 label: "Cancelled",    color: "#9CA3AF" },
+  { key: "terminated",                label: "Terminated",   color: "#6B7280" },
+  { key: "lost",                      label: "Lost",         color: "#1F2937" },
 ];
 
 const NATIONALITY_FILTERS: { key: NationalityFilter; label: string }[] = [
-  { key: "all", label: "Any" },
+  { key: "all",        label: "Any" },
   { key: "bangladesh", label: "Bangladesh" },
-  { key: "india", label: "India" },
-  { key: "nepal", label: "Nepal" },
+  { key: "india",      label: "India" },
+  { key: "nepal",      label: "Nepal" },
 ];
 
 export default function MasterListScreen() {
@@ -136,8 +164,7 @@ export default function MasterListScreen() {
         )}
       </View>
 
-      <FilterRow
-        items={STATUS_FILTERS}
+      <StatusFilterRow
         value={statusFilter}
         onChange={setStatusFilter}
       />
@@ -215,6 +242,51 @@ export default function MasterListScreen() {
   );
 }
 
+function StatusFilterRow({
+  value,
+  onChange,
+}: {
+  value: StatusFilter;
+  onChange: (v: StatusFilter) => void;
+}) {
+  const colors = useColors();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.statusFilterScroll}
+      style={styles.statusFilterWrap}
+    >
+      {STATUS_FILTERS.map((item) => {
+        const active = item.key === value;
+        return (
+          <Pressable
+            key={item.key}
+            onPress={() => onChange(item.key)}
+            style={[
+              styles.statusChip,
+              {
+                backgroundColor: active ? item.color + "22" : colors.card,
+                borderColor: active ? item.color : colors.border,
+              },
+            ]}
+          >
+            <View style={[styles.statusDotChip, { backgroundColor: item.color }]} />
+            <Text
+              style={[
+                styles.chipText,
+                { color: active ? item.color : colors.foreground },
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 function FilterRow<T extends string>({
   items,
   value,
@@ -244,11 +316,7 @@ function FilterRow<T extends string>({
             <Text
               style={[
                 styles.chipText,
-                {
-                  color: active
-                    ? colors.primaryForeground
-                    : colors.foreground,
-                },
+                { color: active ? colors.primaryForeground : colors.foreground },
               ]}
             >
               {item.label}
@@ -468,6 +536,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     padding: 0,
   },
+  statusFilterWrap: { paddingVertical: 5 },
+  statusFilterScroll: {
+    flexDirection: "row",
+    gap: 7,
+    paddingHorizontal: 16,
+    paddingRight: 24,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  statusDotChip: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
   filterRow: {
     flexDirection: "row",
     gap: 7,
