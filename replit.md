@@ -6,7 +6,7 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
 - `pnpm --filter @workspace/passport-ocr run dev` — run the web frontend (port varies)
-- `pnpm --filter @workspace/passport-ocr-mobile run dev` — run the Expo mobile app (Expo Go)
+- `pnpm --filter @workspace/passport-ocr-admin run dev` — run the LEO ADMIN mobile app (Expo Go)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -36,14 +36,14 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 - `artifacts/api-server/src/routes/passports.ts` — Passport CRUD + upload routes
 - `artifacts/api-server/src/lib/ocr.ts` — OpenAI vision OCR extraction logic
 - `artifacts/passport-ocr/src/` — React frontend (pages, components)
-- `artifacts/passport-ocr-mobile/app/` — Expo mobile app (file-based routes; tabs: Dashboard, Master, Capture, Billing, More)
-- `artifacts/passport-ocr-mobile/lib/auth.tsx` — RBAC auth provider (login, register, loginWithGoogle, exposes user.role)
+- `artifacts/passport-ocr-admin/app/` — LEO ADMIN mobile app (file-based routes)
+- `artifacts/passport-ocr-admin/lib/auth.tsx` — RBAC auth provider (login, register, loginWithGoogle, exposes user.role)
 - `lib/db/src/schema/users.ts` — users table (id, email, name, role, googleId, isApproved, passwordHash, linkedEntityId)
 - `artifacts/api-server/src/routes/auth.ts` — email+password login, Google OAuth, register, requireAuth/requireRole
 - `artifacts/api-server/src/routes/admin-users.ts` — admin user CRUD (superuser+admin only)
 - `artifacts/api-server/src/lib/bootstrap-users.ts` — ensures users table exists, seeds superuser on first boot
-- `artifacts/passport-ocr-mobile/app/admin/users.tsx` — User Management screen (mobile)
-- `artifacts/passport-ocr-mobile/app/admin/system-settings.tsx` — System Settings / Google OAuth screen (mobile, superuser)
+- `artifacts/passport-ocr-admin/app/admin/users.tsx` — User Management screen (mobile)
+- `artifacts/passport-ocr-admin/app/admin/system-settings.tsx` — System Settings / Google OAuth screen (mobile, superuser)
 - `artifacts/passport-ocr/src/pages/users.tsx` — User Management page (web, admin+superuser)
 
 ## Auth & RBAC
@@ -66,40 +66,34 @@ An AI-powered passport data extraction tool for Bangladesh and Indian passports.
 
 Users upload passport images (JPG, PNG, PDF) for Bangladesh and Indian passports. The app extracts: full name, passport number, date of birth, date of issue, date of expiry, address, and nationality. Extracted records are stored in PostgreSQL and displayed in a CRUD dashboard with search, filter, edit, and delete capabilities.
 
-## Mobile app
+## LEO ADMIN mobile app
 
-The `passport-ocr-mobile` artifact is an Expo (React Native) client that reuses the same `/api` endpoints as the web dashboard. It signs in with the same shared password, persists the session cookie natively, and exposes:
-
-- **Dashboard** — passport stats, quick actions, recent uploads
-- **Master** — passport list with status/nationality filters and the latest-LOA company per candidate
-- **Capture** — camera + document picker upload to `/api/passports/upload` (multipart; field `file`)
-- **Billing** — invoices and quotations (view-only); detail view shows line items + GST totals
-- **More** — Clients (view-only), Expenses (CRUD), and Sign-out
+The `passport-ocr-admin` artifact is the LEO ADMIN Expo (React Native) app. It connects to the same `/api` endpoints and uses Bearer token auth. It exposes all admin features including User Management and System Settings.
 
 ### Run locally
-- `pnpm --filter @workspace/passport-ocr-mobile run dev` — starts Metro/Expo. Open in Expo Go on a device on the same network, or scan the QR.
-- The app reads `EXPO_PUBLIC_DOMAIN` (set by the workflow) and points API calls at `https://${EXPO_PUBLIC_DOMAIN}` so it shares the proxied `/api` with the web app.
+- `pnpm --filter @workspace/passport-ocr-admin run dev` — starts Metro/Expo. Open in Expo Go on a device on the same network, or scan the QR.
+- The app reads `EXPO_PUBLIC_DOMAIN` and points API calls at `https://${EXPO_PUBLIC_DOMAIN}`.
 
 ### Build an Android APK / AAB (EAS)
-The repo includes `artifacts/passport-ocr-mobile/eas.json` pre-configured with:
+The repo includes `artifacts/passport-ocr-admin/eas.json` pre-configured with:
 - Android package: `com.leo.os` (set in `app.json` — never change after publishing to Play)
 - Backend domain: `EXPO_PUBLIC_DOMAIN=leomaldives.com` (used by the built app for all API/auth calls)
 
 One-time setup:
 1. Install the CLI: `npm i -g eas-cli`
-2. `cd artifacts/passport-ocr-mobile && eas login` (free Expo account)
+2. `cd artifacts/passport-ocr-admin && eas login` (free Expo account)
 3. `eas init` — links the project to your Expo account and writes `extra.eas.projectId` into `app.json`. Commit that change.
 
 Preview build (side-loadable APK):
 ```bash
-cd artifacts/passport-ocr-mobile
+cd artifacts/passport-ocr-admin
 eas build -p android --profile preview
 ```
-EAS returns a downloadable `.apk` URL (~10–15 min). Install on any Android device and sign in with the shared password.
+EAS returns a downloadable `.apk` URL (~10–15 min). Install on any Android device and sign in.
 
 Production build (Play Store AAB):
 ```bash
-cd artifacts/passport-ocr-mobile
+cd artifacts/passport-ocr-admin
 eas build -p android --profile production
 ```
 Returns a `.aab` for upload to Google Play Console.
@@ -109,48 +103,31 @@ If keystore generation prompts on first build, accept the EAS-managed keystore �
 ### Build an iOS .ipa (EAS)
 The same `eas.json` already includes an `ios` block on both profiles:
 - iOS bundle identifier: `com.leo.os` (set in `app.json`, matches the Android package)
-- `preview` uses `distribution: "internal"` so the build is signed with an
-  ad-hoc provisioning profile and installs on iPhones whose UDIDs are
-  registered with your Expo / Apple Developer account
+- `preview` uses `distribution: "internal"` for ad-hoc provisioning
 - `production` is for App Store submission via TestFlight / `eas submit`
 
 Requirements:
-- A paid Apple Developer Program membership ($99/year) — Apple will not let
-  you install a `.ipa` on a real iPhone without one
-- Your iPhone's UDID registered with EAS (see step 1 below)
+- A paid Apple Developer Program membership ($99/year)
+- Your iPhone's UDID registered with EAS
 
 One-time iPhone registration:
 ```bash
-cd artifacts/passport-ocr-mobile
+cd artifacts/passport-ocr-admin
 eas device:create
 ```
-This prints a QR code / link. Open the link on your iPhone in **Safari** and
-approve the device profile that downloads. Then go to
-*Settings → General → VPN & Device Management* → tap the new profile →
-*Install*. Your phone is now registered for ad-hoc builds.
 
 Preview build (installable .ipa):
 ```bash
-cd artifacts/passport-ocr-mobile
+cd artifacts/passport-ocr-admin
 eas build -p ios --profile preview
 ```
-First run prompts for your Apple ID; EAS auto-creates the distribution
-certificate and provisioning profile (always pick the EAS-managed option
-so future builds reuse the same credentials). Build takes ~15–20 min.
-
-When the build finishes, EAS emails a link / QR. Open it on your registered
-iPhone in **Safari** → tap *Install*. After install, *Settings → General →
-VPN & Device Management* → tap the developer profile → *Trust*. The app then
-launches normally.
 
 Production build (App Store submission):
 ```bash
-cd artifacts/passport-ocr-mobile
+cd artifacts/passport-ocr-admin
 eas build -p ios --profile production
 eas submit -p ios --latest
 ```
-The first command produces a store-signed build; the second uploads it to
-App Store Connect for TestFlight / review.
 
 ## User preferences
 
