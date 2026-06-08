@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,71 +13,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { useGetGoogleClientIds } from "@workspace/api-client-react";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
 
-WebBrowser.maybeCompleteAuthSession();
-
-// Env-var fallbacks — set EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID and
-// EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS in Replit Secrets for always-on Google sign-in
-// without needing to configure them through System Settings.
-const ENV_GOOGLE_CLIENT_ID_ANDROID =
-  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? undefined;
-const ENV_GOOGLE_CLIENT_ID_IOS =
-  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? undefined;
-
 export default function LoginScreen() {
   const colors = useColors();
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passwordRef = useRef<TextInput>(null);
-
-  // Merge DB-configured client IDs with env-var fallbacks
-  const { data: googleIds } = useGetGoogleClientIds();
-  const googleClientId = googleIds?.googleClientId ?? ENV_GOOGLE_CLIENT_ID_ANDROID ?? undefined;
-  const googleClientIdIos = googleIds?.googleClientIdIos ?? ENV_GOOGLE_CLIENT_ID_IOS ?? undefined;
-  const hasGoogleSignIn = Boolean(googleClientId || ENV_GOOGLE_CLIENT_ID_ANDROID);
-
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    androidClientId: googleClientId,
-    iosClientId: googleClientIdIos ?? googleClientId,
-    webClientId: googleClientId,
-  });
-
-  const handledResponseRef = useRef<unknown>(null);
-
-  useEffect(() => {
-    if (!googleResponse || googleResponse === handledResponseRef.current) return;
-    handledResponseRef.current = googleResponse;
-
-    if (googleResponse.type === "success") {
-      const idToken = googleResponse.authentication?.idToken;
-      if (!idToken) {
-        setError("Google Sign-In failed: could not retrieve identity token. Please try again.");
-        return;
-      }
-      setGoogleSubmitting(true);
-      setError(null);
-      loginWithGoogle(idToken)
-        .then(() => router.replace("/"))
-        .catch((err) => {
-          const msg = err instanceof Error ? err.message : "Google sign-in failed.";
-          setError(msg);
-        })
-        .finally(() => setGoogleSubmitting(false));
-    } else if (googleResponse.type === "error") {
-      setError(googleResponse.error?.message ?? "Google Sign-In failed. Please try again.");
-    }
-  }, [googleResponse]);
 
   async function onSubmit() {
     if (!email.trim() || !password.trim() || submitting) return;
@@ -140,9 +88,7 @@ export default function LoginScreen() {
             {/* Email */}
             <View style={styles.fieldWrap}>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>EMAIL</Text>
-              <View
-                style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="mail" size={17} color={colors.mutedForeground} />
                 <TextInput
                   value={email}
@@ -162,9 +108,7 @@ export default function LoginScreen() {
             {/* Password */}
             <View style={styles.fieldWrap}>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>PASSWORD</Text>
-              <View
-                style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
+              <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="lock" size={17} color={colors.mutedForeground} />
                 <TextInput
                   ref={passwordRef}
@@ -195,10 +139,7 @@ export default function LoginScreen() {
               disabled={!canSubmit}
               style={({ pressed }) => [
                 styles.primaryBtn,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: !canSubmit ? 0.45 : pressed ? 0.82 : 1,
-                },
+                { backgroundColor: colors.primary, opacity: !canSubmit ? 0.45 : pressed ? 0.82 : 1 },
               ]}
             >
               {submitting ? (
@@ -206,42 +147,6 @@ export default function LoginScreen() {
               ) : (
                 <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
                   Sign in
-                </Text>
-              )}
-            </Pressable>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
-
-            {/* Google Sign-In button */}
-            <Pressable
-              onPress={() => {
-                if (!hasGoogleSignIn || !googleRequest) {
-                  setError("Google Sign-In is not configured. Please contact your admin.");
-                  return;
-                }
-                setError(null);
-                googlePromptAsync();
-              }}
-              disabled={googleSubmitting}
-              style={({ pressed }) => [
-                styles.googleBtn,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  opacity: googleSubmitting ? 0.5 : pressed ? 0.82 : 1,
-                },
-              ]}
-            >
-              {googleSubmitting ? (
-                <ActivityIndicator size="small" color={colors.mutedForeground} />
-              ) : (
-                <Text style={[styles.googleBtnText, { color: colors.foreground }]}>
-                  Continue with Google
                 </Text>
               )}
             </Pressable>
@@ -313,27 +218,7 @@ const styles = StyleSheet.create({
   primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center", marginTop: 4 },
   primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
 
-  divider: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 15,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  googleBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 28,
-    flexWrap: "wrap",
-  },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 28, flexWrap: "wrap" },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular" },
   footerLink: { fontSize: 14, fontFamily: "Inter_700Bold" },
 });

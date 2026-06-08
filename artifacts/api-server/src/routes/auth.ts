@@ -10,7 +10,6 @@ import { eq } from "drizzle-orm";
 import { db, appSettingsTable, usersTable } from "@workspace/db";
 import { LoginBody, ChangePasswordBody } from "@workspace/api-zod";
 import { z } from "zod/v4";
-import { OAuth2Client } from "google-auth-library";
 import { hashPassword, verifyPasswordHash } from "../lib/crypto";
 
 const router: IRouter = Router();
@@ -144,121 +143,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /auth/google
-// ---------------------------------------------------------------------------
-
-const GoogleAuthBody = z.object({
-  idToken: z.string().min(1),
-});
-
-router.post("/auth/google", async (req, res): Promise<void> => {
-  const parsed = GoogleAuthBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid input" });
-    return;
-  }
-
-  const settings = await db
-    .select({
-      googleClientId: appSettingsTable.googleClientId,
-      googleClientIdIos: appSettingsTable.googleClientIdIos,
-    })
-    .from(appSettingsTable)
-    .where(eq(appSettingsTable.id, 1))
-    .limit(1);
-
-  const clientId = settings[0]?.googleClientId;
-  const clientIdIos = settings[0]?.googleClientIdIos;
-  if (!clientId) {
-    res.status(503).json({ error: "Google Sign-In is not configured" });
-    return;
-  }
-
-  // Accept tokens issued for either the web/Android client ID or the iOS client ID
-  const audiences = [clientId, ...(clientIdIos ? [clientIdIos] : [])];
-
-  let googleEmail: string | undefined;
-  let googleName: string | undefined;
-  let googleId: string | undefined;
-
-  try {
-    const client = new OAuth2Client();
-    const ticket = await client.verifyIdToken({
-      idToken: parsed.data.idToken,
-      audience: audiences,
-    });
-    const payload = ticket.getPayload();
-    if (!payload) throw new Error("Empty payload");
-    googleEmail = payload.email;
-    googleName = payload.name;
-    googleId = payload.sub;
-  } catch (err) {
-    req.log.warn({ err }, "Google ID token verification failed");
-    res.status(401).json({ error: "Invalid Google token" });
-    return;
-  }
-
-  if (!googleEmail) {
-    res.status(401).json({ error: "No email in Google token" });
-    return;
-  }
-
-  const normalEmail = googleEmail.toLowerCase().trim();
-  const users = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.email, normalEmail))
-    .limit(1);
-
-  let user = users[0];
-
-  if (!user) {
-    res.status(401).json({ error: "Email not registered. Please request an account." });
-    return;
-  }
-
-  if (!user.googleId && googleId) {
-    await db
-      .update(usersTable)
-      .set({ googleId })
-      .where(eq(usersTable.id, user.id));
-    user = { ...user, googleId };
-  }
-
-  if (user.isBlocked) {
-    res.status(403).json({ error: "Account has been blocked" });
-    return;
-  }
-
-  if (!user.isApproved) {
-    res.status(403).json({ error: "Account pending approval" });
-    return;
-  }
-
-  req.session.regenerate((regenErr) => {
-    if (regenErr) {
-      req.log.error({ err: regenErr }, "Failed to regenerate session");
-      res.status(500).json({ error: "Failed to log in" });
-      return;
-    }
-    req.session.authenticated = true;
-    req.session.userId = user!.id;
-    req.session.role = user!.role;
-    req.session.userEmail = user!.email;
-    req.session.userName = googleName ?? user!.name;
-    req.session.linkedEntityId = user!.linkedEntityId ?? undefined;
-    req.session.save((saveErr) => {
-      if (saveErr) {
-        req.log.error({ err: saveErr }, "Failed to save session");
-        res.status(500).json({ error: "Failed to log in" });
-        return;
-      }
-      res.sendStatus(204);
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
 // POST /auth/logout
 // ---------------------------------------------------------------------------
 
@@ -363,26 +247,6 @@ router.post("/auth/extension-token/regenerate", async (req, res): Promise<void> 
       set: { extensionToken: token },
     });
   res.json({ token });
-});
-
-// ---------------------------------------------------------------------------
-// Public: GET /settings/google-client-ids
-// ---------------------------------------------------------------------------
-
-router.get("/settings/google-client-ids", async (_req, res): Promise<void> => {
-  const rows = await db
-    .select({
-      googleClientId: appSettingsTable.googleClientId,
-      googleClientIdIos: appSettingsTable.googleClientIdIos,
-    })
-    .from(appSettingsTable)
-    .where(eq(appSettingsTable.id, 1))
-    .limit(1);
-
-  res.json({
-    googleClientId: rows[0]?.googleClientId ?? null,
-    googleClientIdIos: rows[0]?.googleClientIdIos ?? null,
-  });
 });
 
 // ---------------------------------------------------------------------------
