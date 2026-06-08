@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
+import multer from "multer";
 import { db, companiesTable } from "@workspace/db";
 import {
   CreateCompanyBody,
@@ -10,6 +11,12 @@ import {
 import { requireRole } from "./auth";
 
 const router: IRouter = Router();
+
+// Multer for multipart branding uploads (bypasses proxy JSON body limits).
+const brandingUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB per file
+});
 
 // Hard cap on inline base64 branding images (keeps PDF render + payloads bounded).
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB raw bytes
@@ -157,6 +164,53 @@ router.patch("/companies/:id", async (req, res): Promise<void> => {
   }
   res.json(company);
 });
+
+// POST /companies/:id/branding — multipart file upload (bypasses JSON proxy limits)
+router.post(
+  "/companies/:id/branding",
+  brandingUpload.fields([
+    { name: "letterhead", maxCount: 1 },
+    { name: "signature", maxCount: 1 },
+  ]),
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) { res.status(400).json({ error: "Invalid company id" }); return; }
+
+    // Same role logic as PATCH
+    const actorRole = req.session?.role ?? "";
+    const actorLinkedId = req.session?.linkedEntityId;
+    if (actorRole !== "superuser" && actorRole !== "admin") {
+      if (actorRole === "company" && actorLinkedId) {
+        const eid = Number(actorLinkedId);
+        if (Number.isNaN(eid) || id !== eid) {
+          res.status(403).json({ error: "Access denied — you may only edit your own company" });
+          return;
+        }
+      } else {
+        res.status(403).json({ error: "Insufficient permissions" });
+        return;
+      }
+    }
+
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const update: Record<string, string> = {};
+    for (const [field, dbKey] of [["letterhead", "letterheadImage"], ["signature", "signatureImage"]] as const) {
+      const f = files?.[field]?.[0];
+      if (f) {
+        const mime = f.mimetype.startsWith("image/") ? f.mimetype : "image/jpeg";
+        update[dbKey] = `data:${mime};base64,${f.buffer.toString("base64")}`;
+      }
+    }
+    if (Object.keys(update).length === 0) {
+      res.status(400).json({ error: "No files uploaded" });
+      return;
+    }
+
+    const [company] = await db.update(companiesTable).set(update).where(eq(companiesTable.id, id)).returning();
+    if (!company) { res.status(404).json({ error: "Company not found" }); return; }
+    res.json(company);
+  },
+);
 
 router.delete("/companies/:id", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
   const params = DeleteCompanyParams.safeParse(req.params);

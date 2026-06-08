@@ -117,50 +117,57 @@ type LoaCategory = "job_title" | "work_type" | "work_site";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Compresses an image file to a base64 data URL that fits within MAX_IMAGE_BYTES.
- * Uses a canvas to resize (max 1200×800) and re-encode as JPEG, stepping down
- * quality until the output is small enough.  This ensures even large mobile
- * camera photos are safe to send as JSON to the API — production proxies have
- * hard body-size limits that a raw base64 blob can silently exceed.
+ * Compresses an image file and uploads it directly as multipart/form-data to
+ * POST /api/companies/:id/branding.  Multipart bypasses proxy JSON body-size
+ * limits that silently reject large base64 payloads in production.
  */
-async function compressImageToDataUrl(file: File): Promise<string> {
+async function uploadBrandingImage(
+  companyId: number,
+  kind: "letterheadImage" | "signatureImage",
+  file: File,
+): Promise<void> {
   const objectUrl = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const el = new Image();
-      el.onload = () => res(el);
-      el.onerror = () => rej(new Error("Could not load image"));
-      el.src = objectUrl;
-    });
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX_W = 1200, MAX_H = 800;
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > MAX_W || h > MAX_H) {
+        const scale = Math.min(MAX_W / w, MAX_H / h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const MAX_BLOB = MAX_IMAGE_BYTES;
+      const step = (q: number) => {
+        canvas.toBlob((b) => {
+          if (!b) { reject(new Error("Encoding failed")); return; }
+          if (b.size <= MAX_BLOB || q <= 0.3) resolve(b);
+          else step(Math.round((q - 0.15) * 100) / 100);
+        }, "image/jpeg", q);
+      };
+      step(0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not load image")); };
+    img.src = objectUrl;
+  });
 
-    const MAX_W = 1200;
-    const MAX_H = 800;
-    let { naturalWidth: w, naturalHeight: h } = img;
-    if (w > MAX_W || h > MAX_H) {
-      const scale = Math.min(MAX_W / w, MAX_H / h);
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-    }
+  const fieldName = kind === "letterheadImage" ? "letterhead" : "signature";
+  const fd = new FormData();
+  fd.append(fieldName, blob, "image.jpg");
 
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(img, 0, 0, w, h);
-
-    // Step quality down until output fits within MAX_IMAGE_BYTES.
-    for (const quality of [0.85, 0.75, 0.65, 0.55]) {
-      const dataUrl = canvas.toDataURL("image/jpeg", quality);
-      // Base64 payload length → approximate byte size
-      const b64 = dataUrl.split(",")[1] ?? "";
-      const approxBytes = Math.ceil((b64.length * 3) / 4);
-      if (approxBytes <= MAX_IMAGE_BYTES) return dataUrl;
-    }
-
-    // Last resort: lowest quality
-    return canvas.toDataURL("image/jpeg", 0.4);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
+  const res = await fetch(`/api/companies/${companyId}/branding`, {
+    method: "POST",
+    body: fd,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Upload failed");
+    throw new Error(text);
   }
 }
 
@@ -476,6 +483,7 @@ function CompanyFormDialog(
   // with the form save — avoids disabling upload buttons while the form saves
   // and stops the "Save changes" spinner from appearing on image upload.
   const brandingMutation = useUpdateCompany();
+  const [brandingUploading, setBrandingUploading] = useState(false);
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const f = (key: keyof CompanyFormState) => (v: string) =>
@@ -581,19 +589,16 @@ function CompanyFormDialog(
                 toast({ title: "Image must be under 10 MB", variant: "destructive" });
                 return;
               }
+              setBrandingUploading(true);
               try {
-                const dataUrl = await compressImageToDataUrl(file);
-                brandingMutation.mutateAsync(
-                  { id: liveCompany.id, data: { [kind]: dataUrl } as Parameters<typeof brandingMutation.mutate>[0]["data"] },
-                ).then(() => {
-                  queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
-                  queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
-                  toast({ title: kind === "letterheadImage" ? "Letterhead saved" : "Signature saved" });
-                }).catch((err: unknown) => {
-                  toast({ title: err instanceof Error ? err.message : "Failed to save image", variant: "destructive" });
-                });
-              } catch {
-                toast({ title: "Failed to read file", variant: "destructive" });
+                await uploadBrandingImage(liveCompany.id, kind, file);
+                queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey() });
+                queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
+                toast({ title: kind === "letterheadImage" ? "Letterhead saved" : "Signature saved" });
+              } catch (err) {
+                toast({ title: err instanceof Error ? err.message : "Failed to save image", variant: "destructive" });
+              } finally {
+                setBrandingUploading(false);
               }
             };
             const handleImageClear = (kind: "letterheadImage" | "signatureImage") => {
@@ -609,7 +614,7 @@ function CompanyFormDialog(
               <div className="space-y-3 pt-2 border-t">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5 pt-1">
                   <ImageIcon className="h-4 w-4 text-muted-foreground" /> Branding
-                  {brandingMutation.isPending && (
+                  {brandingUploading && (
                     <span className="text-[10px] text-muted-foreground animate-pulse ml-1">Saving…</span>
                   )}
                 </h3>
@@ -622,7 +627,7 @@ function CompanyFormDialog(
                     onClear={() => handleImageClear("letterheadImage")}
                     previewClass="h-28"
                     testId={`edit-letterhead-${liveCompany.id}`}
-                    disabled={brandingMutation.isPending}
+                    disabled={brandingUploading}
                   />
                   <ImageSlot
                     label="Signature"
@@ -632,7 +637,7 @@ function CompanyFormDialog(
                     onClear={() => handleImageClear("signatureImage")}
                     previewClass="h-28"
                     testId={`edit-signature-${liveCompany.id}`}
-                    disabled={brandingMutation.isPending}
+                    disabled={brandingUploading}
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">Images save immediately when selected.</p>
@@ -779,6 +784,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateCompany = useUpdateCompany();
+  const [brandingUploading, setBrandingUploading] = useState(false);
 
   const { data: brandedCompanies = [] } = useListCompanies(
     { withBranding: true },
@@ -804,17 +810,15 @@ function CompanyInfoPanel({ company }: { company: Company }) {
       toast({ title: "Image must be under 10 MB", variant: "destructive" });
       return;
     }
+    setBrandingUploading(true);
     try {
-      const dataUrl = await compressImageToDataUrl(file);
-      updateCompany.mutate(
-        { id: company.id, data: { [kind]: dataUrl } },
-        {
-          onSuccess: () => { invalidate(); toast({ title: "Image saved" }); },
-          onError: () => toast({ title: "Failed to save image", variant: "destructive" }),
-        },
-      );
-    } catch {
-      toast({ title: "Failed to read file", variant: "destructive" });
+      await uploadBrandingImage(company.id, kind, file);
+      invalidate();
+      toast({ title: "Image saved" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to save image", variant: "destructive" });
+    } finally {
+      setBrandingUploading(false);
     }
   };
 
@@ -869,7 +873,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
             onClear={() => handleBrandingClear("letterheadImage")}
             previewClass="h-28"
             testId={`letterhead-${company.id}`}
-            disabled={updateCompany.isPending}
+            disabled={brandingUploading || updateCompany.isPending}
           />
           <ImageSlot
             label="Signature"
@@ -879,7 +883,7 @@ function CompanyInfoPanel({ company }: { company: Company }) {
             onClear={() => handleBrandingClear("signatureImage")}
             previewClass="h-28"
             testId={`signature-${company.id}`}
-            disabled={updateCompany.isPending}
+            disabled={brandingUploading || updateCompany.isPending}
           />
         </div>
       </div>

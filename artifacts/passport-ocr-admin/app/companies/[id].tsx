@@ -9,6 +9,7 @@ import {
 import * as Haptics from "expo-haptics";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import * as SecureStore from "expo-secure-store";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -26,28 +27,12 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 import { useColors } from "@/hooks/useColors";
 
-// ─── Image compression ────────────────────────────────────────────────────────
+// ─── Branding upload ──────────────────────────────────────────────────────────
 
-const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB — well under the 2 MB server cap
-
-async function compressForUpload(uri: string): Promise<string> {
-  for (const quality of [0.8, 0.65, 0.5, 0.4]) {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1200 } }],
-      { compress: quality, format: ImageManipulator.SaveFormat.JPEG, base64: true },
-    );
-    const b64 = result.base64 ?? "";
-    const approxBytes = Math.ceil((b64.length * 3) / 4);
-    if (approxBytes <= MAX_IMAGE_BYTES) return `data:image/jpeg;base64,${b64}`;
-  }
-  const last = await ImageManipulator.manipulateAsync(
-    uri,
-    [{ resize: { width: 1200 } }],
-    { compress: 0.3, format: ImageManipulator.SaveFormat.JPEG, base64: true },
-  );
-  return `data:image/jpeg;base64,${last.base64 ?? ""}`;
-}
+const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "";
+const TOKEN_KEY = "leo_admin_session_token";
 
 type EditableField =
   | "name"
@@ -123,6 +108,7 @@ export default function CompanyEditScreen() {
 
   const updateMutation = useUpdateCompany();
   const brandingMutation = useUpdateCompany();
+  const [brandingUploading, setBrandingUploading] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [dirty, setDirty] = useState(false);
 
@@ -148,16 +134,33 @@ export default function CompanyEditScreen() {
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    setBrandingUploading(true);
     try {
-      const dataUrl = await compressForUpload(asset.uri);
-      await brandingMutation.mutateAsync({
-        id: companyId,
-        data: { [kind]: dataUrl } as Parameters<typeof brandingMutation.mutateAsync>[0]["data"],
+      // Compress to JPEG binary (no base64) — multipart bypasses proxy JSON limits
+      const compressed = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [{ resize: { width: 1200 } }],
+        { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const fieldName = kind === "letterheadImage" ? "letterhead" : "signature";
+      const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+      const fd = new FormData();
+      fd.append(fieldName, { uri: compressed.uri, name: "image.jpg", type: "image/jpeg" } as unknown as Blob);
+      const res = await fetch(`${BASE_URL}/api/companies/${companyId}/branding`, {
+        method: "POST",
+        body: fd,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "Upload failed");
+        throw new Error(text);
+      }
       await queryClient.invalidateQueries({ queryKey: getListCompaniesQueryKey({ withBranding: true }) });
       Alert.alert("Saved", kind === "letterheadImage" ? "Letterhead saved." : "Signature saved.");
     } catch (err) {
       Alert.alert("Upload failed", err instanceof Error ? err.message : "Please try again.");
+    } finally {
+      setBrandingUploading(false);
     }
   }
 
@@ -287,7 +290,7 @@ export default function CompanyEditScreen() {
           <Text style={[styles.brandingSectionTitle, { color: colors.foreground }]}>
             Branding
           </Text>
-          {brandingMutation.isPending && (
+          {(brandingMutation.isPending || brandingUploading) && (
             <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
           )}
         </View>
@@ -336,12 +339,12 @@ export default function CompanyEditScreen() {
               <View style={styles.imageActions}>
                 <Pressable
                   onPress={() => handlePickImage(kind)}
-                  disabled={brandingMutation.isPending}
+                  disabled={brandingMutation.isPending || brandingUploading}
                   style={({ pressed }) => [
                     styles.imageBtn,
                     {
                       backgroundColor: colors.primary,
-                      opacity: brandingMutation.isPending ? 0.5 : pressed ? 0.8 : 1,
+                      opacity: (brandingMutation.isPending || brandingUploading) ? 0.5 : pressed ? 0.8 : 1,
                       flex: 1,
                     },
                   ]}
@@ -354,14 +357,14 @@ export default function CompanyEditScreen() {
                 {current && (
                   <Pressable
                     onPress={() => handleClearImage(kind)}
-                    disabled={brandingMutation.isPending}
+                    disabled={brandingMutation.isPending || brandingUploading}
                     style={({ pressed }) => [
                       styles.imageBtn,
                       {
                         backgroundColor: colors.destructive + "18",
                         borderColor: colors.destructive + "40",
                         borderWidth: 1,
-                        opacity: brandingMutation.isPending ? 0.5 : pressed ? 0.8 : 1,
+                        opacity: (brandingMutation.isPending || brandingUploading) ? 0.5 : pressed ? 0.8 : 1,
                       },
                     ]}
                   >
