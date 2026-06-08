@@ -780,7 +780,7 @@ function BillingChart({ docs }: { docs: BillingDocumentSummary[] }) {
 
   const months = useMemo(() => {
     const arr: { key: string; label: string; count: number; revenue: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 11; i >= 0; i--) {
       const d = new Date();
       d.setDate(1);
       d.setMonth(d.getMonth() - i);
