@@ -46,13 +46,15 @@ function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
 function formatDate(raw: string | null | undefined): string {
   if (!raw) return "";
   try {
-    return new Date(raw).toLocaleDateString(undefined, {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   } catch {
-    return raw;
+    return "";
   }
 }
 

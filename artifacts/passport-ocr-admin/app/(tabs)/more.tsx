@@ -39,6 +39,7 @@ const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
 };
 
 const TOOL_ITEMS: Item[] = [
+  { icon: "file-text", label: "LOA", detail: "Letters of Appointment", route: "/loa" },
   { icon: "briefcase", label: "Companies", detail: "Manage employer companies", route: "/companies" },
   { icon: "users", label: "Clients", detail: "Browse client directory", route: "/clients" },
   { icon: "dollar-sign", label: "Expenses", detail: "Track operational spend", route: "/expenses" },
@@ -56,6 +57,7 @@ export default function MoreScreen() {
 
   const ADMIN_ITEMS: Item[] = [
     { icon: "users", label: "User Management", detail: "Approve & manage accounts", route: "/admin/users" },
+    { icon: "shield", label: "Permissions", detail: "Role-based access control", route: "/admin/permissions" },
     { icon: "settings", label: "System Settings", detail: "System configuration", route: "/admin/system-settings" },
   ];
 

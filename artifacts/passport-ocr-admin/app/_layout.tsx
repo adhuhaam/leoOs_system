@@ -128,6 +128,22 @@ function RootLayoutNav() {
         name="clients/new"
         options={{ title: "New Client", presentation: "modal" }}
       />
+      <Stack.Screen
+        name="loa/index"
+        options={{ title: "Letters of Appointment", headerBackTitle: "More" }}
+      />
+      <Stack.Screen
+        name="loa/new"
+        options={{ title: "New Appointment Letter", presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="loa/[id]"
+        options={{ title: "Appointment Letter", headerBackTitle: "LOA" }}
+      />
+      <Stack.Screen
+        name="admin/permissions"
+        options={{ title: "Permissions", headerBackTitle: "More" }}
+      />
     </Stack>
   );
 }

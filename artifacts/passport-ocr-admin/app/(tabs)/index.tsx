@@ -5,28 +5,40 @@ import {
   getListCompaniesQueryKey,
   getListExpensesQueryKey,
   getListPassportsQueryKey,
+  getListTasksQueryKey,
   type BillingDocumentSummary,
   type Client,
   type Company,
   type Expense,
   type Passport,
+  type Task,
+  TaskPriority,
+  TaskStatus,
+  useCreateTask,
+  useDeleteTask,
   useListBillingDocuments,
   useListClients,
   useListCompanies,
   useListExpenses,
   useListPassports,
+  useListTasks,
+  useUpdateTask,
 } from "@workspace/api-client-react";
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/auth";
@@ -86,9 +98,16 @@ const STATUS_GROUPS = {
   completed: ["completed"],
 };
 
+const PRIORITY_COLOR = { low: "#10B981", medium: "#F59E0B", high: "#EF4444" };
+const DUE_COLOR = { overdue: "#EF4444", today: "#F59E0B", upcoming: "#6366F1" };
+
+type TaskFilter = "all" | "today" | "upcoming" | "done";
+type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string };
+
 export default function DashboardScreen() {
   const colors = useColors();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const role = user?.role ?? null;
   const firstName = user?.name?.split(" ")[0] ?? null;
@@ -191,6 +210,88 @@ export default function DashboardScreen() {
     ];
   }, [isAdmin, companiesData, clientsData, expensesData, billingData]);
 
+  // ── Tasks ────────────────────────────────────────────────────────────────
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+
+  const { data: tasksRaw } = useListTasks({
+    query: { queryKey: getListTasksQueryKey(), staleTime: 15_000 },
+  });
+  const allTasks = useMemo(() => (tasksRaw ?? []) as Task[], [tasksRaw]);
+  const topTasks = useMemo(() => allTasks.filter((t) => !t.parentId), [allTasks]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  function classifyTask(t: Task): "overdue" | "today" | "upcoming" | null {
+    if (!t.dueDate) return null;
+    if (t.dueDate < todayStr) return "overdue";
+    if (t.dueDate === todayStr) return "today";
+    return "upcoming";
+  }
+
+  const taskStats = useMemo(() => {
+    const open = topTasks.filter((t) => t.status !== "done").length;
+    const dueToday = topTasks.filter((t) => t.status !== "done" && t.dueDate === todayStr).length;
+    const overdue = topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate < todayStr).length;
+    const done = topTasks.filter((t) => t.status === "done").length;
+    return { open, dueToday, overdue, done };
+  }, [topTasks, todayStr]);
+
+  const filteredTasks = useMemo(() => {
+    if (taskFilter === "all") return topTasks.filter((t) => t.status !== "done");
+    if (taskFilter === "done") return topTasks.filter((t) => t.status === "done");
+    if (taskFilter === "today") return topTasks.filter((t) => t.status !== "done" && t.dueDate === todayStr);
+    if (taskFilter === "upcoming") return topTasks.filter((t) => t.status !== "done" && t.dueDate != null && t.dueDate > todayStr);
+    return topTasks;
+  }, [topTasks, taskFilter, todayStr]);
+
+  const createTask = useCreateTask({
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }) },
+  });
+  const updateTask = useUpdateTask({
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }) },
+  });
+  const deleteTask = useDeleteTask({
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() }) },
+  });
+
+  function handleAddTask() {
+    const title = newTaskTitle.trim();
+    if (!title) return;
+    createTask.mutate({ data: { title } });
+    setNewTaskTitle("");
+  }
+
+  function toggleTask(t: Task) {
+    updateTask.mutate({ id: t.id, data: { status: t.status === "done" ? "todo" : "done" } });
+  }
+
+  function handleDeleteTask(t: Task) {
+    Alert.alert("Delete task?", `"${t.title}" will be removed.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => deleteTask.mutate({ id: t.id }) },
+    ]);
+  }
+
+  function openEdit(t: Task) {
+    setEditDraft({ id: t.id, title: t.title, notes: t.notes ?? "", priority: t.priority, dueDate: t.dueDate ?? "" });
+  }
+
+  function saveEdit() {
+    if (!editDraft) return;
+    updateTask.mutate({
+      id: editDraft.id,
+      data: {
+        title: editDraft.title || undefined,
+        notes: editDraft.notes || null,
+        priority: editDraft.priority as Task["priority"],
+        dueDate: editDraft.dueDate || null,
+      },
+    });
+    setEditDraft(null);
+  }
+
   // ── Recent uploads ───────────────────────────────────────────────────────
   const recent = useMemo(
     () =>
@@ -205,6 +306,7 @@ export default function DashboardScreen() {
   );
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.container}
@@ -352,7 +454,212 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
+
+      {/* ── Task Management ──────────────────────────────────────────── */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Tasks</Text>
+          <Text style={[styles.taskCountBadge, { backgroundColor: colors.secondary, color: colors.mutedForeground }]}>
+            {taskStats.open} open
+          </Text>
+        </View>
+
+        {/* Task stat chips */}
+        <View style={styles.taskStatRow}>
+          {([
+            { label: "Open",      value: taskStats.open,     color: "#0F172A" },
+            { label: "Due Today", value: taskStats.dueToday, color: "#F59E0B" },
+            { label: "Overdue",   value: taskStats.overdue,  color: "#EF4444" },
+            { label: "Done",      value: taskStats.done,     color: "#10B981" },
+          ] as const).map((s) => (
+            <View key={s.label} style={[styles.taskStatChip, { backgroundColor: s.color + "12" }]}>
+              <Text style={[styles.taskStatVal, { color: s.color }]}>{s.value}</Text>
+              <Text style={[styles.taskStatLbl, { color: s.color }]}>{s.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Filter tabs */}
+        <View style={[styles.taskFilterRow, { backgroundColor: colors.secondary, borderRadius: 12 }]}>
+          {(["all", "today", "upcoming", "done"] as TaskFilter[]).map((f) => (
+            <Pressable
+              key={f}
+              onPress={() => setTaskFilter(f)}
+              style={[
+                styles.taskFilterBtn,
+                taskFilter === f && { backgroundColor: colors.card, shadowColor: "#000" },
+              ]}
+            >
+              <Text style={[styles.taskFilterText, { color: taskFilter === f ? colors.foreground : colors.mutedForeground }]}>
+                {f === "all" ? "All" : f === "today" ? "Today" : f === "upcoming" ? "Upcoming" : "Done"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Quick-add */}
+        <View style={[styles.addTaskRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.addTaskInput, { color: colors.foreground }]}
+            placeholder="Add a task…"
+            placeholderTextColor={colors.mutedForeground}
+            value={newTaskTitle}
+            onChangeText={setNewTaskTitle}
+            onSubmitEditing={handleAddTask}
+            returnKeyType="done"
+          />
+          <Pressable
+            onPress={handleAddTask}
+            disabled={!newTaskTitle.trim()}
+            style={({ pressed }) => [
+              styles.addTaskBtn,
+              { backgroundColor: newTaskTitle.trim() ? colors.primary : colors.secondary, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Feather name="plus" size={18} color={newTaskTitle.trim() ? "#fff" : colors.mutedForeground} />
+          </Pressable>
+        </View>
+
+        {/* Task list */}
+        {filteredTasks.length === 0 ? (
+          <View style={[styles.taskEmpty, { borderColor: colors.border }]}>
+            <Feather name="check-circle" size={24} color={colors.mutedForeground} />
+            <Text style={[styles.taskEmptyText, { color: colors.mutedForeground }]}>
+              {taskFilter === "done" ? "No completed tasks" : taskFilter === "today" ? "Nothing due today" : taskFilter === "upcoming" ? "Nothing upcoming" : "All caught up!"}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.taskList}>
+            {filteredTasks.map((t) => {
+              const isDone = t.status === "done";
+              const cls = classifyTask(t);
+              const subtasks = allTasks.filter((s) => s.parentId === t.id);
+              const subDone = subtasks.filter((s) => s.status === "done").length;
+              return (
+                <View key={t.id} style={[styles.taskRow, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+                  <Pressable onPress={() => toggleTask(t)} hitSlop={6} style={styles.taskCheckWrap}>
+                    <View style={[
+                      styles.taskCheck,
+                      { borderColor: isDone ? "#10B981" : colors.border },
+                      isDone && { backgroundColor: "#10B981" },
+                    ]}>
+                      {isDone && <Feather name="check" size={11} color="#fff" />}
+                    </View>
+                  </Pressable>
+                  <Pressable style={styles.taskBody} onPress={() => openEdit(t)}>
+                    <View style={styles.taskTitleRow}>
+                      <Text
+                        style={[styles.taskTitle, { color: isDone ? colors.mutedForeground : colors.foreground }, isDone && styles.taskDoneText]}
+                        numberOfLines={2}
+                      >
+                        {t.title}
+                      </Text>
+                      <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLOR[t.priority as keyof typeof PRIORITY_COLOR] + "20" }]}>
+                        <Text style={[styles.priorityText, { color: PRIORITY_COLOR[t.priority as keyof typeof PRIORITY_COLOR] }]}>
+                          {t.priority}
+                        </Text>
+                      </View>
+                    </View>
+                    {t.notes ? (
+                      <Text style={[styles.taskNotes, { color: colors.mutedForeground }]} numberOfLines={1}>{t.notes}</Text>
+                    ) : null}
+                    <View style={styles.taskMeta}>
+                      {cls && !isDone && (
+                        <View style={[styles.dueBadge, { backgroundColor: DUE_COLOR[cls] + "18" }]}>
+                          <Feather name="calendar" size={10} color={DUE_COLOR[cls]} />
+                          <Text style={[styles.dueText, { color: DUE_COLOR[cls] }]}>
+                            {cls === "overdue" ? `Overdue · ${t.dueDate}` : cls === "today" ? "Due today" : t.dueDate}
+                          </Text>
+                        </View>
+                      )}
+                      {subtasks.length > 0 && (
+                        <Text style={[styles.subtaskCount, { color: colors.mutedForeground }]}>
+                          {subDone}/{subtasks.length} subtasks
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                  <Pressable onPress={() => handleDeleteTask(t)} hitSlop={8} style={styles.taskDeleteBtn}>
+                    <Feather name="trash-2" size={14} color={colors.mutedForeground} />
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
     </ScrollView>
+
+    {/* Edit task modal */}
+    <Modal
+      visible={editDraft !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setEditDraft(null)}
+    >
+      {editDraft && (
+        <View style={[styles.editModal, { backgroundColor: colors.background }]}>
+          <View style={[styles.editHeader, { borderBottomColor: colors.border }]}>
+            <Pressable onPress={() => setEditDraft(null)}>
+              <Text style={[styles.editCancel, { color: colors.mutedForeground }]}>Cancel</Text>
+            </Pressable>
+            <Text style={[styles.editTitle, { color: colors.foreground }]}>Edit Task</Text>
+            <Pressable onPress={saveEdit}>
+              <Text style={[styles.editSave, { color: colors.primary }]}>Save</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.editBody} keyboardShouldPersistTaps="handled">
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Title</Text>
+            <TextInput
+              style={[styles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              value={editDraft.title}
+              onChangeText={(v) => setEditDraft((d) => d ? { ...d, title: v } : d)}
+              autoFocus
+            />
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Notes</Text>
+            <TextInput
+              style={[styles.editInput, styles.editMultiline, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              value={editDraft.notes}
+              onChangeText={(v) => setEditDraft((d) => d ? { ...d, notes: v } : d)}
+              multiline
+              numberOfLines={3}
+              placeholder="Optional notes…"
+              placeholderTextColor={colors.mutedForeground}
+            />
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Priority</Text>
+            <View style={styles.priorityRow}>
+              {(["low", "medium", "high"] as const).map((p) => {
+                const active = editDraft.priority === p;
+                const pc = PRIORITY_COLOR[p];
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => setEditDraft((d) => d ? { ...d, priority: p } : d)}
+                    style={[
+                      styles.priorityPill,
+                      { backgroundColor: active ? pc + "20" : colors.secondary, borderColor: active ? pc : "transparent", borderWidth: 1 },
+                    ]}
+                  >
+                    <Text style={[styles.priorityPillText, { color: active ? pc : colors.mutedForeground }]}>
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Due Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={[styles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              value={editDraft.dueDate}
+              onChangeText={(v) => setEditDraft((d) => d ? { ...d, dueDate: v } : d)}
+              placeholder="e.g. 2025-12-31"
+              placeholderTextColor={colors.mutedForeground}
+            />
+          </ScrollView>
+        </View>
+      )}
+    </Modal>
+    </>
   );
 }
 
@@ -628,4 +935,78 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
+
+  // ── Task styles ──────────────────────────────────────────────────────────
+  taskCountBadge: {
+    fontSize: 12, fontFamily: "Inter_600SemiBold",
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999,
+  },
+  taskStatRow: { flexDirection: "row", gap: 8 },
+  taskStatChip: {
+    flex: 1, borderRadius: 12, padding: 10, alignItems: "center", gap: 2,
+  },
+  taskStatVal: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  taskStatLbl: { fontSize: 9, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+
+  taskFilterRow: {
+    flexDirection: "row", padding: 3, gap: 2,
+  },
+  taskFilterBtn: {
+    flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 0,
+  },
+  taskFilterText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+
+  addTaskRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 14, paddingRight: 6, paddingVertical: 6,
+  },
+  addTaskInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 6 },
+  addTaskBtn: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+
+  taskEmpty: {
+    alignItems: "center", justifyContent: "center", gap: 8,
+    padding: 28, borderRadius: 16, borderWidth: 1, borderStyle: "dashed",
+  },
+  taskEmptyText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+
+  taskList: { gap: 8 },
+  taskRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+    padding: 14, borderRadius: 16,
+    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  taskCheckWrap: { paddingTop: 2 },
+  taskCheck: {
+    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+  },
+  taskBody: { flex: 1, gap: 4 },
+  taskTitleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  taskTitle: { flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  taskDoneText: { textDecorationLine: "line-through", opacity: 0.5 },
+  taskNotes: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  taskMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  priorityBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  priorityText: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" },
+  dueBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  dueText: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  subtaskCount: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  taskDeleteBtn: { padding: 4 },
+
+  editModal: { flex: 1 },
+  editHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  editCancel: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  editTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+  editSave: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  editBody: { padding: 20, gap: 8, paddingBottom: 40 },
+  editLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 8 },
+  editInput: { fontSize: 15, fontFamily: "Inter_400Regular", borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  editMultiline: { minHeight: 80, textAlignVertical: "top", paddingTop: 12 },
+  priorityRow: { flexDirection: "row", gap: 8 },
+  priorityPill: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12 },
+  priorityPillText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 });
