@@ -236,22 +236,22 @@ function FlipUserCard() {
 
         {/* bottom area: dots + name */}
         <View style={styles.cardBottom}>
+          {/* phone row (yellow area) */}
           <View style={styles.cardDotRow}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.cardDotGroup}>
-                {[0, 1, 2, 3].map((j) => <View key={j} style={styles.cardDot} />)}
-              </View>
-            ))}
-            <Text style={styles.cardDotId}>{String(user?.id ?? 0).padStart(4, "0")}</Text>
+            <Feather name="phone" size={10} color="#FFFFFF45" />
+            <Text style={styles.cardPhoneText} numberOfLines={1}>
+              {user?.phone ? user.phone : "—"}
+            </Text>
           </View>
 
+          {/* email + role pill row (blue area) */}
           <View style={styles.cardNameRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardHolderLabel}>CARD HOLDER</Text>
-              <Text style={styles.cardName} numberOfLines={1}>{(user?.name ?? "—").toUpperCase()}</Text>
+              <Text style={styles.cardHolderLabel}>EMAIL</Text>
+              <Text style={styles.cardName} numberOfLines={1}>{user?.email ?? "—"}</Text>
             </View>
-            <View style={[styles.cardRolePill, { backgroundColor: "#FFFFFF20" }]}>
-              <Text style={[styles.cardRoleText, { color: "#FFFFFF" }]}>{roleLabel}</Text>
+            <View style={[styles.cardRolePill, { backgroundColor: "#FFFFFF15" }]}>
+              <Text style={[styles.cardRoleText, { color: "#FFFFFF99" }]}>{roleLabel}</Text>
             </View>
           </View>
         </View>
@@ -1696,16 +1696,16 @@ const styles = StyleSheet.create({
   cardSubText: { fontSize: 10, color: "#FFFFFF70", letterSpacing: 0.3 },
   cardBottom: { gap: 6 },
   // card number dots
-  cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  cardDotRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardDotGroup: { flexDirection: "row", gap: 3 },
   cardDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#FFFFFF65" },
-  cardDotId: { fontSize: 14, fontWeight: "600", color: "#FFFFFF", letterSpacing: 2 },
+  cardPhoneText: { fontSize: 11, color: "#FFFFFF70", letterSpacing: 0.5 },
   // name row
-  cardNameRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 8 },
-  cardHolderLabel: { fontSize: 7.5, color: "#FFFFFF45", letterSpacing: 1.5, marginBottom: 2 },
-  cardName: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: 0.3 },
-  cardRolePill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, flexShrink: 0, backgroundColor: "#FFFFFF20" },
-  cardRoleText: { fontSize: 10, fontWeight: "600", color: "#FFFFFF" },
+  cardNameRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 6 },
+  cardHolderLabel: { fontSize: 6.5, color: "#FFFFFF35", letterSpacing: 1.2, marginBottom: 1 },
+  cardName: { fontSize: 10, fontWeight: "500", color: "#FFFFFF80", letterSpacing: 0.2 },
+  cardRolePill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, flexShrink: 0, backgroundColor: "#FFFFFF15" },
+  cardRoleText: { fontSize: 8, fontWeight: "500", color: "#FFFFFF70" },
   // back face
   cardBackHeader: {
     flexDirection: "row",
