@@ -818,13 +818,12 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
   const netPL = totalRevenue - totalExpenses;
 
   const values = months.map((m) =>
-    tab === "invoices" ? m.count : tab === "expenses" ? m.expense : m.revenue,
+    tab === "expenses" ? m.expense : m.revenue,
   );
   const vsMax  = Math.max(...months.map((m) => Math.max(m.revenue, m.expense)), 1);
   const maxVal = tab === "vs" ? vsMax : Math.max(...values, 1);
 
   function fmtVal(v: number) {
-    if (tab === "invoices") return v > 0 ? String(v) : "";
     if (v === 0) return "";
     return v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(Math.round(v));
   }
@@ -941,9 +940,14 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
               const barColor = pct > 0.6 ? COLOR_HIGH : pct > 0.2 ? COLOR_MID : COLOR_LOW;
               return (
                 <View key={m.key} style={styles.chartCol}>
-                  <Text style={[styles.chartValLabel, { color: colors.mutedForeground }]}>
-                    {fmtVal(v)}
-                  </Text>
+                  <View style={styles.chartValBox}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.chartValLabel, { color: colors.mutedForeground, transform: [{ rotate: "-90deg" }] }]}
+                    >
+                      {fmtVal(v)}
+                    </Text>
+                  </View>
                   <View style={[styles.chartBarTrack, { backgroundColor: colors.secondary }]}>
                     <View style={[styles.chartBar, { height: barH, backgroundColor: barColor }]} />
                   </View>
@@ -1161,8 +1165,9 @@ const styles = StyleSheet.create({
     borderRadius: 18, padding: 16,
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
-  chartBars: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: 108 },
+  chartBars: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: 132 },
   chartCol: { flex: 1, alignItems: "center", justifyContent: "flex-end", gap: 4 },
+  chartValBox: { height: 36, alignItems: "center", justifyContent: "center" },
   chartValLabel: { fontSize: 9, textAlign: "center" },
   chartBarTrack: { width: "100%", height: 72, borderRadius: 8, justifyContent: "flex-end", overflow: "hidden" },
   chartBar: { width: "100%", borderRadius: 8 },
