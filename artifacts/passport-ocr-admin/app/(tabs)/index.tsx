@@ -161,48 +161,42 @@ function FlipUserCard() {
         <View style={[styles.cardOrb, { top: -50, right: -40, width: 170, height: 170, backgroundColor: "#4ADE8010" }]} />
         <View style={[styles.cardOrb, { bottom: -35, left: -25, width: 130, height: 130, backgroundColor: "#2DD4BF0B" }]} />
 
-        {/* logo + contactless symbol */}
+        {/* contactless symbol */}
         <View style={styles.cardTopRow}>
-          <Image
-            source={require("../../assets/images/icon.png")}
-            style={styles.cardLogo}
-            resizeMode="contain"
-          />
           <View style={{ transform: [{ rotate: "90deg" }] }}>
             <Feather name="wifi" size={20} color="#FFFFFF25" />
           </View>
         </View>
 
-        {/* EMV chip + avatar initials */}
-        <View style={styles.cardChipRow}>
-          <View style={styles.cardChip}>
-            <View style={styles.cardChipContact} />
-            <View style={styles.cardChipH} />
-            <View style={styles.cardChipH} />
-          </View>
-          <View style={styles.cardAvatar}>
-            <Text style={styles.cardAvatarText}>{initials}</Text>
-          </View>
-        </View>
+        {/* logo */}
+        <Image
+          source={require("../../assets/images/icon.png")}
+          style={styles.cardLogo}
+          resizeMode="contain"
+        />
 
-        {/* card number dots + ID */}
-        <View style={styles.cardDotRow}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.cardDotGroup}>
-              {[0, 1, 2, 3].map((j) => <View key={j} style={styles.cardDot} />)}
+        {/* spacer pushes bottom content down */}
+        <View style={{ flex: 1 }} />
+
+        {/* bottom area: dots + name */}
+        <View style={styles.cardBottom}>
+          <View style={styles.cardDotRow}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.cardDotGroup}>
+                {[0, 1, 2, 3].map((j) => <View key={j} style={styles.cardDot} />)}
+              </View>
+            ))}
+            <Text style={styles.cardDotId}>{String(user?.id ?? 0).padStart(4, "0")}</Text>
+          </View>
+
+          <View style={styles.cardNameRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardHolderLabel}>CARD HOLDER</Text>
+              <Text style={styles.cardName} numberOfLines={1}>{(user?.name ?? "—").toUpperCase()}</Text>
             </View>
-          ))}
-          <Text style={styles.cardDotId}>{String(user?.id ?? 0).padStart(4, "0")}</Text>
-        </View>
-
-        {/* card holder name + role pill */}
-        <View style={styles.cardNameRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardHolderLabel}>CARD HOLDER</Text>
-            <Text style={styles.cardName} numberOfLines={1}>{(user?.name ?? "—").toUpperCase()}</Text>
-          </View>
-          <View style={[styles.cardRolePill, { backgroundColor: rStyle.bg }]}>
-            <Text style={[styles.cardRoleText, { color: rStyle.text }]}>{roleLabel}</Text>
+            <View style={[styles.cardRolePill, { backgroundColor: "#FFFFFF20" }]}>
+              <Text style={[styles.cardRoleText, { color: "#FFFFFF" }]}>{roleLabel}</Text>
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -972,29 +966,9 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   cardOrb: { position: "absolute", borderRadius: 999 },
-  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  cardBrand: { fontSize: 13, fontWeight: "700", letterSpacing: 3, color: "#FFFFFF", opacity: 0.6 },
-  cardLogo: { width: 150, height: 60, marginLeft: -4, marginTop: -4 },
-  // EMV chip
-  cardChipRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  cardChip: {
-    width: 38, height: 28, borderRadius: 5,
-    backgroundColor: "#D4AF3750",
-    borderWidth: 0.5, borderColor: "#D4AF37",
-    padding: 5, gap: 3, justifyContent: "center",
-  },
-  cardChipContact: {
-    width: "100%", height: 12, borderRadius: 3,
-    borderWidth: 0.5, borderColor: "#D4AF37",
-    backgroundColor: "#D4AF3728",
-  },
-  cardChipH: { width: "100%", height: 1, backgroundColor: "#D4AF3778" },
-  cardAvatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#FFFFFF18", borderWidth: 1.5, borderColor: "#FFFFFF30",
-    alignItems: "center", justifyContent: "center",
-  },
-  cardAvatarText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
+  cardLogo: { position: "absolute", width: 150, height: 60, left: 10, top: 12, zIndex: 1 },
+  cardBottom: { gap: 6 },
   // card number dots
   cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardDotGroup: { flexDirection: "row", gap: 3 },
@@ -1004,8 +978,8 @@ const styles = StyleSheet.create({
   cardNameRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 8 },
   cardHolderLabel: { fontSize: 7.5, color: "#FFFFFF45", letterSpacing: 1.5, marginBottom: 2 },
   cardName: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: 0.3 },
-  cardRolePill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, flexShrink: 0 },
-  cardRoleText: { fontSize: 10, fontWeight: "600" },
+  cardRolePill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, flexShrink: 0, backgroundColor: "#FFFFFF20" },
+  cardRoleText: { fontSize: 10, fontWeight: "600", color: "#FFFFFF" },
   // back face
   cardMagStripe: { height: 34, backgroundColor: "#00000060", marginHorizontal: -20, marginTop: -6 },
   cardBackTitle: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.2, marginTop: 6 },

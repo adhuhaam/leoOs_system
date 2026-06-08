@@ -247,7 +247,7 @@ export default function LoginScreen() {
               ]}
             >
               <Image
-                source={require("../../assets/images/icon.png")}
+                source={require("../assets/images/icon.png")}
                 style={{ width: 20, height: 20, borderRadius: 10 }}
               />
               <Text style={[styles.googleBtnText, { color: colors.foreground }]}>
