@@ -52,6 +52,24 @@ export default function LoaPrintPage() {
   const signatoryDesignation =
     loa?.signatoryDesignation ?? company?.signatoryDesignation ?? "";
 
+  // Ensure correct mobile viewport for this public print page.
+  useEffect(() => {
+    const tag = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    const prev = tag?.getAttribute("content") ?? null;
+    const content = "width=device-width, initial-scale=1.0";
+    if (tag) {
+      tag.setAttribute("content", content);
+    } else {
+      const m = document.createElement("meta");
+      m.name = "viewport";
+      m.content = content;
+      document.head.appendChild(m);
+    }
+    return () => {
+      if (tag && prev !== null) tag.setAttribute("content", prev);
+    };
+  }, []);
+
   // Page title for "Save as PDF" filename suggestion.
   useEffect(() => {
     if (!loa?.candidateName) return undefined;
