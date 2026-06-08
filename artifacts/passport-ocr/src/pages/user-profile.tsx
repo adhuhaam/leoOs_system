@@ -1,24 +1,5 @@
 import { useParams } from "wouter";
 import { useGetPublicUserProfile, getGetPublicUserProfileQueryKey } from "@workspace/api-client-react";
-import { Briefcase, Phone, Shield, User } from "lucide-react";
-
-const ROLE_LABEL: Record<string, string> = {
-  superuser: "Superuser",
-  admin: "Admin",
-  client: "Client",
-  company: "Company",
-  employee: "Employee",
-  agent: "Agent",
-};
-
-const ROLE_COLOR: Record<string, string> = {
-  superuser: "bg-violet-100 text-violet-700",
-  admin: "bg-slate-100 text-slate-700",
-  client: "bg-sky-100 text-sky-700",
-  company: "bg-emerald-100 text-emerald-700",
-  employee: "bg-amber-100 text-amber-700",
-  agent: "bg-pink-100 text-pink-700",
-};
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -28,95 +9,109 @@ export default function UserProfilePage() {
     query: { queryKey: getGetPublicUserProfileQueryKey(id), enabled: !isNaN(id) && id > 0 },
   });
 
-  if (isNaN(id) || id < 1) {
-    return <ErrorView message="Invalid profile link." />;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (isError || !profile) {
-    return <ErrorView message="Profile not found." />;
-  }
+  if (isNaN(id) || id < 1) return <Shell><ErrorMsg text="Invalid profile link." /></Shell>;
+  if (isLoading) return <Shell><Spinner /></Shell>;
+  if (isError || !profile) return <Shell><ErrorMsg text="Profile not found." /></Shell>;
 
   const initials = (profile.name ?? "?")
     .split(" ").filter(Boolean).slice(0, 2)
     .map((w: string) => w[0] ?? "").join("").toUpperCase();
 
-  const roleLabel = ROLE_LABEL[profile.role ?? ""] ?? (profile.role ?? "");
-  const roleColor = ROLE_COLOR[profile.role ?? ""] ?? "bg-slate-100 text-slate-600";
+  function saveContact() {
+    const lines = [
+      "BEGIN:VCARD",
+      "VERSION:3.0",
+      `FN:${profile!.name ?? ""}`,
+      profile!.designation ? `TITLE:${profile!.designation}` : "",
+      profile!.companyName ? `ORG:${profile!.companyName}` : "",
+      profile!.phone ? `TEL;TYPE=CELL:${profile!.phone}` : "",
+    ].filter(Boolean);
+    lines.push("END:VCARD");
+
+    const blob = new Blob([lines.join("\r\n")], { type: "text/vcard" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(profile!.name ?? "contact").replace(/\s+/g, "_")}.vcf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex flex-col items-center justify-center px-4 py-12">
-      {/* Card */}
-      <div className="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-        {/* Top gradient bar */}
-        <div className="h-2 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
-
-        <div className="p-8 flex flex-col items-center gap-5">
-          {/* Avatar */}
-          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center border-2 border-white/20 shadow-inner">
-            <span className="text-3xl font-bold text-white">{initials}</span>
-          </div>
-
-          {/* Name */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white tracking-tight">{profile.name}</h1>
-            {profile.designation && (
-              <p className="mt-1 text-sm text-emerald-300">{profile.designation}</p>
-            )}
-            <span className={`mt-2 inline-block px-3 py-0.5 rounded-full text-xs font-semibold ${roleColor}`}>
-              {roleLabel}
-            </span>
-          </div>
-
-          {/* Divider */}
-          <div className="w-full h-px bg-white/10" />
-
-          {/* Details */}
-          <div className="w-full flex flex-col gap-3">
-            {profile.companyName && (
-              <Row icon={<Briefcase size={15} className="text-emerald-400" />} label="Company" value={profile.companyName} />
-            )}
-            {profile.phone && (
-              <Row icon={<Phone size={15} className="text-emerald-400" />} label="Phone" value={profile.phone} />
-            )}
-            <Row icon={<Shield size={15} className="text-emerald-400" />} label="Role" value={roleLabel} />
-            <Row icon={<User size={15} className="text-emerald-400" />} label="ID" value={`#${String(profile.id).padStart(4, "0")}`} />
-          </div>
+    <Shell>
+      <div className="w-full max-w-xs flex flex-col items-center gap-6">
+        {/* Avatar */}
+        <div
+          className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl"
+          style={{ background: "linear-gradient(135deg,#1a5c4a,#2e9e7a)" }}
+        >
+          {initials}
         </div>
 
-        {/* Footer */}
-        <div className="px-8 pb-6 flex justify-center">
-          <span className="text-xs text-white/30">Sky Office · LEO OS</span>
+        {/* Name + designation */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white tracking-tight leading-tight">{profile.name}</h1>
+          {profile.designation && (
+            <p className="mt-1 text-emerald-300 text-sm">{profile.designation}</p>
+          )}
         </div>
+
+        {/* Info rows */}
+        <div className="w-full flex flex-col gap-3">
+          {profile.companyName && <InfoRow icon="🏢" value={profile.companyName} />}
+          {profile.phone && <InfoRow icon="📞" value={profile.phone} href={`tel:${profile.phone}`} />}
+        </div>
+
+        {/* Divider */}
+        <div className="w-full h-px bg-white/10" />
+
+        {/* Save Contact button */}
+        <button
+          onClick={saveContact}
+          className="w-full py-4 rounded-2xl font-semibold text-sm tracking-wide text-white shadow-lg active:scale-95 transition-transform"
+          style={{ background: "linear-gradient(135deg,#1a5c4a,#2e9e7a)" }}
+        >
+          Save Contact
+        </button>
+
+        <p className="text-white/20 text-xs">Sky Office · LEO OS</p>
       </div>
+    </Shell>
+  );
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="min-h-screen w-full flex items-center justify-center px-6 py-12"
+      style={{ background: "linear-gradient(160deg,#0a1612 0%,#0f2d23 50%,#0a1612 100%)" }}
+    >
+      {children}
     </div>
   );
 }
 
-function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/5">
-      <div className="shrink-0">{icon}</div>
-      <span className="text-xs text-white/40 w-16 shrink-0">{label}</span>
-      <span className="text-sm text-white/80 font-medium truncate">{value}</span>
+function InfoRow({ icon, value, href }: { icon: string; value: string; href?: string }) {
+  const inner = (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/8">
+      <span className="text-base shrink-0">{icon}</span>
+      <span className="text-sm text-white/75 font-medium truncate">{value}</span>
     </div>
   );
+  return href ? <a href={href}>{inner}</a> : inner;
 }
 
-function ErrorView({ message }: { message: string }) {
+function Spinner() {
+  return <div className="w-8 h-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />;
+}
+
+function ErrorMsg({ text }: { text: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center px-4">
-      <div className="text-center">
-        <p className="text-white/60 text-sm">{message}</p>
-        <p className="mt-1 text-white/30 text-xs">Sky Office · LEO OS</p>
-      </div>
+    <div className="text-center">
+      <p className="text-white/50 text-sm">{text}</p>
+      <p className="mt-1 text-white/25 text-xs">Sky Office · LEO OS</p>
     </div>
   );
 }
