@@ -79,4 +79,6 @@ export * from "./taskUpdate";
 export * from "./taskUpdatePriority";
 export * from "./taskUpdateStatus";
 export * from "./updateLoaOptionInput";
+export * from "./updateProfileInput";
+export * from "./userProfile";
 export * from "./xpatWorkPermit";

@@ -75,6 +75,36 @@ paths:
                   role:
                     type: string
                     nullable: true
+                  phone:
+                    type: string
+                    nullable: true
+                  designation:
+                    type: string
+                    nullable: true
+                  companyId:
+                    type: integer
+                    nullable: true
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update own profile (name, phone, designation, companyId)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileInput"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Invalid input
+        "401":
+          description: Not authenticated
 
   /auth/register:
     post:
@@ -1338,6 +1368,42 @@ components:
           type: string
       required:
         - status
+
+    UpdateProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          nullable: true
+        designation:
+          type: string
+          nullable: true
+        companyId:
+          type: integer
+          nullable: true
+
+    UserProfile:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        designation:
+          type: string
+          nullable: true
+        companyId:
+          type: integer
+          nullable: true
 
     ExtensionToken:
       type: object

@@ -21,24 +21,112 @@ const router: IRouter = Router();
 // ---------------------------------------------------------------------------
 
 router.get("/auth/me", (req, res): void => {
-  const respond = () => {
+  const respond = (): void => {
     if (!req.session?.authenticated) {
-      res.json({ authenticated: false, userId: null, email: null, name: null, role: null });
+      res.json({ authenticated: false, userId: null, email: null, name: null, role: null, phone: null, designation: null, companyId: null });
       return;
     }
-    res.json({
-      authenticated: true,
-      userId: req.session.userId ?? null,
-      email: req.session.userEmail ?? null,
-      name: req.session.userName ?? null,
-      role: req.session.role ?? null,
-    });
+    const userId = req.session.userId ?? null;
+    db.select({
+      phone: usersTable.phone,
+      designation: usersTable.designation,
+      companyId: usersTable.companyId,
+    })
+      .from(usersTable)
+      .where(userId ? eq(usersTable.id, userId) : eq(usersTable.id, -1))
+      .limit(1)
+      .then(([profile]) => {
+        res.json({
+          authenticated: true,
+          userId,
+          email: req.session.userEmail ?? null,
+          name: req.session.userName ?? null,
+          role: req.session.role ?? null,
+          phone: profile?.phone ?? null,
+          designation: profile?.designation ?? null,
+          companyId: profile?.companyId ?? null,
+        });
+      })
+      .catch((err: unknown) => {
+        req.log.error({ err }, "GET /auth/me db lookup failed");
+        res.status(500).json({ error: "Internal error" });
+      });
   };
 
   if (req.session?.authenticated) {
     respond();
   } else {
     populateFromBearerToken(req, () => respond());
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /auth/me — update own profile
+// ---------------------------------------------------------------------------
+
+const UpdateProfileBody = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().nullable().optional(),
+  designation: z.string().nullable().optional(),
+  companyId: z.number().int().nullable().optional(),
+});
+
+router.patch("/auth/me", (req, res): void => {
+  const doUpdate = async (): Promise<void> => {
+    if (!req.session?.authenticated) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    const userId = req.session.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    const parsed = UpdateProfileBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input" });
+      return;
+    }
+    const { name, phone, designation, companyId } = parsed.data;
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined) updates["name"] = name;
+    if (phone !== undefined) updates["phone"] = phone;
+    if (designation !== undefined) updates["designation"] = designation;
+    if (companyId !== undefined) updates["companyId"] = companyId;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "No fields provided" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set(updates)
+      .where(eq(usersTable.id, userId))
+      .returning({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        phone: usersTable.phone,
+        designation: usersTable.designation,
+        companyId: usersTable.companyId,
+      });
+
+    if (name) req.session.userName = name;
+    res.json(updated ?? {});
+  };
+
+  const run = (): void => {
+    doUpdate().catch((err: unknown) => {
+      req.log.error({ err }, "PATCH /auth/me failed");
+      res.status(500).json({ error: "Internal error" });
+    });
+  };
+
+  if (req.session?.authenticated) {
+    run();
+  } else {
+    populateFromBearerToken(req, run);
   }
 });
 

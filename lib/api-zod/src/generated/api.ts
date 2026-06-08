@@ -24,6 +24,29 @@ export const GetAuthStatusResponse = zod.object({
   email: zod.string().nullish(),
   name: zod.string().nullish(),
   role: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  designation: zod.string().nullish(),
+  companyId: zod.number().nullish(),
+});
+
+/**
+ * @summary Update own profile (name, phone, designation, companyId)
+ */
+
+export const UpdateProfileBody = zod.object({
+  name: zod.string().min(1).optional(),
+  phone: zod.string().nullish(),
+  designation: zod.string().nullish(),
+  companyId: zod.number().nullish(),
+});
+
+export const UpdateProfileResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullish(),
+  designation: zod.string().nullish(),
+  companyId: zod.number().nullish(),
 });
 
 /**

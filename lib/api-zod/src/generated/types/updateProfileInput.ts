@@ -6,13 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetAuthStatus200 = {
-  authenticated: boolean;
-  userId?: number | null;
-  email?: string | null;
-  name?: string | null;
-  role?: string | null;
+export interface UpdateProfileInput {
+  /** @minLength 1 */
+  name?: string;
   phone?: string | null;
   designation?: string | null;
   companyId?: number | null;
-};
+}

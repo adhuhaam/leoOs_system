@@ -190,13 +190,12 @@ function FlipUserCard() {
           </View>
         </View>
 
-        {/* logo */}
-        <Image
-          source={require("../../assets/images/logo-transparent.png")}
-          style={styles.cardLogo}
-          resizeMode="contain"
-          tintColor="#FFFFFF"
-        />
+        {/* user name display */}
+        <View style={styles.cardNameDisplay}>
+          <Text style={styles.cardDisplayName} numberOfLines={2}>
+            {(user?.name ?? "").toUpperCase()}
+          </Text>
+        </View>
 
         {/* spacer pushes bottom content down */}
         <View style={{ flex: 1 }} />
@@ -1617,7 +1616,8 @@ const styles = StyleSheet.create({
   },
   cardOrb: { position: "absolute", borderRadius: 999 },
   cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
-  cardLogo: { position: "absolute", width: 140, height: 52, left: 14, top: 16, zIndex: 1 },
+  cardNameDisplay: { position: "absolute", left: 14, top: 16, right: 60, zIndex: 1 },
+  cardDisplayName: { fontSize: 20, fontWeight: "700", color: "#FFFFFF", letterSpacing: 1.2, lineHeight: 26 },
   cardBottom: { gap: 6 },
   // card number dots
   cardDotRow: { flexDirection: "row", alignItems: "center", gap: 10 },

@@ -23,6 +23,9 @@ export type AuthUser = {
   name: string | null;
   email: string | null;
   role: string | null;
+  phone: string | null;
+  designation: string | null;
+  companyId: number | null;
 };
 
 type AuthContextValue = {
@@ -171,6 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name?: string | null;
           email?: string | null;
           role?: string | null;
+          phone?: string | null;
+          designation?: string | null;
+          companyId?: number | null;
         }
       | undefined;
 
@@ -182,6 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: raw?.name ?? null,
           email: raw?.email ?? null,
           role: raw?.role ?? null,
+          phone: raw?.phone ?? null,
+          designation: raw?.designation ?? null,
+          companyId: raw?.companyId ?? null,
         }
       : null;
 

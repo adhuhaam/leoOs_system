@@ -9,6 +9,23 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface UpdateProfileInput {
+  /** @minLength 1 */
+  name?: string;
+  phone?: string | null;
+  designation?: string | null;
+  companyId?: number | null;
+}
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  name: string;
+  phone?: string | null;
+  designation?: string | null;
+  companyId?: number | null;
+}
+
 export interface ExtensionToken {
   token: string;
 }
@@ -923,6 +940,9 @@ export type GetAuthStatus200 = {
   email?: string | null;
   name?: string | null;
   role?: string | null;
+  phone?: string | null;
+  designation?: string | null;
+  companyId?: number | null;
 };
 
 export type Login200 = {

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -23,6 +23,9 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash"),
   googleId: text("google_id").unique(),
   linkedEntityId: text("linked_entity_id"),
+  phone: text("phone"),
+  designation: text("designation"),
+  companyId: integer("company_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
