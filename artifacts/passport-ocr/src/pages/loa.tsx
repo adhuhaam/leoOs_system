@@ -412,24 +412,6 @@ function StepThree({ form, setForm }: { form: FormData; setForm: (f: FormData) =
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label>Signatory Name</Label>
-        <Input
-          value={form.signatoryName}
-          onChange={(e) => setForm({ ...form, signatoryName: e.target.value })}
-          placeholder="Full name of the signing authority"
-          data-testid="input-signatoryName"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Signatory Designation</Label>
-        <Input
-          value={form.signatoryDesignation}
-          onChange={(e) => setForm({ ...form, signatoryDesignation: e.target.value })}
-          placeholder="e.g. Managing Director"
-          data-testid="input-signatoryDesignation"
-        />
-      </div>
-      <div className="space-y-1.5">
         <Label>Signature Date</Label>
         <Input
           value={form.signatureDate}
@@ -534,7 +516,7 @@ export default function LoaPage() {
   const canNext = () => {
     if (step === 0) return !!form.companyId && !!form.passportId;
     if (step === 1) return !!form.jobTitle.trim();
-    return !!form.signatoryName.trim();
+    return true;
   };
 
   const [, navigate] = useLocation();

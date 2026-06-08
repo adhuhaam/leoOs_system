@@ -215,10 +215,6 @@ export default function NewLoaScreen() {
       Alert.alert("Select a candidate before continuing.");
       return false;
     }
-    if (step === 2 && !form.signatoryName.trim()) {
-      Alert.alert("Enter a signatory name.");
-      return false;
-    }
     return true;
   }
 
@@ -363,8 +359,6 @@ export default function NewLoaScreen() {
         {/* Step 3: Signatory */}
         {step === 2 && (
           <View style={styles.stepContent}>
-            <Field label="Signatory Name" value={form.signatoryName} onChangeText={(v) => set("signatoryName", v)} required />
-            <Field label="Signatory Designation" value={form.signatoryDesignation} onChangeText={(v) => set("signatoryDesignation", v)} />
             <Field label="Signature Date (DD/MM/YYYY)" value={form.signatureDate} onChangeText={(v) => set("signatureDate", v)} />
 
             {/* Summary card */}
