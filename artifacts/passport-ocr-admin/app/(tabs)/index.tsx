@@ -69,6 +69,20 @@ function formatDate(): string {
   });
 }
 
+function fmtDueDateLabel(dueDate: string | null | undefined, todayStr: string): string {
+  if (!dueDate) return "";
+  const diffDays = Math.round(
+    (new Date(dueDate + "T12:00:00").getTime() - new Date(todayStr + "T12:00:00").getTime()) / 86400000
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === 2) return "In 2 days";
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
+  if (diffDays <= 6) return new Date(dueDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" });
+  return new Date(dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function fmtMVR(n: number): string {
   if (n >= 1_000_000) return `MVR ${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `MVR ${(n / 1_000).toFixed(1)}K`;
@@ -110,10 +124,15 @@ const STATUS_GROUPS = {
 
 const PRIORITY_COLOR = { low: "#10B981", medium: "#F59E0B", high: "#EF4444" };
 const DUE_COLOR = { overdue: "#EF4444", today: "#F59E0B", upcoming: "#6366F1" };
+const TASK_STATUS_CONFIG = {
+  todo:        { label: "To Do",       color: "#94A3B8", icon: "circle"       as const },
+  in_progress: { label: "In Progress", color: "#F59E0B", icon: "clock"        as const },
+  done:        { label: "Done",        color: "#10B981", icon: "check-circle" as const },
+};
 
 type TaskFilter = "all" | "today" | "upcoming" | "done";
 type UploadFilter = "all" | "processing" | "active" | "attention";
-type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string };
+type EditDraft = { id: number; title: string; notes: string; priority: string; dueDate: string; status: string };
 
 // ── Flip user card (credit-card proportions) ──────────────────────────────────
 const CARD_HEIGHT = 210;
@@ -347,7 +366,10 @@ export default function DashboardScreen() {
   // ── Tasks ────────────────────────────────────────────────────────────────
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<"low" | "medium" | "high">("medium");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [showCalInModal, setShowCalInModal] = useState(false);
 
   const { data: tasksRaw } = useListTasks({
     query: { queryKey: getListTasksQueryKey(), staleTime: 15_000 },
@@ -393,15 +415,20 @@ export default function DashboardScreen() {
   function handleAddTask() {
     const title = newTaskTitle.trim();
     if (!title) return;
-    createTask.mutate({ data: { title } });
+    createTask.mutate({ data: { title, priority: newTaskPriority, dueDate: newTaskDueDate || null } });
     setNewTaskTitle("");
+    setNewTaskDueDate("");
+    setNewTaskPriority("medium");
   }
 
   function toggleTask(t: Task) {
-    updateTask.mutate({ id: t.id, data: { status: t.status === "done" ? "todo" : "done" } });
+    const next = t.status === "done" ? "todo" : "done";
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    updateTask.mutate({ id: t.id, data: { status: next } });
   }
 
   function handleDeleteTask(t: Task) {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert("Delete task?", `"${t.title}" will be removed.`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteTask.mutate({ id: t.id }) },
@@ -409,7 +436,8 @@ export default function DashboardScreen() {
   }
 
   function openEdit(t: Task) {
-    setEditDraft({ id: t.id, title: t.title, notes: t.notes ?? "", priority: t.priority, dueDate: t.dueDate ?? "" });
+    setShowCalInModal(false);
+    setEditDraft({ id: t.id, title: t.title, notes: t.notes ?? "", priority: t.priority, dueDate: t.dueDate ?? "", status: t.status });
   }
 
   function saveEdit() {
@@ -421,6 +449,7 @@ export default function DashboardScreen() {
         notes: editDraft.notes || null,
         priority: editDraft.priority as Task["priority"],
         dueDate: editDraft.dueDate || null,
+        status: editDraft.status as Task["status"],
       },
     });
     setEditDraft(null);
@@ -511,26 +540,69 @@ export default function DashboardScreen() {
         </View>
 
         {/* Quick-add */}
-        <View style={[styles.addTaskRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TextInput
-            style={[styles.addTaskInput, { color: colors.foreground }]}
-            placeholder="Add a task…"
-            placeholderTextColor={colors.mutedForeground}
-            value={newTaskTitle}
-            onChangeText={setNewTaskTitle}
-            onSubmitEditing={handleAddTask}
-            returnKeyType="done"
-          />
-          <Pressable
-            onPress={handleAddTask}
-            disabled={!newTaskTitle.trim()}
-            style={({ pressed }) => [
-              styles.addTaskBtn,
-              { backgroundColor: newTaskTitle.trim() ? colors.primary : colors.secondary, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Feather name="plus" size={18} color={newTaskTitle.trim() ? "#fff" : colors.mutedForeground} />
-          </Pressable>
+        <View style={{ gap: 8 }}>
+          <View style={[styles.addTaskRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.addTaskInput, { color: colors.foreground }]}
+              placeholder="Add a task…"
+              placeholderTextColor={colors.mutedForeground}
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              onSubmitEditing={handleAddTask}
+              returnKeyType="done"
+            />
+            <Pressable
+              onPress={handleAddTask}
+              disabled={!newTaskTitle.trim()}
+              style={({ pressed }) => [
+                styles.addTaskBtn,
+                { backgroundColor: newTaskTitle.trim() ? colors.primary : colors.secondary, opacity: pressed ? 0.8 : 1 },
+              ]}
+            >
+              <Feather name="plus" size={18} color={newTaskTitle.trim() ? "#fff" : colors.mutedForeground} />
+            </Pressable>
+          </View>
+          {newTaskTitle.trim() ? (
+            <View style={styles.quickAddOptions}>
+              <View style={styles.quickPriorityRow}>
+                {(["low", "medium", "high"] as const).map((p) => {
+                  const active = newTaskPriority === p;
+                  const pc = PRIORITY_COLOR[p];
+                  return (
+                    <Pressable
+                      key={p}
+                      onPress={() => { setNewTaskPriority(p); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                      style={[styles.quickPriorityBtn, { backgroundColor: active ? pc + "20" : colors.secondary, borderWidth: 1, borderColor: active ? pc : "transparent" }]}
+                    >
+                      <View style={[styles.quickPriorityDot, { backgroundColor: pc }]} />
+                      <Text style={[styles.quickPriorityText, { color: active ? pc : colors.mutedForeground }]}>
+                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.quickDateRow}>
+                {([
+                  { label: "No date", value: "" },
+                  { label: "Today", value: todayStr },
+                  { label: "Tomorrow", value: new Date(Date.now() + 86400000).toISOString().slice(0, 10) },
+                  { label: "Next week", value: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) },
+                ] as const).map((opt) => {
+                  const active = newTaskDueDate === opt.value;
+                  return (
+                    <Pressable
+                      key={opt.label}
+                      onPress={() => { setNewTaskDueDate(opt.value); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                      style={[styles.quickDateBtn, { backgroundColor: active ? colors.primary + "15" : colors.secondary, borderWidth: 1, borderColor: active ? colors.primary : "transparent" }]}
+                    >
+                      <Text style={[styles.quickDateText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {/* Task list */}
@@ -545,32 +617,53 @@ export default function DashboardScreen() {
           <View style={styles.taskList}>
             {filteredTasks.map((t) => {
               const isDone = t.status === "done";
+              const isInProgress = t.status === "in_progress";
               const cls = classifyTask(t);
               const subtasks = allTasks.filter((s) => s.parentId === t.id);
               const subDone = subtasks.filter((s) => s.status === "done").length;
+              const pc = PRIORITY_COLOR[t.priority as keyof typeof PRIORITY_COLOR] ?? "#94A3B8";
               return (
-                <View key={t.id} style={[styles.taskRow, { backgroundColor: colors.card, shadowColor: "#000" }]}>
-                  <Pressable onPress={() => toggleTask(t)} hitSlop={6} style={styles.taskCheckWrap}>
-                    <View style={[
-                      styles.taskCheck,
-                      { borderColor: isDone ? "#10B981" : colors.border },
-                      isDone && { backgroundColor: "#10B981" },
-                    ]}>
-                      {isDone && <Feather name="check" size={11} color="#fff" />}
-                    </View>
+                <Pressable
+                  key={t.id}
+                  onLongPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    Alert.alert(t.title, t.notes ?? (t.dueDate ? `Due: ${fmtDueDateLabel(t.dueDate, todayStr)}` : ""), [
+                      { text: "Edit Task", onPress: () => openEdit(t) },
+                      {
+                        text: isInProgress ? "Mark To Do" : "Mark In Progress",
+                        onPress: () => updateTask.mutate({ id: t.id, data: { status: isInProgress ? "todo" : "in_progress" } }),
+                      },
+                      ...(!t.dueDate ? [{ text: "Due Today", onPress: () => updateTask.mutate({ id: t.id, data: { dueDate: todayStr } }) }] : []),
+                      ...(!t.dueDate ? [{ text: "Due Tomorrow", onPress: () => updateTask.mutate({ id: t.id, data: { dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10) } }) }] : []),
+                      { text: "Delete", style: "destructive" as const, onPress: () => handleDeleteTask(t) },
+                      { text: "Cancel", style: "cancel" as const },
+                    ]);
+                  }}
+                  style={({ pressed }) => [
+                    styles.taskRow,
+                    { backgroundColor: colors.card, shadowColor: "#000", opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.986 : 1 }] },
+                    isInProgress && { borderLeftWidth: 3, borderLeftColor: "#F59E0B" },
+                  ]}
+                >
+                  <Pressable onPress={() => toggleTask(t)} hitSlop={10} style={styles.taskCheckWrap}>
+                    {isInProgress && !isDone ? (
+                      <View style={[styles.taskCheck, { borderColor: "#F59E0B", backgroundColor: "#F59E0B15" }]}>
+                        <Feather name="clock" size={10} color="#F59E0B" />
+                      </View>
+                    ) : (
+                      <View style={[styles.taskCheck, { borderColor: isDone ? "#10B981" : colors.border }, isDone && { backgroundColor: "#10B981" }]}>
+                        {isDone && <Feather name="check" size={11} color="#fff" />}
+                      </View>
+                    )}
                   </Pressable>
                   <Pressable style={styles.taskBody} onPress={() => openEdit(t)}>
                     <View style={styles.taskTitleRow}>
-                      <Text
-                        style={[styles.taskTitle, { color: isDone ? colors.mutedForeground : colors.foreground }, isDone && styles.taskDoneText]}
-                        numberOfLines={2}
-                      >
+                      <Text style={[styles.taskTitle, { color: isDone ? colors.mutedForeground : colors.foreground }, isDone && styles.taskDoneText]} numberOfLines={2}>
                         {t.title}
                       </Text>
-                      <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLOR[t.priority as keyof typeof PRIORITY_COLOR] + "20" }]}>
-                        <Text style={[styles.priorityText, { color: PRIORITY_COLOR[t.priority as keyof typeof PRIORITY_COLOR] }]}>
-                          {t.priority}
-                        </Text>
+                      <View style={[styles.priorityBadge, { backgroundColor: pc + "20" }]}>
+                        <View style={[styles.priorityDot, { backgroundColor: pc }]} />
+                        <Text style={[styles.priorityText, { color: pc }]}>{t.priority.toUpperCase()}</Text>
                       </View>
                     </View>
                     {t.notes ? (
@@ -580,22 +673,29 @@ export default function DashboardScreen() {
                       {cls && !isDone && (
                         <View style={[styles.dueBadge, { backgroundColor: DUE_COLOR[cls] + "18" }]}>
                           <Feather name="calendar" size={10} color={DUE_COLOR[cls]} />
-                          <Text style={[styles.dueText, { color: DUE_COLOR[cls] }]}>
-                            {cls === "overdue" ? `Overdue · ${t.dueDate}` : cls === "today" ? "Due today" : t.dueDate}
-                          </Text>
+                          <Text style={[styles.dueText, { color: DUE_COLOR[cls] }]}>{fmtDueDateLabel(t.dueDate, todayStr)}</Text>
+                        </View>
+                      )}
+                      {isInProgress && !isDone && (
+                        <View style={[styles.dueBadge, { backgroundColor: "#F59E0B18" }]}>
+                          <Feather name="zap" size={10} color="#F59E0B" />
+                          <Text style={[styles.dueText, { color: "#F59E0B" }]}>In Progress</Text>
                         </View>
                       )}
                       {subtasks.length > 0 && (
-                        <Text style={[styles.subtaskCount, { color: colors.mutedForeground }]}>
-                          {subDone}/{subtasks.length} subtasks
-                        </Text>
+                        <View style={styles.subtaskMeta}>
+                          <Text style={[styles.subtaskCount, { color: colors.mutedForeground }]}>{subDone}/{subtasks.length}</Text>
+                          <View style={[styles.subtaskTrack, { backgroundColor: colors.border }]}>
+                            <View style={[styles.subtaskFill, { backgroundColor: "#10B981", width: `${Math.round(subDone / subtasks.length * 100)}%` as any }]} />
+                          </View>
+                        </View>
                       )}
                     </View>
                   </Pressable>
-                  <Pressable onPress={() => handleDeleteTask(t)} hitSlop={8} style={styles.taskDeleteBtn}>
+                  <Pressable onPress={() => handleDeleteTask(t)} hitSlop={10} style={styles.taskDeleteBtn}>
                     <Feather name="trash-2" size={14} color={colors.mutedForeground} />
                   </Pressable>
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -717,6 +817,23 @@ export default function DashboardScreen() {
               placeholder="Optional notes…"
               placeholderTextColor={colors.mutedForeground}
             />
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Status</Text>
+            <View style={styles.statusRow}>
+              {(["todo", "in_progress", "done"] as const).map((s) => {
+                const cfg = TASK_STATUS_CONFIG[s];
+                const active = editDraft.status === s;
+                return (
+                  <Pressable
+                    key={s}
+                    onPress={() => { setEditDraft((d) => d ? { ...d, status: s } : d); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[styles.statusPillBtn, { backgroundColor: active ? cfg.color + "20" : colors.secondary, borderColor: active ? cfg.color : "transparent", borderWidth: 1 }]}
+                  >
+                    <Feather name={cfg.icon} size={13} color={active ? cfg.color : colors.mutedForeground} />
+                    <Text style={[styles.statusPillBtnText, { color: active ? cfg.color : colors.mutedForeground }]}>{cfg.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Priority</Text>
             <View style={styles.priorityRow}>
               {(["low", "medium", "high"] as const).map((p) => {
@@ -725,12 +842,10 @@ export default function DashboardScreen() {
                 return (
                   <Pressable
                     key={p}
-                    onPress={() => setEditDraft((d) => d ? { ...d, priority: p } : d)}
-                    style={[
-                      styles.priorityPill,
-                      { backgroundColor: active ? pc + "20" : colors.secondary, borderColor: active ? pc : "transparent", borderWidth: 1 },
-                    ]}
+                    onPress={() => { setEditDraft((d) => d ? { ...d, priority: p } : d); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[styles.priorityPill, { backgroundColor: active ? pc + "20" : colors.secondary, borderColor: active ? pc : "transparent", borderWidth: 1 }]}
                   >
+                    <View style={[styles.quickPriorityDot, { backgroundColor: pc }]} />
                     <Text style={[styles.priorityPillText, { color: active ? pc : colors.mutedForeground }]}>
                       {p.charAt(0).toUpperCase() + p.slice(1)}
                     </Text>
@@ -738,19 +853,107 @@ export default function DashboardScreen() {
                 );
               })}
             </View>
-            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Due Date (YYYY-MM-DD)</Text>
-            <TextInput
-              style={[styles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              value={editDraft.dueDate}
-              onChangeText={(v) => setEditDraft((d) => d ? { ...d, dueDate: v } : d)}
-              placeholder="e.g. 2025-12-31"
-              placeholderTextColor={colors.mutedForeground}
-            />
+            <Text style={[styles.editLabel, { color: colors.mutedForeground }]}>Due Date</Text>
+            <Pressable
+              onPress={() => { setShowCalInModal((v) => !v); void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              style={[styles.datePickerBtn, { backgroundColor: colors.card, borderColor: editDraft.dueDate ? colors.primary : colors.border }]}
+            >
+              <Feather name="calendar" size={16} color={editDraft.dueDate ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.datePickerBtnText, { color: editDraft.dueDate ? colors.foreground : colors.mutedForeground }]}>
+                {editDraft.dueDate ? fmtDueDateLabel(editDraft.dueDate, todayStr) + " · " + editDraft.dueDate : "Pick a date"}
+              </Text>
+              {editDraft.dueDate ? (
+                <Pressable onPress={(e) => { e.stopPropagation(); setEditDraft((d) => d ? { ...d, dueDate: "" } : d); setShowCalInModal(false); }} hitSlop={8}>
+                  <Feather name="x" size={14} color={colors.mutedForeground} />
+                </Pressable>
+              ) : (
+                <Feather name={showCalInModal ? "chevron-up" : "chevron-down"} size={14} color={colors.mutedForeground} />
+              )}
+            </Pressable>
+            {showCalInModal && (
+              <CalendarPicker
+                value={editDraft.dueDate}
+                onChange={(d) => { setEditDraft((dr) => dr ? { ...dr, dueDate: d } : dr); if (d) setShowCalInModal(false); }}
+              />
+            )}
           </ScrollView>
         </View>
       )}
     </Modal>
     </>
+  );
+}
+
+function CalendarPicker({ value, onChange }: { value: string; onChange: (d: string) => void }) {
+  const colors = useColors();
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const sel = value ? new Date(value + "T12:00:00") : null;
+  const [viewYear, setViewYear] = useState(sel?.getFullYear() ?? today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(sel?.getMonth() ?? today.getMonth());
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  function prevMonth() { if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); } else setViewMonth((m) => m - 1); }
+  function nextMonth() { if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); } else setViewMonth((m) => m + 1); }
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  function toStr(day: number) {
+    return `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  return (
+    <View style={[styles.calWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.calHeader}>
+        <Pressable onPress={prevMonth} hitSlop={14} style={styles.calNavBtn}>
+          <Feather name="chevron-left" size={18} color={colors.foreground} />
+        </Pressable>
+        <Text style={[styles.calMonthLabel, { color: colors.foreground }]}>{MONTHS[viewMonth]} {viewYear}</Text>
+        <Pressable onPress={nextMonth} hitSlop={14} style={styles.calNavBtn}>
+          <Feather name="chevron-right" size={18} color={colors.foreground} />
+        </Pressable>
+      </View>
+      <View style={styles.calDowRow}>
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+          <Text key={d} style={[styles.calDow, { color: colors.mutedForeground }]}>{d}</Text>
+        ))}
+      </View>
+      <View style={styles.calGrid}>
+        {cells.map((day, i) => {
+          if (!day) return <View key={i} style={styles.calCell} />;
+          const ds = toStr(day);
+          const isToday = ds === todayStr;
+          const isSelected = ds === value;
+          const isPast = ds < todayStr;
+          return (
+            <Pressable
+              key={i}
+              style={[
+                styles.calCell,
+                isSelected && { backgroundColor: colors.primary, borderRadius: 20 },
+                !isSelected && isToday && { borderWidth: 1.5, borderColor: colors.primary, borderRadius: 20 },
+              ]}
+              onPress={() => { void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onChange(ds === value ? "" : ds); }}
+            >
+              <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isToday ? colors.primary : isPast ? colors.mutedForeground : colors.foreground, opacity: isPast && !isSelected ? 0.5 : 1 }]}>
+                {day}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {value ? (
+        <Pressable onPress={() => onChange("")} style={styles.calClear}>
+          <Text style={[styles.calClearText, { color: colors.mutedForeground }]}>Clear date</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -1566,6 +1769,20 @@ const styles = StyleSheet.create({
   dueText: { fontSize: 10, },
   subtaskCount: { fontSize: 10, },
   taskDeleteBtn: { padding: 4 },
+  priorityDot: { width: 5, height: 5, borderRadius: 3 },
+
+  quickAddOptions: { gap: 6 },
+  quickPriorityRow: { flexDirection: "row", gap: 6 },
+  quickPriorityBtn: { flex: 1, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
+  quickPriorityDot: { width: 6, height: 6, borderRadius: 3 },
+  quickPriorityText: { fontSize: 12, fontWeight: "600" },
+  quickDateRow: { flexDirection: "row", gap: 5 },
+  quickDateBtn: { flex: 1, alignItems: "center", paddingVertical: 6, borderRadius: 10 },
+  quickDateText: { fontSize: 11 },
+
+  subtaskMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  subtaskTrack: { flex: 1, height: 3, borderRadius: 2, overflow: "hidden" },
+  subtaskFill: { height: 3, borderRadius: 2 },
 
   editModal: { flex: 1 },
   editHeader: {
@@ -1579,9 +1796,28 @@ const styles = StyleSheet.create({
   editLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 8 },
   editInput: { fontSize: 15, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
   editMultiline: { minHeight: 80, textAlignVertical: "top", paddingTop: 12 },
+  statusRow: { flexDirection: "row", gap: 6 },
+  statusPillBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 9, borderRadius: 12 },
+  statusPillBtnText: { fontSize: 11, fontWeight: "600" },
+
+  datePickerBtn: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  datePickerBtnText: { flex: 1, fontSize: 15 },
+
+  calWrap: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 8, marginTop: 4 },
+  calHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 },
+  calNavBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  calMonthLabel: { fontSize: 15, fontWeight: "600" },
+  calDowRow: { flexDirection: "row" },
+  calDow: { flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", paddingVertical: 4 },
+  calGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calCell: { width: "14.28%" as any, aspectRatio: 1, alignItems: "center", justifyContent: "center" },
+  calDayText: { fontSize: 13, fontWeight: "500" },
+  calClear: { alignItems: "center", paddingVertical: 6 },
+  calClearText: { fontSize: 12 },
+
   priorityRow: { flexDirection: "row", gap: 8 },
-  priorityPill: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12 },
-  priorityPillText: { fontSize: 13, },
+  priorityPill: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 10, borderRadius: 12 },
+  priorityPillText: { fontSize: 13 },
 
   chartReportBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   chartReportBtnText: { fontSize: 12, fontWeight: "600" },
