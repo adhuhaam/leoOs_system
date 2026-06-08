@@ -64,10 +64,11 @@ export default function ProfileScreen() {
     }
   }
 
+  const passwordsMatch = newPassword.length >= 6 && confirmPassword === newPassword;
+
   const canSave =
     currentPassword.trim().length > 0 &&
-    newPassword.length >= 6 &&
-    confirmPassword.length > 0 &&
+    passwordsMatch &&
     !changePasswordMutation.isPending;
 
   return (
@@ -181,6 +182,20 @@ export default function ProfileScreen() {
               returnKeyType="go"
               onSubmitEditing={handleChangePassword}
             />
+
+            {/* Live match / mismatch feedback */}
+            {confirmPassword.length > 0 && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: -4 }}>
+                <Feather
+                  name={passwordsMatch ? "check-circle" : "x-circle"}
+                  size={14}
+                  color={passwordsMatch ? "#10B981" : "#EF4444"}
+                />
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: passwordsMatch ? "#10B981" : "#EF4444" }}>
+                  {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                </Text>
+              </View>
+            )}
 
             {success && (
               <View
