@@ -30,39 +30,43 @@ const queryClient = new QueryClient();
 function Router() {
   useApplySystemSettings();
   return (
-    <AuthGate>
-      <Switch>
-        {/* Public routes — accessible before authentication */}
-        <Route path="/signup" component={SignupPage} />
-        <Route path="/login" component={LoginPage} />
-        {/* Print views render standalone — no app sidebar/header */}
-        <Route path="/billing/:id/print" component={BillingPrintPage} />
-        <Route path="/loa/:id/print" component={LoaPrintPage} />
-        <Route>
-          <AppLayout>
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/upload" component={UploadPage} />
-              {/* /passports kept as alias so old bookmarks still work */}
-              <Route path="/passports" component={MasterListPage} />
-              <Route path="/master-list" component={MasterListPage} />
-              <Route path="/employees/:id" component={EmployeeProfilePage} />
-              <Route path="/companies" component={CompaniesPage} />
-              <Route path="/clients" component={ClientsPage} />
-              <Route path="/loa" component={LoaPage} />
-              <Route path="/expenses" component={ExpensesPage} />
-              <Route path="/billing" component={BillingPage} />
-              <Route path="/passwords" component={PasswordsPage} />
-              <Route path="/settings" component={SettingsPage} />
-              <Route path="/users" component={UsersPage} />
-              <Route path="/permissions" component={PermissionsPage} />
-              <Route path="/profile" component={ProfilePage} />
-              <Route component={NotFound} />
-            </Switch>
-          </AppLayout>
-        </Route>
-      </Switch>
-    </AuthGate>
+    <Switch>
+      {/* Fully public — no auth gate, no sidebar */}
+      <Route path="/loa/:id/print" component={LoaPrintPage} />
+      <Route path="/billing/:id/print" component={BillingPrintPage} />
+      {/* Everything else requires authentication */}
+      <Route>
+        <AuthGate>
+          <Switch>
+            <Route path="/signup" component={SignupPage} />
+            <Route path="/login" component={LoginPage} />
+            <Route>
+              <AppLayout>
+                <Switch>
+                  <Route path="/" component={Dashboard} />
+                  <Route path="/upload" component={UploadPage} />
+                  {/* /passports kept as alias so old bookmarks still work */}
+                  <Route path="/passports" component={MasterListPage} />
+                  <Route path="/master-list" component={MasterListPage} />
+                  <Route path="/employees/:id" component={EmployeeProfilePage} />
+                  <Route path="/companies" component={CompaniesPage} />
+                  <Route path="/clients" component={ClientsPage} />
+                  <Route path="/loa" component={LoaPage} />
+                  <Route path="/expenses" component={ExpensesPage} />
+                  <Route path="/billing" component={BillingPage} />
+                  <Route path="/passwords" component={PasswordsPage} />
+                  <Route path="/settings" component={SettingsPage} />
+                  <Route path="/users" component={UsersPage} />
+                  <Route path="/permissions" component={PermissionsPage} />
+                  <Route path="/profile" component={ProfilePage} />
+                  <Route component={NotFound} />
+                </Switch>
+              </AppLayout>
+            </Route>
+          </Switch>
+        </AuthGate>
+      </Route>
+    </Switch>
   );
 }
 

@@ -15,6 +15,7 @@ import systemRouter from "./system";
 import xpatRouter from "./xpat";
 import adminUsersRouter from "./admin-users";
 import adminPermissionsRouter from "./admin-permissions";
+import publicReadsRouter from "./public-reads";
 import { permissionsMiddleware } from "../lib/permissions";
 
 const router: IRouter = Router();
@@ -29,6 +30,11 @@ router.use(systemRouter);
 // Passport routes handle their own per-route auth (reads: session or token,
 // writes: session only) — see routes/passports.ts for details.
 router.use(passportsRouter);
+
+// Public read-only endpoints (LOA detail + companies) used by the LOA print
+// page. Authenticated requests are deferred to the private routers below so
+// role-scoped filtering still applies.
+router.use(publicReadsRouter);
 
 // Everything below requires a valid session
 router.use(requireAuth);
