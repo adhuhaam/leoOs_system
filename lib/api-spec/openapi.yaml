@@ -2383,7 +2383,7 @@ components:
 
     BillingDocumentSummary:
       type: object
-      required: [id, kind, number, companyId, companyName, customerName, issueDate, gstRate, gstInclusive, status, subtotal, createdAt, updatedAt]
+      required: [id, kind, number, companyId, companyName, customerName, issueDate, gstRate, gstInclusive, status, subtotal, employeeCost, profit, createdAt, updatedAt]
       properties:
         id: { type: integer }
         kind: { type: string, enum: [invoice, quotation] }
@@ -2411,6 +2411,8 @@ components:
         notes: { type: ["string", "null"] }
         status: { type: string }
         subtotal: { type: string }
+        employeeCost: { type: string }
+        profit: { type: string }
         createdAt: { type: string }
         updatedAt: { type: string }
 

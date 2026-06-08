@@ -120,6 +120,13 @@ export default function BillingScreen() {
         .reduce((s, d) => s + Number(d.subtotal || 0), 0),
     [allDocs],
   );
+  const totalSalaryCost = useMemo(
+    () =>
+      allDocs
+        .filter((d) => d.status === "payment_received" || d.status === "completed")
+        .reduce((s, d) => s + Number(d.employeeCost || 0), 0),
+    [allDocs],
+  );
   const totalExp = useMemo(
     () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
     [expenses],
@@ -228,7 +235,15 @@ export default function BillingScreen() {
               </View>
               <View style={styles.plRow}>
                 <Text style={[styles.plLabel, { color: colors.mutedForeground }]}>
-                  Expenses
+                  Employee Costs
+                </Text>
+                <Text style={[styles.plValue, { color: "#D97706" }]}>
+                  {formatMVR(totalSalaryCost)}
+                </Text>
+              </View>
+              <View style={styles.plRow}>
+                <Text style={[styles.plLabel, { color: colors.mutedForeground }]}>
+                  Other Expenses
                 </Text>
                 <Text style={[styles.plValue, { color: "#DC2626" }]}>
                   {formatMVR(totalExp)}
@@ -243,7 +258,7 @@ export default function BillingScreen() {
                     styles.plLabel,
                     {
                       color:
-                        revenue - totalExp >= 0 ? "#4F46E5" : "#EA580C",
+                        revenue - totalSalaryCost - totalExp >= 0 ? "#4F46E5" : "#EA580C",
                       fontFamily: "Inter_700Bold",
                     },
                   ]}
@@ -254,12 +269,12 @@ export default function BillingScreen() {
                   style={[
                     styles.plValue,
                     {
-                      color: revenue - totalExp >= 0 ? "#4F46E5" : "#EA580C",
+                      color: revenue - totalSalaryCost - totalExp >= 0 ? "#4F46E5" : "#EA580C",
                       fontSize: 17,
                     },
                   ]}
                 >
-                  {formatMVR(revenue - totalExp)}
+                  {formatMVR(revenue - totalSalaryCost - totalExp)}
                 </Text>
               </View>
             </View>
@@ -554,9 +569,19 @@ function DocCard({
         <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
           {doc.issueDate}
         </Text>
-        <Text style={[styles.amount, { color: colors.foreground }]}>
-          {formatMVR(sub)}
-        </Text>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={[styles.amount, { color: colors.foreground }]}>
+            {formatMVR(sub)}
+          </Text>
+          {Number(doc.employeeCost || 0) > 0 && (() => {
+            const p = Number(doc.profit || 0);
+            return (
+              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: p >= 0 ? "#059669" : "#EA580C" }}>
+                Profit {formatMVR(p)}
+              </Text>
+            );
+          })()}
+        </View>
       </View>
       <View style={styles.cardActions}>
         <Text style={[styles.longPressHint, { color: colors.mutedForeground }]}>

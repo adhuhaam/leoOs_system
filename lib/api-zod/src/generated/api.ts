@@ -1450,6 +1450,8 @@ export const ListBillingDocumentsResponseItem = zod.object({
   notes: zod.string().nullish(),
   status: zod.string(),
   subtotal: zod.string(),
+  employeeCost: zod.string(),
+  profit: zod.string(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1522,6 +1524,8 @@ export const GetBillingDocumentResponse = zod
     notes: zod.string().nullish(),
     status: zod.string(),
     subtotal: zod.string(),
+    employeeCost: zod.string(),
+    profit: zod.string(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })

@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, sql, type SQL } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, type SQL } from "drizzle-orm";
 import {
   db,
   billingDocumentsTable,
   billingItemsTable,
   companiesTable,
   clientsTable,
+  salaryRecordsTable,
 } from "@workspace/db";
 import {
   CreateBillingDocumentBody,
@@ -182,21 +183,38 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
   // Compute totals per row from item amounts so the listing can show them
   // without N+1 round-trips. One join is fine for small volumes.
   const totalsMap = new Map<number, string>();
+  const salaryMap = new Map<number, string>();
   if (rows.length > 0) {
-    const totalsRows = await db
-      .select({
-        documentId: billingItemsTable.documentId,
-        total: sql<string>`COALESCE(SUM(${billingItemsTable.amount}), 0)::text`,
-      })
-      .from(billingItemsTable)
-      .groupBy(billingItemsTable.documentId);
+    const docIds = rows.map((r) => r.id);
+    const [totalsRows, salaryRows] = await Promise.all([
+      db
+        .select({
+          documentId: billingItemsTable.documentId,
+          total: sql<string>`COALESCE(SUM(${billingItemsTable.amount}), 0)::text`,
+        })
+        .from(billingItemsTable)
+        .groupBy(billingItemsTable.documentId),
+      db
+        .select({
+          invoiceId: salaryRecordsTable.invoiceId,
+          employeeCost: sql<string>`COALESCE(SUM(${salaryRecordsTable.netSalary}), 0)::text`,
+        })
+        .from(salaryRecordsTable)
+        .where(inArray(salaryRecordsTable.invoiceId, docIds))
+        .groupBy(salaryRecordsTable.invoiceId),
+    ]);
     for (const t of totalsRows) totalsMap.set(t.documentId, t.total);
+    for (const s of salaryRows) {
+      if (s.invoiceId != null) salaryMap.set(s.invoiceId, s.employeeCost);
+    }
   }
 
-  const result = rows.map((r) => ({
-    ...r,
-    subtotal: totalsMap.get(r.id) ?? "0",
-  }));
+  const result = rows.map((r) => {
+    const subtotal = totalsMap.get(r.id) ?? "0";
+    const employeeCost = salaryMap.get(r.id) ?? "0";
+    const profit = (Number(subtotal) - Number(employeeCost)).toFixed(2);
+    return { ...r, subtotal, employeeCost, profit };
+  });
 
   const filtered = search
     ? result.filter((r) => {
@@ -283,12 +301,24 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  const items = await db
-    .select()
-    .from(billingItemsTable)
-    .where(eq(billingItemsTable.documentId, id))
-    .orderBy(billingItemsTable.position, billingItemsTable.id);
-  res.json({ ...docRows[0], items });
+  const [items, salaryTotals] = await Promise.all([
+    db
+      .select()
+      .from(billingItemsTable)
+      .where(eq(billingItemsTable.documentId, id))
+      .orderBy(billingItemsTable.position, billingItemsTable.id),
+    db
+      .select({
+        employeeCost: sql<string>`COALESCE(SUM(${salaryRecordsTable.netSalary}), 0)::text`,
+      })
+      .from(salaryRecordsTable)
+      .where(eq(salaryRecordsTable.invoiceId, id)),
+  ]);
+  const doc = docRows[0]!;
+  const subtotal = items.reduce((s, it) => s + Number(it.amount ?? 0), 0);
+  const employeeCost = salaryTotals[0]?.employeeCost ?? "0";
+  const profit = (subtotal - Number(employeeCost)).toFixed(2);
+  res.json({ ...doc, subtotal: subtotal.toFixed(2), employeeCost, profit, items });
 });
 
 router.post("/billing/documents", requireRole("superuser", "admin"), async (req, res): Promise<void> => {

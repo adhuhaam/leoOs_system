@@ -99,11 +99,11 @@ import {
   Calendar,
   ChevronDown,
   Check,
-  Users,
   Wallet,
   TrendingUp,
   TrendingDown,
   DollarSign,
+  Users,
   Printer,
 } from "lucide-react";
 
@@ -412,6 +412,7 @@ function DocumentRow({
   const sub = Number(doc.subtotal || 0);
   const rate = Number(doc.gstRate || 0);
   const grand = doc.gstInclusive ? sub : sub + (sub * rate) / 100;
+  const profit = Number(doc.profit || 0);
   return (
     <div
       className="flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors group"
@@ -453,6 +454,11 @@ function DocumentRow({
           {rate > 0 && (
             <div className="text-[10px] text-muted-foreground">
               GST {rate}% {doc.gstInclusive ? "incl" : "excl"}
+            </div>
+          )}
+          {Number(doc.employeeCost || 0) > 0 && (
+            <div className={`text-[11px] font-mono font-semibold tabular-nums mt-0.5 ${profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
+              Profit {formatMVR(profit)}
             </div>
           )}
         </div>
@@ -1528,11 +1534,18 @@ function BillingExpensesSection() {
         }, 0),
     [allDocs],
   );
+  const totalSalaryCost = useMemo(
+    () =>
+      allDocs
+        .filter((d) => d.status === "payment_received" || d.status === "completed")
+        .reduce((s, d) => s + Number(d.employeeCost || 0), 0),
+    [allDocs],
+  );
   const totalExpenses = useMemo(
     () => expenses.reduce((s, e) => s + Number(e.amount || 0), 0),
     [expenses],
   );
-  const netProfit = revenue - totalExpenses;
+  const netProfit = revenue - totalSalaryCost - totalExpenses;
 
   const expDeleteMutation = useDeleteExpense();
   const handleDeleteExpense = (e: Expense) => {
@@ -1564,7 +1577,7 @@ function BillingExpensesSection() {
       </div>
 
       {/* P&L summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800 p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -1580,11 +1593,26 @@ function BillingExpensesSection() {
           </p>
         </div>
 
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+              Employee Costs
+            </span>
+          </div>
+          <p className="text-xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+            {formatMVR(totalSalaryCost)}
+          </p>
+          <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70 mt-0.5">
+            net salaries on paid invoices
+          </p>
+        </div>
+
         <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
             <span className="text-xs font-medium text-red-700 dark:text-red-400">
-              Total Expenses
+              Other Expenses
             </span>
           </div>
           <p className="text-xl font-bold tabular-nums text-red-700 dark:text-red-400">

@@ -49,6 +49,8 @@ export interface BillingDocumentSummary {
   notes?: string | null;
   status: string;
   subtotal: string;
+  employeeCost: string;
+  profit: string;
   createdAt: string;
   updatedAt: string;
 }
