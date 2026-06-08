@@ -3,8 +3,10 @@ import {
   type BillingDocumentUpdate,
   getGetBillingDocumentQueryKey,
   getListBillingDocumentsQueryKey,
+  getListSalaryRecordsQueryKey,
   useGetBillingDocument,
   useUpdateBillingDocument,
+  useUpdateSalaryRecord,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -31,6 +33,7 @@ export default function EditBillingDocumentScreen() {
   });
 
   const updateMutation = useUpdateBillingDocument();
+  const updateSalaryMutation = useUpdateSalaryRecord();
 
   if (isLoading) {
     return (
@@ -109,6 +112,17 @@ export default function EditBillingDocumentScreen() {
     };
 
     await updateMutation.mutateAsync({ id, data: payload });
+
+    // Link newly selected salary records to this invoice
+    if (form.linkedSalaryIds?.length) {
+      await Promise.all(
+        form.linkedSalaryIds.map((sid) =>
+          updateSalaryMutation.mutateAsync({ id: sid, data: { invoiceId: id } }),
+        ),
+      );
+      await queryClient.invalidateQueries({ queryKey: getListSalaryRecordsQueryKey() });
+    }
+
     await queryClient.invalidateQueries({ queryKey: getGetBillingDocumentQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
     router.back();

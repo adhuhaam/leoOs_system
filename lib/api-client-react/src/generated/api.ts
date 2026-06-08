@@ -31,6 +31,7 @@ import type {
   Company,
   CompanyInput,
   CompanyUpdate,
+  CreateSalaryRecord,
   CreateUserInput,
   Expense,
   ExpenseCategory,
@@ -53,6 +54,7 @@ import type {
   ListLoaParams,
   ListPassportsParams,
   ListPasswordsParams,
+  ListSalaryRecordsParams,
   Loa,
   LoaInput,
   LoaOption,
@@ -70,6 +72,7 @@ import type {
   PublicUserProfile,
   RegisterInput,
   RolePermission,
+  SalaryRecord,
   SystemSettings,
   SystemSettingsInput,
   Task,
@@ -77,6 +80,7 @@ import type {
   TaskUpdate,
   UpdateLoaOptionInput,
   UpdateProfileInput,
+  UpdateSalaryRecord,
   UserProfile,
   XpatWorkPermit,
 } from "./api.schemas";
@@ -5603,4 +5607,358 @@ export const useDeleteLoaOption = <
   TContext
 > => {
   return useMutation(getDeleteLoaOptionMutationOptions(options));
+};
+
+/**
+ * @summary List salary records (admin sees all; employee sees own via linkedEntityId)
+ */
+export const getListSalaryRecordsUrl = (params?: ListSalaryRecordsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/salary-records?${stringifiedParams}`
+    : `/api/salary-records`;
+};
+
+export const listSalaryRecords = async (
+  params?: ListSalaryRecordsParams,
+  options?: RequestInit,
+): Promise<SalaryRecord[]> => {
+  return customFetch<SalaryRecord[]>(getListSalaryRecordsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSalaryRecordsQueryKey = (
+  params?: ListSalaryRecordsParams,
+) => {
+  return [`/api/salary-records`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSalaryRecordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSalaryRecords>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListSalaryRecordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSalaryRecords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListSalaryRecordsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listSalaryRecords>>
+  > = ({ signal }) => listSalaryRecords(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSalaryRecords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSalaryRecordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSalaryRecords>>
+>;
+export type ListSalaryRecordsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List salary records (admin sees all; employee sees own via linkedEntityId)
+ */
+
+export function useListSalaryRecords<
+  TData = Awaited<ReturnType<typeof listSalaryRecords>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListSalaryRecordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listSalaryRecords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSalaryRecordsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a salary record (admin/superuser only)
+ */
+export const getCreateSalaryRecordUrl = () => {
+  return `/api/salary-records`;
+};
+
+export const createSalaryRecord = async (
+  createSalaryRecord: CreateSalaryRecord,
+  options?: RequestInit,
+): Promise<SalaryRecord> => {
+  return customFetch<SalaryRecord>(getCreateSalaryRecordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createSalaryRecord),
+  });
+};
+
+export const getCreateSalaryRecordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSalaryRecord>>,
+    TError,
+    { data: BodyType<CreateSalaryRecord> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSalaryRecord>>,
+  TError,
+  { data: BodyType<CreateSalaryRecord> },
+  TContext
+> => {
+  const mutationKey = ["createSalaryRecord"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSalaryRecord>>,
+    { data: BodyType<CreateSalaryRecord> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSalaryRecord(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSalaryRecordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSalaryRecord>>
+>;
+export type CreateSalaryRecordMutationBody = BodyType<CreateSalaryRecord>;
+export type CreateSalaryRecordMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a salary record (admin/superuser only)
+ */
+export const useCreateSalaryRecord = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSalaryRecord>>,
+    TError,
+    { data: BodyType<CreateSalaryRecord> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createSalaryRecord>>,
+  TError,
+  { data: BodyType<CreateSalaryRecord> },
+  TContext
+> => {
+  return useMutation(getCreateSalaryRecordMutationOptions(options));
+};
+
+/**
+ * @summary Update a salary record (admin/superuser only)
+ */
+export const getUpdateSalaryRecordUrl = (id: number) => {
+  return `/api/salary-records/${id}`;
+};
+
+export const updateSalaryRecord = async (
+  id: number,
+  updateSalaryRecord: UpdateSalaryRecord,
+  options?: RequestInit,
+): Promise<SalaryRecord> => {
+  return customFetch<SalaryRecord>(getUpdateSalaryRecordUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateSalaryRecord),
+  });
+};
+
+export const getUpdateSalaryRecordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSalaryRecord>>,
+    TError,
+    { id: number; data: BodyType<UpdateSalaryRecord> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSalaryRecord>>,
+  TError,
+  { id: number; data: BodyType<UpdateSalaryRecord> },
+  TContext
+> => {
+  const mutationKey = ["updateSalaryRecord"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSalaryRecord>>,
+    { id: number; data: BodyType<UpdateSalaryRecord> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSalaryRecord(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSalaryRecordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSalaryRecord>>
+>;
+export type UpdateSalaryRecordMutationBody = BodyType<UpdateSalaryRecord>;
+export type UpdateSalaryRecordMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a salary record (admin/superuser only)
+ */
+export const useUpdateSalaryRecord = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSalaryRecord>>,
+    TError,
+    { id: number; data: BodyType<UpdateSalaryRecord> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSalaryRecord>>,
+  TError,
+  { id: number; data: BodyType<UpdateSalaryRecord> },
+  TContext
+> => {
+  return useMutation(getUpdateSalaryRecordMutationOptions(options));
+};
+
+/**
+ * @summary Delete a salary record (admin/superuser only)
+ */
+export const getDeleteSalaryRecordUrl = (id: number) => {
+  return `/api/salary-records/${id}`;
+};
+
+export const deleteSalaryRecord = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteSalaryRecordUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSalaryRecordMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSalaryRecord>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSalaryRecord>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteSalaryRecord"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSalaryRecord>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteSalaryRecord(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSalaryRecordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSalaryRecord>>
+>;
+
+export type DeleteSalaryRecordMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a salary record (admin/superuser only)
+ */
+export const useDeleteSalaryRecord = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSalaryRecord>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSalaryRecord>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteSalaryRecordMutationOptions(options));
 };

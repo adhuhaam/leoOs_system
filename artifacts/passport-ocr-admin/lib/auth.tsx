@@ -23,6 +23,7 @@ export type AuthUser = {
   name: string | null;
   email: string | null;
   role: string | null;
+  linkedEntityId: string | null;
   phone: string | null;
   designation: string | null;
   companyId: number | null;
@@ -174,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name?: string | null;
           email?: string | null;
           role?: string | null;
+          linkedEntityId?: string | null;
           phone?: string | null;
           designation?: string | null;
           companyId?: number | null;
@@ -188,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: raw?.name ?? null,
           email: raw?.email ?? null,
           role: raw?.role ?? null,
+          linkedEntityId: raw?.linkedEntityId ?? null,
           phone: raw?.phone ?? null,
           designation: raw?.designation ?? null,
           companyId: raw?.companyId ?? null,

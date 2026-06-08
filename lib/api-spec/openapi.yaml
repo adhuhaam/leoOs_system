@@ -32,6 +32,8 @@ tags:
     description: Daily task manager with subtasks and notes
   - name: xpat
     description: Maldives Xpat MV work permit lookup (proxy)
+  - name: salary-records
+    description: Monthly salary records per employee (admin generates, employee views)
 paths:
   /u/{userId}:
     get:
@@ -1380,6 +1382,93 @@ paths:
         "404":
           description: Not found
 
+  /salary-records:
+    get:
+      operationId: listSalaryRecords
+      tags: [salary-records]
+      summary: List salary records (admin sees all; employee sees own via linkedEntityId)
+      parameters:
+        - name: passportId
+          in: query
+          schema: { type: integer }
+        - name: month
+          in: query
+          schema: { type: integer }
+        - name: year
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of salary records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalaryRecord"
+    post:
+      operationId: createSalaryRecord
+      tags: [salary-records]
+      summary: Create a salary record (admin/superuser only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSalaryRecord"
+      responses:
+        "201":
+          description: Created salary record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalaryRecord"
+        "409":
+          description: Record already exists for this employee/month/year
+
+  /salary-records/{id}:
+    patch:
+      operationId: updateSalaryRecord
+      tags: [salary-records]
+      summary: Update a salary record (admin/superuser only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSalaryRecord"
+      responses:
+        "200":
+          description: Updated salary record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalaryRecord"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteSalaryRecord
+      tags: [salary-records]
+      summary: Delete a salary record (admin/superuser only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -2523,4 +2612,56 @@ components:
         employerContactNumber: { type: ["string", "null"] }
         photoUrl: { type: ["string", "null"] }
         verifyUrl: { type: ["string", "null"] }
+
+    SalaryRecord:
+      type: object
+      required: [id, passportId, month, year, basicSalary, foodAllowance, transportAllowance, otherAllowances, deductions, otherExpenses, netSalary, status, createdAt]
+      properties:
+        id: { type: integer }
+        passportId: { type: integer }
+        month: { type: integer }
+        year: { type: integer }
+        basicSalary: { type: string }
+        foodAllowance: { type: string }
+        transportAllowance: { type: string }
+        otherAllowances: { type: string }
+        deductions: { type: string }
+        otherExpenses: { type: string }
+        netSalary: { type: string }
+        invoiceId: { type: integer, nullable: true }
+        notes: { type: string, nullable: true }
+        status: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        employeeName: { type: string, nullable: true }
+        passportNumber: { type: string, nullable: true }
+
+    CreateSalaryRecord:
+      type: object
+      required: [passportId, month, year, basicSalary]
+      properties:
+        passportId: { type: integer }
+        month: { type: integer, minimum: 1, maximum: 12 }
+        year: { type: integer }
+        basicSalary: { type: string }
+        foodAllowance: { type: string }
+        transportAllowance: { type: string }
+        otherAllowances: { type: string }
+        deductions: { type: string }
+        otherExpenses: { type: string }
+        notes: { type: string, nullable: true }
+        status: { type: string }
+
+    UpdateSalaryRecord:
+      type: object
+      properties:
+        basicSalary: { type: string }
+        foodAllowance: { type: string }
+        transportAllowance: { type: string }
+        otherAllowances: { type: string }
+        deductions: { type: string }
+        otherExpenses: { type: string }
+        invoiceId: { type: integer, nullable: true }
+        notes: { type: string, nullable: true }
+        status: { type: string }
 

@@ -154,6 +154,14 @@ function FlipUserCard() {
   });
   const companyName = (companiesData ?? []).find((c) => c.id === user?.companyId)?.name ?? null;
 
+  const isEmployee = user?.role === "employee";
+  const { data: employeePassportsRaw } = useListPassports(undefined, {
+    query: { queryKey: getListPassportsQueryKey(), enabled: isEmployee && !!user?.linkedEntityId, staleTime: 5 * 60_000 },
+  });
+  const linkedPassport = isEmployee && user?.linkedEntityId
+    ? ((employeePassportsRaw ?? []) as Passport[]).find((p) => p.id === Number(user.linkedEntityId)) ?? null
+    : null;
+
   const initials = (user?.name ?? "?")
     .split(" ").filter(Boolean).slice(0, 2)
     .map((w: string) => w[0] ?? "").join("").toUpperCase();
@@ -303,6 +311,27 @@ function FlipUserCard() {
             <Text style={styles.cardContactLabel}>Email</Text>
             <Text style={styles.cardContactValue} numberOfLines={1}>{user?.email ?? "—"}</Text>
           </View>
+          {linkedPassport && (
+            <>
+              <View style={[styles.cardContactRow, { borderTopWidth: 1, borderTopColor: "#FFFFFF12", marginTop: 4, paddingTop: 8 }]}>
+                <Feather name="user" size={11} color="#4ADE80" />
+                <Text style={styles.cardContactLabel}>Passport Name</Text>
+                <Text style={styles.cardContactValue} numberOfLines={1}>{linkedPassport.fullName ?? "—"}</Text>
+              </View>
+              <View style={styles.cardContactRow}>
+                <Feather name="book-open" size={11} color="#FFFFFF50" />
+                <Text style={styles.cardContactLabel}>Passport No.</Text>
+                <Text style={styles.cardContactValue} numberOfLines={1}>{linkedPassport.passportNumber ?? "—"}</Text>
+              </View>
+              {linkedPassport.nationality ? (
+                <View style={styles.cardContactRow}>
+                  <Feather name="globe" size={11} color="#FFFFFF50" />
+                  <Text style={styles.cardContactLabel}>Nationality</Text>
+                  <Text style={styles.cardContactValue} numberOfLines={1}>{linkedPassport.nationality}</Text>
+                </View>
+              ) : null}
+            </>
+          )}
         </View>
 
         <View style={styles.cardHintRow}>

@@ -42,6 +42,7 @@ router.get("/auth/me", (req, res): void => {
           email: req.session.userEmail ?? null,
           name: req.session.userName ?? null,
           role: req.session.role ?? null,
+          linkedEntityId: req.session.linkedEntityId ?? null,
           phone: profile?.phone ?? null,
           designation: profile?.designation ?? null,
           companyId: profile?.companyId ?? null,

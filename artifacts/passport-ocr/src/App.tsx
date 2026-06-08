@@ -26,6 +26,7 @@ import UsersPage from "@/pages/users";
 import PermissionsPage from "@/pages/permissions";
 import ProfilePage from "@/pages/profile";
 import UserProfilePage from "@/pages/user-profile";
+import SalaryPage from "@/pages/salary";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ function Router() {
                   <Route path="/billing" component={BillingPage} />
                   <Route path="/passwords" component={PasswordsPage} />
                   <Route path="/settings" component={SettingsPage} />
+                  <Route path="/salary" component={SalaryPage} />
                   <Route path="/users" component={UsersPage} />
                   <Route path="/permissions" component={PermissionsPage} />
                   <Route path="/profile" component={ProfilePage} />

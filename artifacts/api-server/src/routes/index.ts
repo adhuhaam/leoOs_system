@@ -13,6 +13,7 @@ import passwordsRouter from "./passwords";
 import tasksRouter from "./tasks";
 import systemRouter from "./system";
 import xpatRouter from "./xpat";
+import salaryRecordsRouter from "./salary-records";
 import adminUsersRouter from "./admin-users";
 import adminPermissionsRouter from "./admin-permissions";
 import publicReadsRouter from "./public-reads";
@@ -60,6 +61,7 @@ router.use(loaOptionsRouter);
 router.use(billingRouter);
 router.use(passwordsRouter);
 router.use(tasksRouter);
+router.use(salaryRecordsRouter);
 router.use(xpatRouter);
 
 export default router;

@@ -3,10 +3,11 @@ import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/auth";
 import {
-  type Passport,
-  getListPassportsQueryKey,
-  useListPassports,
+  useListSalaryRecords,
+  getListSalaryRecordsQueryKey,
+  type SalaryRecord,
 } from "@workspace/api-client-react";
+import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -18,38 +19,92 @@ import {
   View,
 } from "react-native";
 
+const MONTHS_LONG = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function fmtMVR(val: string | null | undefined): string {
+function fmtMVR(val: string | number | null | undefined): string {
   const n = Number(val ?? "0");
   if (!val || isNaN(n)) return "MVR —";
   return `MVR ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, "0")} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
-  } catch {
-    return iso;
-  }
+function StatusBadge({ status, colors }: { status: string; colors: ReturnType<typeof useColors> }) {
+  const confirmed = status === "confirmed";
+  return (
+    <View style={[styles.badge, { backgroundColor: confirmed ? "#05966918" : "#D9770618" }]}>
+      <Feather name={confirmed ? "check-circle" : "clock"} size={10} color={confirmed ? "#059669" : "#D97706"} />
+      <Text style={[styles.badgeText, { color: confirmed ? "#059669" : "#D97706" }]}>
+        {confirmed ? "Confirmed" : "Draft"}
+      </Text>
+    </View>
+  );
 }
 
-function InfoRow({ icon, label, value, valueColor }: {
-  icon: React.ComponentProps<typeof Feather>["name"];
-  label: string;
-  value: string;
-  valueColor?: string;
+function SalaryCard({ record, isAdmin, colors }: {
+  record: SalaryRecord;
+  isAdmin: boolean;
+  colors: ReturnType<typeof useColors>;
 }) {
-  const colors = useColors();
+  const initials = (record.employeeName ?? "?")
+    .split(" ").filter(Boolean).slice(0, 2)
+    .map((w: string) => w[0] ?? "").join("").toUpperCase() || "?";
+
   return (
-    <View style={styles.infoRow}>
-      <Feather name={icon} size={14} color={colors.mutedForeground} style={styles.infoIcon} />
-      <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: valueColor ?? colors.foreground }]} numberOfLines={1}>
-        {value}
-      </Text>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {/* Header */}
+      <View style={styles.cardHeader}>
+        {isAdmin && (
+          <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
+            <Text style={[styles.avatarText, { color: colors.foreground }]}>{initials}</Text>
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          {isAdmin && (
+            <Text style={[styles.employeeName, { color: colors.foreground }]} numberOfLines={1}>
+              {record.employeeName ?? "—"}
+            </Text>
+          )}
+          <Text style={[styles.monthLabel, { color: colors.mutedForeground }]}>
+            {MONTHS_LONG[record.month - 1]} {record.year}
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 4 }}>
+          <Text style={[styles.netSalary, { color: colors.foreground }]}>{fmtMVR(record.netSalary)}</Text>
+          <StatusBadge status={record.status} colors={colors} />
+        </View>
+      </View>
+
+      {/* Breakdown */}
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <View style={styles.breakdown}>
+        {[
+          { label: "Basic", val: record.basicSalary, color: colors.foreground },
+          { label: "Food", val: record.foodAllowance, color: colors.foreground },
+          { label: "Transport", val: record.transportAllowance, color: colors.foreground },
+          { label: "Other Allowances", val: record.otherAllowances, color: colors.foreground },
+          { label: "Other Expenses", val: record.otherExpenses, color: colors.foreground },
+          { label: "Deductions", val: record.deductions, color: "#DC2626" },
+        ]
+          .filter((r) => parseFloat(r.val ?? "0") !== 0)
+          .map((r) => (
+            <View key={r.label} style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: colors.mutedForeground }]}>{r.label}</Text>
+              <Text style={[styles.breakdownValue, { color: r.color }]}>
+                {r.label === "Deductions" ? `− ${fmtMVR(r.val)}` : fmtMVR(r.val)}
+              </Text>
+            </View>
+          ))}
+      </View>
+
+      {record.notes ? (
+        <>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.notes, { color: colors.mutedForeground }]}>{record.notes}</Text>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -58,23 +113,38 @@ export default function SalaryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const isAdmin = user?.role === "superuser" || user?.role === "admin";
 
-  const { data, isLoading, isError, refetch, isFetching } = useListPassports(undefined, {
+  const isAdmin = user?.role === "superuser" || user?.role === "admin";
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const { data, isLoading, isError, refetch, isFetching } = useListSalaryRecords(undefined, {
     query: {
-      queryKey: getListPassportsQueryKey(),
+      queryKey: getListSalaryRecordsQueryKey(),
       refetchInterval: 30000,
     },
   });
 
-  const passports = useMemo(() => {
-    const all = (data ?? []) as Passport[];
-    return all.filter((p) => p.agencySalary && Number(p.agencySalary) > 0);
-  }, [data]);
+  const records = data ?? [];
 
-  const totalSalary = useMemo(
-    () => passports.reduce((sum, p) => sum + Number(p.agencySalary ?? 0), 0),
-    [passports],
+  // For employee: their records are already filtered server-side by linkedEntityId.
+  // For admin: all records — group by month for a summary view.
+  const { currentMonthRecords, totalCurrentMonth, confirmedCount } = useMemo(() => {
+    const current = records.filter((r) => r.month === currentMonth && r.year === currentYear);
+    const total = current.reduce((s, r) => s + parseFloat(r.netSalary || "0"), 0);
+    const confirmed = current.filter((r) => r.status === "confirmed").length;
+    return { currentMonthRecords: current, totalCurrentMonth: total, confirmedCount: confirmed };
+  }, [records, currentMonth, currentYear]);
+
+  // For employee: show all their records sorted most-recent first
+  const sortedRecords = useMemo(
+    () =>
+      [...records].sort((a, b) => {
+        if (b.year !== a.year) return b.year - a.year;
+        return b.month - a.month;
+      }),
+    [records],
   );
 
   if (isLoading) {
@@ -100,7 +170,7 @@ export default function SalaryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* ── Navigation bar ── */}
+      {/* Navigation bar */}
       <View style={[styles.navBar, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <Text style={[styles.navTitle, { color: colors.foreground }]}>Salary</Text>
         <Text style={[styles.navSub, { color: colors.mutedForeground }]}>
@@ -108,98 +178,123 @@ export default function SalaryScreen() {
         </Text>
       </View>
 
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />
-      }
-    >
-      {/* ── Summary hero ── */}
-      <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
-        <Text style={styles.heroLabel}>Monthly Agency Salary</Text>
-        <Text style={styles.heroAmount}>{fmtMVR(String(totalSalary))}</Text>
-        {passports.length > 0 && (
-          <Text style={styles.heroSub}>
-            Across {passports.length} employee{passports.length !== 1 ? "s" : ""}
-          </Text>
-        )}
-      </View>
-
-      {/* ── Salary breakdown table ── */}
-      {passports.length === 0 ? (
-        <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="dollar-sign" size={32} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No salary data yet</Text>
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            Agency salaries are set by your admin when editing employee records.
-          </Text>
-        </View>
-      ) : (
-        <>
-          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>EMPLOYEES</Text>
-
-          {passports.map((p) => (
-            <View
-              key={p.id}
-              style={[styles.salaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              {/* Name + salary hero */}
-              <View style={styles.cardHeader}>
-                <View style={styles.cardAvatar}>
-                  <Text style={[styles.cardAvatarText, { color: colors.primary }]}>
-                    {(p.fullName ?? "?").split(" ").slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>
-                    {p.fullName ?? "Unknown"}
-                  </Text>
-                  {p.clientName && (
-                    <Text style={[styles.cardClient, { color: colors.mutedForeground }]} numberOfLines={1}>
-                      {p.clientName}
-                    </Text>
-                  )}
-                </View>
-                <View style={[styles.salaryBadge, { backgroundColor: colors.primary + "14" }]}>
-                  <Text style={[styles.salaryBadgeText, { color: colors.primary }]}>
-                    {fmtMVR(p.agencySalary)}
-                  </Text>
-                  <Text style={[styles.salaryPeriod, { color: colors.primary + "99" }]}>/mo</Text>
-                </View>
-              </View>
-
-              {/* Details */}
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <View style={styles.detailsGrid}>
-                <InfoRow icon="hash" label="Passport" value={p.passportNumber ?? "—"} />
-                {p.workPermitNumber && (
-                  <InfoRow icon="briefcase" label="Work Permit" value={p.workPermitNumber} />
-                )}
-                {p.nationality && (
-                  <InfoRow icon="globe" label="Nationality" value={p.nationality} />
-                )}
-                {p.dateOfExpiry && (
-                  <InfoRow
-                    icon="calendar"
-                    label="PP Expiry"
-                    value={fmtDate(p.dateOfExpiry)}
-                    valueColor={
-                      new Date(p.dateOfExpiry) < new Date() ? "#DC2626" : undefined
-                    }
-                  />
-                )}
-              </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => refetch()} tintColor={colors.primary} />
+        }
+      >
+        {/* ── Admin view ── */}
+        {isAdmin && (
+          <>
+            {/* Summary hero */}
+            <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+              <Text style={styles.heroLabel}>{MONTHS_LONG[currentMonth - 1]} {currentYear} — Total</Text>
+              <Text style={styles.heroAmount}>{fmtMVR(totalCurrentMonth)}</Text>
+              {currentMonthRecords.length > 0 && (
+                <Text style={styles.heroSub}>
+                  {confirmedCount} confirmed · {currentMonthRecords.length - confirmedCount} draft
+                </Text>
+              )}
             </View>
-          ))}
-        </>
-      )}
-    </ScrollView>
+
+            {/* Go to generator CTA */}
+            <Pressable
+              onPress={() => router.push("/admin/salary-generator" as never)}
+              style={({ pressed }) => [styles.ctaBtn, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <View style={[styles.ctaIcon, { backgroundColor: colors.primary + "14" }]}>
+                <Feather name="dollar-sign" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.ctaTitle, { color: colors.foreground }]}>Salary Generator</Text>
+                <Text style={[styles.ctaSub, { color: colors.mutedForeground }]}>Generate & manage monthly salaries</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </Pressable>
+
+            {/* Current month records */}
+            {currentMonthRecords.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="dollar-sign" size={28} color={colors.mutedForeground} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No salary records yet</Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  Use Salary Generator to create salary records for {MONTHS_LONG[currentMonth - 1]}.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+                  THIS MONTH · {currentMonthRecords.length} RECORDS
+                </Text>
+                {currentMonthRecords.map((r) => (
+                  <SalaryCard key={r.id} record={r} isAdmin colors={colors} />
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Employee view ── */}
+        {!isAdmin && (
+          <>
+            {sortedRecords.length === 0 ? (
+              <>
+                {/* Current month pending hero */}
+                <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.heroLabel}>{MONTHS_LONG[currentMonth - 1]} {currentYear}</Text>
+                  <Text style={styles.heroAmount}>Pending</Text>
+                  <Text style={styles.heroSub}>Your salary hasn't been processed yet</Text>
+                </View>
+
+                <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Feather name="clock" size={28} color={colors.mutedForeground} />
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Salary not yet generated</Text>
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    Salaries are processed by your admin once the monthly invoice is marked as paid. Check back soon.
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Latest salary hero */}
+                {(() => {
+                  const latest = sortedRecords[0];
+                  return (
+                    <View style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.heroLabel}>
+                        {MONTHS_LONG[(latest?.month ?? 1) - 1]} {latest?.year}
+                      </Text>
+                      <Text style={styles.heroAmount}>{fmtMVR(latest?.netSalary)}</Text>
+                      <Text style={styles.heroSub}>
+                        {latest?.status === "confirmed" ? "✓ Confirmed" : "Draft — pending confirmation"}
+                      </Text>
+                    </View>
+                  );
+                })()}
+
+                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SALARY HISTORY</Text>
+                {sortedRecords.map((r) => (
+                  <SalaryCard key={r.id} record={r} isAdmin={false} colors={colors} />
+                ))}
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
+  loadingText: { fontSize: 13, marginTop: 4 },
+  errorText: { fontSize: 14, textAlign: "center" },
+  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, marginTop: 4 },
+  retryText: { fontSize: 14, color: "#fff" },
+
   navBar: {
     paddingHorizontal: 20,
     paddingBottom: 12,
@@ -208,12 +303,8 @@ const styles = StyleSheet.create({
   },
   navTitle: { fontSize: 24, fontWeight: "700", letterSpacing: -0.3 },
   navSub: { fontSize: 13 },
+
   container: { padding: 16, gap: 12, paddingBottom: 48 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
-  loadingText: { fontSize: 13, marginTop: 4 },
-  errorText: { fontSize: 14, textAlign: "center" },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontSize: 14 },
 
   heroCard: {
     borderRadius: 20,
@@ -225,9 +316,21 @@ const styles = StyleSheet.create({
   heroAmount: { fontSize: 36, fontWeight: "700", color: "#fff" },
   heroSub: { fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 },
 
+  ctaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  ctaIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  ctaTitle: { fontSize: 15, fontWeight: "600" },
+  ctaSub: { fontSize: 12, marginTop: 1 },
+
   sectionTitle: { fontSize: 11, letterSpacing: 0.8, fontWeight: "600", marginTop: 4 },
 
-  salaryCard: {
+  card: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
@@ -238,44 +341,31 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 14,
   },
-  cardAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(99,102,241,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  cardAvatarText: { fontSize: 15, fontWeight: "700" },
-  cardName: { fontSize: 15, fontWeight: "600" },
-  cardClient: { fontSize: 12, marginTop: 1 },
-  salaryBadge: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  salaryBadgeText: { fontSize: 14, fontWeight: "700" },
-  salaryPeriod: { fontSize: 10 },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 14, fontWeight: "600" },
+  employeeName: { fontSize: 14, fontWeight: "600" },
+  monthLabel: { fontSize: 12, marginTop: 1 },
+  netSalary: { fontSize: 16, fontWeight: "700" },
+
+  badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badgeText: { fontSize: 11, fontWeight: "600" },
 
   divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14 },
-  detailsGrid: { padding: 12, gap: 6 },
 
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  infoIcon: { width: 18 },
-  infoLabel: { fontSize: 12, width: 88 },
-  infoValue: { fontSize: 12, flex: 1 },
+  breakdown: { padding: 12, gap: 6 },
+  breakdownRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  breakdownLabel: { fontSize: 12 },
+  breakdownValue: { fontSize: 12, fontWeight: "500" },
+
+  notes: { fontSize: 12, padding: 12, fontStyle: "italic" },
 
   emptyCard: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 32,
+    padding: 28,
     alignItems: "center",
     gap: 10,
   },
   emptyTitle: { fontSize: 16, fontWeight: "600" },
-  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
+  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 20, color: "#999" },
 });

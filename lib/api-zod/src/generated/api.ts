@@ -1604,3 +1604,103 @@ export const UpdateLoaOptionResponse = zod.object({
 export const DeleteLoaOptionParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List salary records (admin sees all; employee sees own via linkedEntityId)
+ */
+export const ListSalaryRecordsQueryParams = zod.object({
+  passportId: zod.coerce.number().optional(),
+  month: zod.coerce.number().optional(),
+  year: zod.coerce.number().optional(),
+  status: zod.coerce.string().optional(),
+});
+
+export const ListSalaryRecordsResponseItem = zod.object({
+  id: zod.number(),
+  passportId: zod.number(),
+  month: zod.number(),
+  year: zod.number(),
+  basicSalary: zod.string(),
+  foodAllowance: zod.string(),
+  transportAllowance: zod.string(),
+  otherAllowances: zod.string(),
+  deductions: zod.string(),
+  otherExpenses: zod.string(),
+  netSalary: zod.string(),
+  invoiceId: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string().optional(),
+  employeeName: zod.string().nullish(),
+  passportNumber: zod.string().nullish(),
+});
+export const ListSalaryRecordsResponse = zod.array(
+  ListSalaryRecordsResponseItem,
+);
+
+/**
+ * @summary Create a salary record (admin/superuser only)
+ */
+export const createSalaryRecordBodyMonthMax = 12;
+
+export const CreateSalaryRecordBody = zod.object({
+  passportId: zod.number(),
+  month: zod.number().min(1).max(createSalaryRecordBodyMonthMax),
+  year: zod.number(),
+  basicSalary: zod.string(),
+  foodAllowance: zod.string().optional(),
+  transportAllowance: zod.string().optional(),
+  otherAllowances: zod.string().optional(),
+  deductions: zod.string().optional(),
+  otherExpenses: zod.string().optional(),
+  notes: zod.string().nullish(),
+  status: zod.string().optional(),
+});
+
+/**
+ * @summary Update a salary record (admin/superuser only)
+ */
+export const UpdateSalaryRecordParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSalaryRecordBody = zod.object({
+  basicSalary: zod.string().optional(),
+  foodAllowance: zod.string().optional(),
+  transportAllowance: zod.string().optional(),
+  otherAllowances: zod.string().optional(),
+  deductions: zod.string().optional(),
+  otherExpenses: zod.string().optional(),
+  invoiceId: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  status: zod.string().optional(),
+});
+
+export const UpdateSalaryRecordResponse = zod.object({
+  id: zod.number(),
+  passportId: zod.number(),
+  month: zod.number(),
+  year: zod.number(),
+  basicSalary: zod.string(),
+  foodAllowance: zod.string(),
+  transportAllowance: zod.string(),
+  otherAllowances: zod.string(),
+  deductions: zod.string(),
+  otherExpenses: zod.string(),
+  netSalary: zod.string(),
+  invoiceId: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+  updatedAt: zod.string().optional(),
+  employeeName: zod.string().nullish(),
+  passportNumber: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a salary record (admin/superuser only)
+ */
+export const DeleteSalaryRecordParams = zod.object({
+  id: zod.coerce.number(),
+});

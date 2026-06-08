@@ -10,6 +10,8 @@ import {
   useListCompanies,
   useListClients,
   useListPassports,
+  useListSalaryRecords,
+  useUpdateSalaryRecord,
   useListExpenses,
   useListExpenseCategories,
   useCreateExpense,
@@ -17,6 +19,7 @@ import {
   useDeleteExpense,
   getListBillingDocumentsQueryKey,
   getGetBillingDocumentQueryKey,
+  getListSalaryRecordsQueryKey,
   getListExpensesQueryKey,
 } from "@workspace/api-client-react";
 import type {
@@ -25,6 +28,7 @@ import type {
   Company,
   Client,
   Passport,
+  SalaryRecord,
   Expense,
   ExpenseCategory,
 } from "@workspace/api-client-react";
@@ -538,6 +542,7 @@ interface FormState {
   gstInclusive: boolean;
   notes: string;
   items: { description: string; detail: string; qty: string; rate: string }[];
+  linkedSalaryIds: number[];
 }
 
 function emptyForm(kind: Kind): FormState {
@@ -556,6 +561,7 @@ function emptyForm(kind: Kind): FormState {
         ? "Thank you.\nThis invoice is valid without a stamp or signature.\nAll payments shall be made in favor of Leo E. Services.\n\nBank: Maldives Islamic Bank\nAccount Number: 90101480044441000\nCurrency: MVR"
         : "Looking Forward in working with You in the future\n\nAll payments shall be made in favor of Leo E. Services.\n\nBank: Maldives Islamic Bank\nAccount Number: 90101480044441000",
     items: [{ description: "", detail: "", qty: "1", rate: "0" }],
+    linkedSalaryIds: [],
   };
 }
 
@@ -589,6 +595,7 @@ function DocumentFormDialog({
   const { toast } = useToast();
   const createMutation = useCreateBillingDocument();
   const updateMutation = useUpdateBillingDocument();
+  const updateSalaryMutation = useUpdateSalaryRecord();
 
   const [form, setForm] = useState<FormState>(initial ?? emptyForm(kind));
 
@@ -648,6 +655,8 @@ function DocumentFormDialog({
         rate: it.rate || "0",
       }));
 
+    const salaryIdsToLink = [...(form.linkedSalaryIds ?? [])];
+
     if (mode === "create") {
       createMutation.mutate(
         {
@@ -669,7 +678,13 @@ function DocumentFormDialog({
           },
         },
         {
-          onSuccess: () => {
+          onSuccess: (data) => {
+            if (salaryIdsToLink.length) {
+              salaryIdsToLink.forEach((sid) =>
+                updateSalaryMutation.mutate({ id: sid, data: { invoiceId: data.id } }),
+              );
+              queryClient.invalidateQueries({ queryKey: getListSalaryRecordsQueryKey() });
+            }
             queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
             toast({ title: `${kind === "invoice" ? "Invoice" : "Quotation"} created` });
             onOpenChange(false);
@@ -702,6 +717,12 @@ function DocumentFormDialog({
         },
         {
           onSuccess: () => {
+            if (salaryIdsToLink.length) {
+              salaryIdsToLink.forEach((sid) =>
+                updateSalaryMutation.mutate({ id: sid, data: { invoiceId: documentId } }),
+              );
+              queryClient.invalidateQueries({ queryKey: getListSalaryRecordsQueryKey() });
+            }
             queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
             queryClient.invalidateQueries({ queryKey: getGetBillingDocumentQueryKey(documentId) });
             toast({ title: "Updated" });
@@ -721,6 +742,7 @@ function DocumentFormDialog({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
+  const [salaryPickerOpen, setSalaryPickerOpen] = useState(false);
 
   const addEmployeeItems = (
     newItems: { description: string; detail: string; qty: string; rate: string }[],
@@ -866,6 +888,16 @@ function DocumentFormDialog({
                 Line items
               </h4>
               <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSalaryPickerOpen(true)}
+                  data-testid="button-add-from-salary"
+                  className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                >
+                  <DollarSign className="h-3.5 w-3.5 mr-1" /> From Salary
+                </Button>
                 {form.clientId && (
                   <Button
                     type="button"
@@ -873,7 +905,7 @@ function DocumentFormDialog({
                     variant="outline"
                     onClick={() => setEmployeePickerOpen(true)}
                     data-testid="button-add-employees"
-                    className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                   >
                     <Users className="h-3.5 w-3.5 mr-1" /> Add employees
                   </Button>
@@ -1050,6 +1082,23 @@ function DocumentFormDialog({
           }}
         />
       )}
+
+      <SalaryPickerDialog
+        open={salaryPickerOpen}
+        onOpenChange={setSalaryPickerOpen}
+        onAdd={(items, salaryIds) => {
+          setForm((s) => {
+            const hasBlank =
+              s.items.length === 1 && !s.items[0].description.trim() && s.items[0].rate === "0";
+            return {
+              ...s,
+              items: hasBlank ? items : [...s.items, ...items],
+              linkedSalaryIds: [...(s.linkedSalaryIds ?? []), ...salaryIds],
+            };
+          });
+          setSalaryPickerOpen(false);
+        }}
+      />
     </Dialog>
   );
 }
@@ -1216,6 +1265,129 @@ function EmployeePickerDialog({
   );
 }
 
+// ============================================================================
+// Salary picker dialog (add confirmed salary records as line items)
+// ============================================================================
+
+const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function SalaryPickerDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onAdd: (
+    items: { description: string; detail: string; qty: string; rate: string }[],
+    salaryIds: number[],
+  ) => void;
+}) {
+  const { data: rawRecords = [], isLoading } = useListSalaryRecords({ status: "confirmed" }, {
+    query: { queryKey: getListSalaryRecordsQueryKey({ status: "confirmed" }), enabled: open },
+  });
+  const records = (rawRecords as SalaryRecord[]).filter((r) => !r.invoiceId);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const toggle = (id: number) =>
+    setSelected((s) => { const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const toggleAll = () =>
+    setSelected(selected.size === records.length ? new Set() : new Set(records.map((r) => r.id)));
+
+  const handleAdd = () => {
+    const chosen = records.filter((r) => selected.has(r.id));
+    if (chosen.length === 0) return;
+    const items = chosen.map((r) => ({
+      description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
+      detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
+      qty: "1",
+      rate: r.netSalary ?? "0",
+    }));
+    onAdd(items, chosen.map((r) => r.id));
+  };
+
+  const allSelected = records.length > 0 && selected.size === records.length;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setSelected(new Set()); onOpenChange(o); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>From Salary Records</DialogTitle>
+          <DialogDescription>
+            Select confirmed salary records. Each will be added as a line item at its net salary amount.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 mt-2">
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
+          ) : records.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              No confirmed, unlinked salary records available. Confirm salary records first.
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 pb-1 border-b">
+                <Checkbox
+                  id="sal-all"
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                />
+                <label htmlFor="sal-all" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none">
+                  {allSelected ? "Deselect all" : "Select all"} ({records.length})
+                </label>
+              </div>
+
+              <ScrollArea className="max-h-64 pr-2">
+                <div className="space-y-1">
+                  {records.map((r) => (
+                    <label
+                      key={r.id}
+                      htmlFor={`sal-${r.id}`}
+                      className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/50 cursor-pointer select-none"
+                    >
+                      <Checkbox
+                        id={`sal-${r.id}`}
+                        checked={selected.has(r.id)}
+                        onCheckedChange={() => toggle(r.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {r.employeeName ?? "Unknown employee"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {MONTHS_LONG[(r.month - 1) % 12]} {r.year}
+                          {r.passportNumber ? ` · ${r.passportNumber}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-emerald-600 tabular-nums">
+                        {formatMVR(Number(r.netSalary ?? 0))}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </div>
+
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={() => { setSelected(new Set()); onOpenChange(false); }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAdd}
+            disabled={selected.size === 0}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            Add {selected.size > 0 ? `${selected.size} record${selected.size > 1 ? "s" : ""}` : "records"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Row({
   label,
   value,
@@ -1292,6 +1464,7 @@ function EditDocumentDialog({
             rate: it.rate,
           }))
         : [{ description: "", detail: "", qty: "1", rate: "0" }],
+    linkedSalaryIds: [],
   };
 
   return (

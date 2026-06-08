@@ -32,3 +32,4 @@ export * from "./tasks";
 export * from "./push-tokens";
 export * from "./users";
 export * from "./role-permissions";
+export * from "./salary-records";

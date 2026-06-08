@@ -943,6 +943,57 @@ export interface XpatWorkPermit {
   verifyUrl?: string | null;
 }
 
+export interface SalaryRecord {
+  id: number;
+  passportId: number;
+  month: number;
+  year: number;
+  basicSalary: string;
+  foodAllowance: string;
+  transportAllowance: string;
+  otherAllowances: string;
+  deductions: string;
+  otherExpenses: string;
+  netSalary: string;
+  invoiceId?: number | null;
+  notes?: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt?: string;
+  employeeName?: string | null;
+  passportNumber?: string | null;
+}
+
+export interface CreateSalaryRecord {
+  passportId: number;
+  /**
+   * @minimum 1
+   * @maximum 12
+   */
+  month: number;
+  year: number;
+  basicSalary: string;
+  foodAllowance?: string;
+  transportAllowance?: string;
+  otherAllowances?: string;
+  deductions?: string;
+  otherExpenses?: string;
+  notes?: string | null;
+  status?: string;
+}
+
+export interface UpdateSalaryRecord {
+  basicSalary?: string;
+  foodAllowance?: string;
+  transportAllowance?: string;
+  otherAllowances?: string;
+  deductions?: string;
+  otherExpenses?: string;
+  invoiceId?: number | null;
+  notes?: string | null;
+  status?: string;
+}
+
 export type GetAuthStatus200 = {
   authenticated: boolean;
   userId?: number | null;
@@ -1044,3 +1095,10 @@ export const ListLoaOptionsCategory = {
   work_site: "work_site",
   job_title: "job_title",
 } as const;
+
+export type ListSalaryRecordsParams = {
+  passportId?: number;
+  month?: number;
+  year?: number;
+  status?: string;
+};

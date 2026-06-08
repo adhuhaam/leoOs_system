@@ -3,11 +3,14 @@ import {
   type Client,
   type Company,
   type Passport,
+  type SalaryRecord,
   getListClientsQueryKey,
   getListCompaniesQueryKey,
+  getListSalaryRecordsQueryKey,
   useListClients,
   useListCompanies,
   useListPassports,
+  useListSalaryRecords,
 } from "@workspace/api-client-react";
 import React, { useMemo, useState } from "react";
 import {
@@ -51,6 +54,7 @@ export type BillingFormState = {
   notes: string;
   status: string;
   items: LineItemDraft[];
+  linkedSalaryIds: number[];
 };
 
 export const EMPTY_FORM: BillingFormState = {
@@ -68,6 +72,7 @@ export const EMPTY_FORM: BillingFormState = {
   notes: "",
   status: "draft",
   items: [{ description: "", detail: "", qty: "1", rate: "" }],
+  linkedSalaryIds: [],
 };
 
 const STATUS_OPTIONS = [
@@ -115,7 +120,9 @@ export default function BillingDocumentForm({
   const [clientModalVisible, setClientModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [employeeModalVisible, setEmployeeModalVisible] = useState(false);
+  const [salaryModalVisible, setSalaryModalVisible] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(new Set());
+  const [selectedSalaryIds, setSelectedSalaryIds] = useState<Set<number>>(new Set());
   const [showIssueCal, setShowIssueCal] = useState(false);
   const [showDueCal, setShowDueCal] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
@@ -168,6 +175,15 @@ export default function BillingDocumentForm({
     [clientEmployees, employeeSearch],
   );
 
+  // Salary records for invoice linking (confirmed, not yet linked to any invoice)
+  const { data: salaryRecordsRaw = [] } = useListSalaryRecords({ status: "confirmed" }, {
+    query: { queryKey: getListSalaryRecordsQueryKey({ status: "confirmed" }), enabled: salaryModalVisible },
+  });
+  const availableSalaryRecords = useMemo(
+    () => (salaryRecordsRaw as SalaryRecord[]).filter((r) => !r.invoiceId),
+    [salaryRecordsRaw],
+  );
+
   function toggleEmployee(id: number) {
     setSelectedEmployeeIds((prev) => {
       const next = new Set(prev);
@@ -189,6 +205,24 @@ export default function BillingDocumentForm({
     setSelectedEmployeeIds(new Set());
     setEmployeeSearch("");
     setEmployeeModalVisible(false);
+  }
+
+  const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  function addSelectedSalaryRecords() {
+    const toAdd = availableSalaryRecords.filter((r) => selectedSalaryIds.has(r.id));
+    if (toAdd.length === 0) return;
+    const newItems = toAdd.map((r) => ({
+      description: r.employeeName ? `Salary — ${r.employeeName}` : "Salary",
+      detail: `${MONTHS_LONG[(r.month - 1) % 12] ?? ""} ${r.year}${r.passportNumber ? ` · ${r.passportNumber}` : ""}`,
+      qty: "1",
+      rate: r.netSalary ?? "0",
+    }));
+    const newLinkedIds = [...(form.linkedSalaryIds ?? []), ...Array.from(selectedSalaryIds)];
+    setF("items", [...form.items, ...newItems]);
+    setF("linkedSalaryIds", newLinkedIds);
+    setSelectedSalaryIds(new Set());
+    setSalaryModalVisible(false);
   }
 
   const filteredClients = useMemo(
@@ -525,6 +559,18 @@ export default function BillingDocumentForm({
         <View style={styles.sectionHeaderRow}>
           <Label text="Line Items *" />
           <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => {
+                setSelectedSalaryIds(new Set());
+                setSalaryModalVisible(true);
+              }}
+              style={[styles.addItemBtn, { backgroundColor: "#05966918" }]}
+            >
+              <Feather name="dollar-sign" size={14} color="#059669" />
+              <Text style={[styles.addItemText, { color: "#059669" }]}>
+                From Salary
+              </Text>
+            </Pressable>
             {form.clientId != null && clientEmployees.length > 0 && (
               <Pressable
                 onPress={() => {
@@ -1036,6 +1082,98 @@ export default function BillingDocumentForm({
                 {selectedEmployeeIds.size > 0
                   ? `Add ${selectedEmployeeIds.size} employee${selectedEmployeeIds.size > 1 ? "s" : ""}`
                   : "Select employees above"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Salary record picker modal ── */}
+      <Modal
+        visible={salaryModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { setSalaryModalVisible(false); setSelectedSalaryIds(new Set()); }}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalNav, { borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>From Salary Records</Text>
+            <Pressable onPress={() => { setSalaryModalVisible(false); setSelectedSalaryIds(new Set()); }} hitSlop={12}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+
+          {availableSalaryRecords.length === 0 ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
+              <Feather name="dollar-sign" size={32} color={colors.mutedForeground} />
+              <Text style={{ color: colors.mutedForeground, textAlign: "center" }}>
+                No confirmed, unlinked salary records.{"\n"}Confirm salary records first.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={[styles.selectAllRow, { borderBottomColor: colors.border }]}>
+                <Pressable
+                  onPress={() =>
+                    setSelectedSalaryIds(
+                      selectedSalaryIds.size === availableSalaryRecords.length
+                        ? new Set()
+                        : new Set(availableSalaryRecords.map((r) => r.id)),
+                    )
+                  }
+                  style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}
+                >
+                  <View style={[styles.checkbox, { borderColor: selectedSalaryIds.size === availableSalaryRecords.length ? colors.primary : colors.border, backgroundColor: selectedSalaryIds.size === availableSalaryRecords.length ? colors.primary : "transparent" }]}>
+                    {selectedSalaryIds.size === availableSalaryRecords.length && (
+                      <Feather name="check" size={12} color={colors.primaryForeground} />
+                    )}
+                  </View>
+                  <Text style={[styles.selectAllText, { color: colors.foreground }]}>Select all</Text>
+                </Pressable>
+                {selectedSalaryIds.size > 0 && (
+                  <Text style={[styles.selectedCount, { color: colors.mutedForeground }]}>{selectedSalaryIds.size} selected</Text>
+                )}
+              </View>
+              <FlatList
+                data={availableSalaryRecords}
+                keyExtractor={(r) => String(r.id)}
+                contentContainerStyle={{ padding: 16, gap: 8 }}
+                renderItem={({ item: r }) => {
+                  const checked = selectedSalaryIds.has(r.id);
+                  return (
+                    <Pressable
+                      onPress={() => setSelectedSalaryIds((prev) => { const next = new Set(prev); if (next.has(r.id)) next.delete(r.id); else next.add(r.id); return next; })}
+                      style={({ pressed }) => [styles.employeeRow, { backgroundColor: checked ? colors.primary + "18" : colors.card, borderColor: checked ? colors.primary : colors.border, opacity: pressed ? 0.8 : 1 }]}
+                    >
+                      <View style={[styles.checkbox, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : "transparent" }]}>
+                        {checked && <Feather name="check" size={12} color={colors.primaryForeground} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }} numberOfLines={1}>
+                          {r.employeeName ?? "Unknown employee"}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.mutedForeground }} numberOfLines={1}>
+                          {MONTHS_LONG[(r.month - 1) % 12]} {r.year}{r.passportNumber ? ` · ${r.passportNumber}` : ""}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#059669" }}>
+                        MVR {Number(r.netSalary ?? 0).toFixed(2)}
+                      </Text>
+                    </Pressable>
+                  );
+                }}
+              />
+            </>
+          )}
+
+          <View style={[styles.employeeFooter, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+            <Pressable
+              onPress={addSelectedSalaryRecords}
+              disabled={selectedSalaryIds.size === 0}
+              style={[styles.employeeAddBtn, { backgroundColor: selectedSalaryIds.size > 0 ? "#059669" : colors.muted }]}
+            >
+              <Text style={[styles.employeeAddBtnText, { color: selectedSalaryIds.size > 0 ? "#FFFFFF" : colors.mutedForeground }]}>
+                {selectedSalaryIds.size > 0 ? `Add ${selectedSalaryIds.size} salary record${selectedSalaryIds.size > 1 ? "s" : ""}` : "Select records above"}
               </Text>
             </Pressable>
           </View>

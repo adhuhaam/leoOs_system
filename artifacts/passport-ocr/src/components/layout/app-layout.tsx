@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   LogOut,
   CircleUserRound,
+  DollarSign,
 } from "lucide-react";
 import {
   Sidebar,
@@ -65,6 +66,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/clients", label: "Clients", icon: Building, roles: ["superuser", "admin"] },
   { href: "/loa", label: "Letter of Appointment", icon: FileSignature, roles: ["superuser", "admin", "company"] },
   { href: "/expenses", label: "Expenses", icon: Wallet, roles: ["superuser", "admin"] },
+  { href: "/salary", label: "Salary Generator", icon: DollarSign, roles: ["superuser", "admin"] },
   { href: "/billing", label: "Invoices & Quotes", icon: Receipt, roles: ["superuser", "admin", "company", "client"] },
   { href: "/passwords", label: "Passwords", icon: KeyRound, roles: ["superuser", "admin"] },
   // Admin
