@@ -34,6 +34,8 @@ app.use(
     origin: (origin, callback) => {
       // Server-to-server / curl / mobile apps send no Origin header.
       if (!origin) return callback(null, true);
+      // Allow Expo Go and Expo development clients (exp:// scheme).
+      if (origin.startsWith("exp://")) return callback(null, true);
       // Allow all Chrome extension origins.
       if (origin.startsWith("chrome-extension://")) return callback(null, true);
       // Allow the app's configured domains (comma-separated Replit dev + prod).
