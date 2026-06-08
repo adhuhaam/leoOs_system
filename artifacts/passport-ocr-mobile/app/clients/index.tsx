@@ -19,10 +19,14 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 export default function ClientsScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
+
+  const canAdd = user?.role === "superuser" || user?.role === "admin";
 
   const params = useMemo<ListClientsParams>(() => {
     const p: ListClientsParams = {};
@@ -39,20 +43,7 @@ export default function ClientsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: "Clients",
-          headerRight: () => (
-            <Pressable
-              onPress={() => router.push("/clients/new")}
-              hitSlop={10}
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            >
-              <Feather name="plus" size={22} color={colors.primary} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: "Clients" }} />
       <View
         style={[
           styles.searchWrap,
@@ -116,6 +107,11 @@ export default function ClientsScreen() {
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 No clients
               </Text>
+              {canAdd && (
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  Tap + to add your first client.
+                </Text>
+              )}
             </View>
           }
           renderItem={({ item }) => (
@@ -125,6 +121,19 @@ export default function ClientsScreen() {
             />
           )}
         />
+      )}
+
+      {/* FAB — only visible to admin and superuser */}
+      {canAdd && (
+        <Pressable
+          onPress={() => router.push("/clients/new")}
+          style={({ pressed }) => [
+            styles.fab,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Feather name="plus" size={26} color={colors.primaryForeground} />
+        </Pressable>
       )}
     </View>
   );
@@ -189,7 +198,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     padding: 0,
   },
-  listContent: { padding: 16, gap: 10 },
+  listContent: { padding: 16, gap: 10, paddingBottom: 100 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
   row: {
     flexDirection: "row",
@@ -212,7 +221,23 @@ const styles = StyleSheet.create({
   detail: { fontSize: 12, fontFamily: "Inter_500Medium", marginTop: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   emptyTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });

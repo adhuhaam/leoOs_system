@@ -18,10 +18,14 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/lib/auth";
 
 export default function CompaniesScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
+
+  const canAdd = user?.role === "superuser" || user?.role === "admin";
 
   const { data, isLoading, isError, error, refetch, isFetching } =
     useListCompanies(undefined, {
@@ -40,20 +44,7 @@ export default function CompaniesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: "Companies",
-          headerRight: () => (
-            <Pressable
-              onPress={() => router.push("/companies/new")}
-              hitSlop={10}
-              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-            >
-              <Feather name="plus" size={22} color={colors.primary} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: "Companies" }} />
 
       <View
         style={[
@@ -121,9 +112,11 @@ export default function CompaniesScreen() {
             <View style={styles.center}>
               <Feather name="briefcase" size={36} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No companies</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Add companies from the web dashboard.
-              </Text>
+              {canAdd && (
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  Tap + to add your first company.
+                </Text>
+              )}
             </View>
           }
           renderItem={({ item }) => (
@@ -133,6 +126,19 @@ export default function CompaniesScreen() {
             />
           )}
         />
+      )}
+
+      {/* FAB — only visible to admin and superuser */}
+      {canAdd && (
+        <Pressable
+          onPress={() => router.push("/companies/new")}
+          style={({ pressed }) => [
+            styles.fab,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Feather name="plus" size={26} color={colors.primaryForeground} />
+        </Pressable>
       )}
     </View>
   );
@@ -194,7 +200,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     padding: 0,
   },
-  listContent: { padding: 16, paddingTop: 8 },
+  listContent: { padding: 16, paddingTop: 8, paddingBottom: 100 },
   emptyContent: { flexGrow: 1, justifyContent: "center", padding: 24 },
   count: { fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 10 },
   row: {
@@ -225,4 +231,19 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
 });
