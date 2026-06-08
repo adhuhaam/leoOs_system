@@ -7,7 +7,6 @@ import {
   UpdateTaskBody,
   DeleteTaskParams,
 } from "@workspace/api-zod";
-import { broadcastPush } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -173,17 +172,6 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
   req.log.info({ id: row.id, fields: Object.keys(patch) }, "task updated");
-
-  // Push a notification to all registered mobile devices summarizing the
-  // change. Fire-and-forget — never let push delivery block the response.
-  void broadcastPush({
-    title: row.status === "done" ? "Task completed" : "Task updated",
-    body:
-      row.status === "done"
-        ? `\u2705 ${row.title}`
-        : `\u270f\ufe0f ${row.title}`,
-    data: { type: "task", id: row.id, status: row.status },
-  });
 
   res.json(row);
 });

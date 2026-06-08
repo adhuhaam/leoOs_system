@@ -62,8 +62,6 @@ export * from "./passportUpload";
 export * from "./password";
 export * from "./passwordInput";
 export * from "./passwordUpdate";
-export * from "./pushTokenInput";
-export * from "./pushTokenInputPlatform";
 export * from "./registerInput";
 export * from "./rolePermission";
 export * from "./systemSettings";

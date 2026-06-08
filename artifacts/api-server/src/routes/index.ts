@@ -11,7 +11,6 @@ import loaOptionsRouter from "./loa-options";
 import billingRouter from "./billing";
 import passwordsRouter from "./passwords";
 import tasksRouter from "./tasks";
-import pushTokensRouter from "./push-tokens";
 import systemRouter from "./system";
 import xpatRouter from "./xpat";
 import adminUsersRouter from "./admin-users";
@@ -53,7 +52,6 @@ router.use(loaOptionsRouter);
 router.use(billingRouter);
 router.use(passwordsRouter);
 router.use(tasksRouter);
-router.use(pushTokensRouter);
 router.use(xpatRouter);
 
 export default router;
