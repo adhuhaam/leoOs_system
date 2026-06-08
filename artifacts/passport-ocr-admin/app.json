@@ -78,17 +78,17 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "owner": "adhuhaam",
     "extra": {
       "eas": {
-        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+        "projectId": "930da1e8-b735-40c9-b04a-f71604dbceeb"
       }
     },
-    "owner": "adhuhaam",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/REPLACE_WITH_EAS_PROJECT_ID"
+      "url": "https://u.expo.dev/930da1e8-b735-40c9-b04a-f71604dbceeb"
     }
   }
 }
