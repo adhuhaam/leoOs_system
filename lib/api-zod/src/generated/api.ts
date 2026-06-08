@@ -1343,7 +1343,7 @@ export const ListBillingDocumentsResponse = zod.array(
 
 export const CreateBillingDocumentBody = zod.object({
   kind: zod.enum(["invoice", "quotation"]),
-  companyId: zod.number(),
+  companyId: zod.number().optional(),
   clientId: zod.number().nullish(),
   customerName: zod.string().min(1),
   customerAddress: zod.string().optional(),

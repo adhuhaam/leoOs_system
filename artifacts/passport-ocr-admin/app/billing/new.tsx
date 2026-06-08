@@ -18,7 +18,7 @@ export default function NewBillingDocumentScreen() {
   const handleSubmit = async (form: BillingFormState) => {
     const payload: BillingDocumentInput = {
       kind: form.kind,
-      companyId: form.companyId!,
+      ...(form.clientId != null && { clientId: form.clientId }),
       customerName: form.customerName.trim(),
       issueDate: form.issueDate.trim(),
       items: form.items.map((it) => ({

@@ -10,7 +10,7 @@ import type { BillingItemInput } from "./billingItemInput";
 
 export interface BillingDocumentInput {
   kind: BillingDocumentInputKind;
-  companyId: number;
+  companyId?: number;
   /** @nullable */
   clientId?: number | null;
   /** @minLength 1 */

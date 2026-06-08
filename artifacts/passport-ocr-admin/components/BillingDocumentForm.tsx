@@ -1,8 +1,8 @@
 import { Feather } from "@/components/Icon";
 import {
-  type Company,
-  getListCompaniesQueryKey,
-  useListCompanies,
+  type Client,
+  getListClientsQueryKey,
+  useListClients,
 } from "@workspace/api-client-react";
 import React, { useMemo, useState } from "react";
 import {
@@ -32,7 +32,7 @@ export type LineItemDraft = {
 
 export type BillingFormState = {
   kind: "invoice" | "quotation";
-  companyId: number | null;
+  clientId: number | null;
   customerName: string;
   customerAddress: string;
   customerTin: string;
@@ -48,7 +48,7 @@ export type BillingFormState = {
 
 export const EMPTY_FORM: BillingFormState = {
   kind: "invoice",
-  companyId: null,
+  clientId: null,
   customerName: "",
   customerAddress: "",
   customerTin: "",
@@ -103,26 +103,26 @@ export default function BillingDocumentForm({
         : EMPTY_FORM.items,
   });
 
-  const [companyModalVisible, setCompanyModalVisible] = useState(false);
+  const [clientModalVisible, setClientModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [companySearch, setCompanySearch] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
 
-  const { data: companiesRaw = [] } = useListCompanies(undefined, {
-    query: { queryKey: getListCompaniesQueryKey() },
+  const { data: clientsRaw = [] } = useListClients(undefined, {
+    query: { queryKey: getListClientsQueryKey() },
   });
-  const companies = companiesRaw as Company[];
+  const clients = clientsRaw as Client[];
 
-  const filteredCompanies = useMemo(
+  const filteredClients = useMemo(
     () =>
-      companySearch
-        ? companies.filter((c) =>
-            (c.name ?? "").toLowerCase().includes(companySearch.toLowerCase()),
+      clientSearch
+        ? clients.filter((c) =>
+            (c.name ?? "").toLowerCase().includes(clientSearch.toLowerCase()),
           )
-        : companies,
-    [companies, companySearch],
+        : clients,
+    [clients, clientSearch],
   );
 
-  const selectedCompany = companies.find((c) => c.id === form.companyId) ?? null;
+  const selectedClient = clients.find((c) => c.id === form.clientId) ?? null;
 
   const setF = <K extends keyof BillingFormState>(key: K, value: BillingFormState[K]) =>
     setForm((s) => ({ ...s, [key]: value }));
@@ -164,10 +164,6 @@ export default function BillingDocumentForm({
   }, [form.items, form.gstRate, form.gstInclusive]);
 
   const handleSubmit = async () => {
-    if (!form.companyId) {
-      Alert.alert("Required", "Please select a company.");
-      return;
-    }
     if (!form.customerName.trim()) {
       Alert.alert("Required", "Customer name is required.");
       return;
@@ -232,11 +228,11 @@ export default function BillingDocumentForm({
         </View>
       </View>
 
-      {/* Company */}
+      {/* Client */}
       <View style={styles.section}>
-        <Label text="Company *" />
+        <Label text="Client" />
         <Pressable
-          onPress={() => setCompanyModalVisible(true)}
+          onPress={() => setClientModalVisible(true)}
           style={[
             styles.pickerBtn,
             { backgroundColor: colors.card, borderColor: colors.border },
@@ -246,13 +242,13 @@ export default function BillingDocumentForm({
             style={[
               styles.pickerBtnText,
               {
-                color: selectedCompany ? colors.foreground : colors.mutedForeground,
+                color: selectedClient ? colors.foreground : colors.mutedForeground,
                 flex: 1,
               },
             ]}
             numberOfLines={1}
           >
-            {selectedCompany?.name ?? "Select company…"}
+            {selectedClient?.name ?? "Select client…"}
           </Text>
           <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
         </Pressable>
@@ -497,20 +493,20 @@ export default function BillingDocumentForm({
         )}
       </Pressable>
 
-      {/* Company picker modal */}
+      {/* Client picker modal */}
       <Modal
-        visible={companyModalVisible}
+        visible={clientModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setCompanyModalVisible(false)}
+        onRequestClose={() => setClientModalVisible(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
           <View style={[styles.modalNav, { borderColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              Select Company
+              Select Client
             </Text>
             <Pressable
-              onPress={() => { setCompanyModalVisible(false); setCompanySearch(""); }}
+              onPress={() => { setClientModalVisible(false); setClientSearch(""); }}
               hitSlop={12}
             >
               <Feather name="x" size={22} color={colors.foreground} />
@@ -524,32 +520,38 @@ export default function BillingDocumentForm({
           >
             <Feather name="search" size={16} color={colors.mutedForeground} />
             <TextInput
-              value={companySearch}
-              onChangeText={setCompanySearch}
+              value={clientSearch}
+              onChangeText={setClientSearch}
               placeholder="Search…"
               placeholderTextColor={colors.mutedForeground}
               style={[styles.searchInput, { color: colors.foreground }]}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            {companySearch.length > 0 && (
-              <Pressable onPress={() => setCompanySearch("")} hitSlop={8}>
+            {clientSearch.length > 0 && (
+              <Pressable onPress={() => setClientSearch("")} hitSlop={8}>
                 <Feather name="x" size={16} color={colors.mutedForeground} />
               </Pressable>
             )}
           </View>
           <FlatList
-            data={filteredCompanies}
+            data={filteredClients}
             keyExtractor={(c) => String(c.id)}
             contentContainerStyle={{ padding: 16, gap: 8 }}
             renderItem={({ item }) => {
-              const selected = item.id === form.companyId;
+              const selected = item.id === form.clientId;
               return (
                 <Pressable
                   onPress={() => {
-                    setF("companyId", item.id);
-                    setCompanyModalVisible(false);
-                    setCompanySearch("");
+                    setForm((s) => ({
+                      ...s,
+                      clientId: item.id,
+                      customerName: item.name ?? s.customerName,
+                      customerAddress: item.address ?? s.customerAddress,
+                      customerTin: item.tin ?? s.customerTin,
+                    }));
+                    setClientModalVisible(false);
+                    setClientSearch("");
                   }}
                   style={({ pressed }) => [
                     styles.companyRow,
@@ -560,15 +562,28 @@ export default function BillingDocumentForm({
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.companyName,
-                      { color: selected ? colors.primaryForeground : colors.foreground },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.name}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.companyName,
+                        { color: selected ? colors.primaryForeground : colors.foreground },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    {item.contactPerson ? (
+                      <Text
+                        style={[
+                          styles.clientSub,
+                          { color: selected ? colors.primaryForeground + "cc" : colors.mutedForeground },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.contactPerson}
+                      </Text>
+                    ) : null}
+                  </View>
                   {selected && (
                     <Feather name="check" size={16} color={colors.primaryForeground} />
                   )}
@@ -577,7 +592,7 @@ export default function BillingDocumentForm({
             }}
             ListEmptyComponent={
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                No companies found
+                No clients found
               </Text>
             }
           />
@@ -879,6 +894,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   companyName: { flex: 1, fontSize: 15, },
+  clientSub: { fontSize: 12, marginTop: 2 },
   emptyText: { textAlign: "center", marginTop: 20, fontSize: 14, },
   // Status modal
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },

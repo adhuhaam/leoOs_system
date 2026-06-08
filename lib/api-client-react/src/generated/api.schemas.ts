@@ -662,7 +662,7 @@ export const BillingDocumentInputKind = {
 
 export interface BillingDocumentInput {
   kind: BillingDocumentInputKind;
-  companyId: number;
+  companyId?: number;
   /** @nullable */
   clientId?: number | null;
   /** @minLength 1 */

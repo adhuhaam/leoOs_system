@@ -2228,7 +2228,7 @@ components:
 
     BillingDocumentInput:
       type: object
-      required: [kind, companyId, customerName, issueDate, items]
+      required: [kind, customerName, issueDate, items]
       properties:
         kind: { type: string, enum: [invoice, quotation] }
         companyId: { type: integer }

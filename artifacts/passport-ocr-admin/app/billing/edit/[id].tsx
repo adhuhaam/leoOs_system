@@ -63,7 +63,7 @@ export default function EditBillingDocumentScreen() {
 
   const initialValues: Partial<BillingFormState> = {
     kind: doc.kind as "invoice" | "quotation",
-    companyId: doc.companyId,
+    clientId: (doc as any).clientId ?? null,
     customerName: doc.customerName ?? "",
     customerAddress: doc.customerAddress ?? "",
     customerTin: doc.customerTin ?? "",
@@ -87,7 +87,7 @@ export default function EditBillingDocumentScreen() {
 
   const handleSubmit = async (form: BillingFormState) => {
     const payload: BillingDocumentUpdate = {
-      companyId: form.companyId ?? undefined,
+      clientId: form.clientId ?? undefined,
       customerName: form.customerName.trim(),
       customerAddress: form.customerAddress.trim() || null,
       customerTin: form.customerTin.trim() || null,
