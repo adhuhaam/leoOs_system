@@ -4,11 +4,14 @@ import {
   type Client,
   type Company,
   type Passport,
+  type XpatWorkPermit,
   getGetPassportQueryKey,
+  getGetXpatWorkPermitQueryKey,
   getListClientsQueryKey,
   getListCompaniesQueryKey,
   useDeletePassport,
   useGetPassport,
+  useGetXpatWorkPermit,
   useListClients,
   useListCompanies,
   useUpdatePassport,
@@ -20,6 +23,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -32,6 +36,38 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 import { useColors } from "@/hooks/useColors";
+
+// ─── Xpat helpers ─────────────────────────────────────────────────────────────
+
+const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+  : "";
+
+function buildPhotoSrc(photoUrl: string | null | undefined): string | null {
+  if (!photoUrl) return null;
+  return `${BASE_URL}/api/xpat/photo?photoUrl=${encodeURIComponent(photoUrl)}`;
+}
+
+function buildCardSrc(wp: string, pp: string): string {
+  return (
+    `${BASE_URL}/api/xpat/card` +
+    `?workPermitNumber=${encodeURIComponent(wp)}` +
+    `&passportNumber=${encodeURIComponent(pp)}`
+  );
+}
+
+function fmtXpatDate(raw: string | null | undefined): string {
+  if (!raw) return "—";
+  try {
+    return new Date(raw).toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return raw;
+  }
+}
 
 // ─── Status definitions ──────────────────────────────────────────────────────
 
@@ -411,6 +447,24 @@ export default function PassportDetailScreen() {
   const [statusPicker, setStatusPicker] = useState(false);
   const [companyPicker, setCompanyPicker] = useState(false);
   const [clientPicker, setClientPicker] = useState(false);
+  const [cardModal, setCardModal] = useState(false);
+
+  const xpatParams = {
+    workPermitNumber: data?.workPermitNumber ?? "",
+    passportNumber: data?.passportNumber ?? "",
+  };
+  const hasXpat = !!(data?.workPermitNumber && data?.passportNumber);
+  const { data: xpat, isLoading: xpatLoading } = useGetXpatWorkPermit(xpatParams, {
+    query: {
+      enabled: hasXpat,
+      staleTime: 15 * 60 * 1000,
+      queryKey: getGetXpatWorkPermitQueryKey(xpatParams),
+    },
+  });
+  const photoSrc = buildPhotoSrc(xpat?.photoUrl);
+  const cardSrc = hasXpat
+    ? buildCardSrc(data.workPermitNumber!, data.passportNumber!)
+    : null;
 
   useEffect(() => {
     if (data && !dirty) setForm(toForm(data));
@@ -455,7 +509,7 @@ export default function PassportDetailScreen() {
       if (Platform.OS !== "web") {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      Alert.alert("Saved", "Record updated successfully.");
+      router.back();
     } catch (err) {
       Alert.alert("Save failed", err instanceof Error ? err.message : "Please try again.");
     }
@@ -552,6 +606,37 @@ export default function PassportDetailScreen() {
         onSelect={(c) => setField("clientId", c?.id ?? null)}
         onClose={() => setClientPicker(false)}
       />
+
+      {/* Work permit card full-screen modal */}
+      {cardSrc && (
+        <Modal
+          visible={cardModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setCardModal(false)}
+          statusBarTranslucent
+        >
+          <Pressable
+            style={xpatStyles.cardModalOverlay}
+            onPress={() => setCardModal(false)}
+          >
+            <View style={xpatStyles.cardModalInner}>
+              <Image
+                source={{ uri: cardSrc }}
+                style={xpatStyles.cardModalImage}
+                resizeMode="contain"
+              />
+              <Pressable
+                onPress={() => setCardModal(false)}
+                style={xpatStyles.cardModalClose}
+                hitSlop={12}
+              >
+                <Feather name="x" size={20} color="#fff" />
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
 
       <KeyboardAwareScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
@@ -683,6 +768,123 @@ export default function PassportDetailScreen() {
             ]}
           />
         </View>
+
+        {/* ── Xpat Employee Data ── */}
+        {hasXpat && (
+          <>
+            <SectionHeader label="Xpat Work Permit" icon="globe" colors={colors} />
+
+            {xpatLoading && !xpat && (
+              <View style={xpatStyles.loadingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[xpatStyles.loadingText, { color: colors.mutedForeground }]}>
+                  Fetching Xpat data…
+                </Text>
+              </View>
+            )}
+
+            {xpat && (
+              <>
+                {/* ── Hero card: photo + name/status ── */}
+                <View style={[xpatStyles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  {photoSrc ? (
+                    <Image
+                      source={{ uri: photoSrc }}
+                      style={xpatStyles.photo}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[xpatStyles.photoPlaceholder, { backgroundColor: colors.secondary }]}>
+                      <Feather name="user" size={28} color={colors.mutedForeground} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={[xpatStyles.empName, { color: colors.foreground }]} numberOfLines={2}>
+                      {xpat.fullName ?? "—"}
+                    </Text>
+                    {xpat.occupationName ? (
+                      <Text style={[xpatStyles.empSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+                        {xpat.occupationName}
+                      </Text>
+                    ) : null}
+                    <View style={[
+                      xpatStyles.validBadge,
+                      { backgroundColor: xpat.isValid?.toLowerCase() === "valid" ? "#DCFCE7" : "#FEE2E2" },
+                    ]}>
+                      <Feather
+                        name={xpat.isValid?.toLowerCase() === "valid" ? "check-circle" : "x-circle"}
+                        size={12}
+                        color={xpat.isValid?.toLowerCase() === "valid" ? "#15803D" : "#DC2626"}
+                      />
+                      <Text style={[
+                        xpatStyles.validText,
+                        { color: xpat.isValid?.toLowerCase() === "valid" ? "#15803D" : "#DC2626" },
+                      ]}>
+                        {xpat.workPermitStateName ?? xpat.isValid ?? "Unknown"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Detail rows ── */}
+                <View style={[xpatStyles.detailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  {[
+                    { label: "Employer",        value: xpat.employerName },
+                    { label: "Employer No.",     value: xpat.employerNumber },
+                    { label: "Contact",          value: xpat.employerContactNumber },
+                    { label: "Date of Birth",    value: fmtXpatDate(xpat.dateOfBirth) },
+                    { label: "Nationality",      value: xpat.nationality },
+                    { label: "Gender",           value: xpat.gender },
+                    { label: "Contact No.",      value: xpat.contactNumber },
+                    { label: "WP Issued",        value: fmtXpatDate(xpat.workPermitIssuedDate) },
+                    { label: "WP Expiry",        value: fmtXpatDate(xpat.workPermitExpiry) },
+                  ]
+                    .filter((r) => r.value)
+                    .map((row, i, arr) => (
+                      <View
+                        key={row.label}
+                        style={[
+                          xpatStyles.detailRow,
+                          i < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                        ]}
+                      >
+                        <Text style={[xpatStyles.detailLabel, { color: colors.mutedForeground }]}>{row.label}</Text>
+                        <Text style={[xpatStyles.detailValue, { color: colors.foreground }]} numberOfLines={2}>
+                          {row.value}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+
+                {/* ── Work permit card thumbnail ── */}
+                {cardSrc && (
+                  <View style={{ gap: 6 }}>
+                    <Text style={[xpatStyles.cardLabel, { color: colors.mutedForeground }]}>
+                      WORK PERMIT CARD
+                    </Text>
+                    <Pressable
+                      onPress={() => setCardModal(true)}
+                      style={({ pressed }) => [
+                        xpatStyles.cardThumbWrap,
+                        { borderColor: colors.border, opacity: pressed ? 0.8 : 1 },
+                      ]}
+                    >
+                      <Image
+                        source={{ uri: cardSrc }}
+                        style={xpatStyles.cardThumb}
+                        resizeMode="contain"
+                      />
+                      <View style={[xpatStyles.cardOverlay, { backgroundColor: "rgba(0,0,0,0.32)" }]}>
+                        <Feather name="maximize-2" size={18} color="#fff" />
+                        <Text style={xpatStyles.cardOverlayText}>Tap to enlarge</Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            )}
+          </>
+        )}
 
         {/* ── Read-only info ── */}
         {(data.originalFilename || data.errorMessage) && (
@@ -863,4 +1065,106 @@ const styles = StyleSheet.create({
   errorText:  { fontSize: 14, textAlign: "center", fontFamily: "Inter_500Medium" },
   retryBtn:   { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
   retryText:  { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+});
+
+const xpatStyles = StyleSheet.create({
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+  },
+  loadingText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+
+  heroCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  photo: {
+    width: 64,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: "#E2E8F0",
+  },
+  photoPlaceholder: {
+    width: 64,
+    height: 80,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  empName: { fontSize: 15, fontFamily: "Inter_700Bold", lineHeight: 20 },
+  empSub:  { fontSize: 13, fontFamily: "Inter_400Regular" },
+  validBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    marginTop: 2,
+  },
+  validText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+
+  detailCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  detailLabel: { fontSize: 12, fontFamily: "Inter_500Medium", flex: 1 },
+  detailValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 2, textAlign: "right" },
+
+  cardLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  cardThumbWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+    height: 120,
+  },
+  cardThumb: { width: "100%", height: "100%" },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  cardOverlayText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  cardModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  cardModalInner: { width: "100%", position: "relative" },
+  cardModalImage: { width: "100%", height: 260, borderRadius: 12 },
+  cardModalClose: {
+    position: "absolute",
+    top: -14,
+    right: -14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
