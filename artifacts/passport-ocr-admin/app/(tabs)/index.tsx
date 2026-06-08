@@ -224,32 +224,53 @@ function FlipUserCard() {
         </View>
       </Animated.View>
 
-      {/* ── Back ─────────────────────────────── */}
+      {/* ── Back: contact card ───────────────── */}
       <Animated.View style={[styles.card, backStyle]}>
         <LinearGradient
           colors={["#0B1A15", "#1A3D33", "#0B1A15"]}
           start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.cardOrb, { bottom: -20, right: -15, width: 110, height: 110, backgroundColor: "#4ADE8010" }]} />
+        <View style={[styles.cardOrb, { top: -40, left: -30, width: 140, height: 140, backgroundColor: "#4ADE8008" }]} />
+        <View style={[styles.cardOrb, { bottom: -20, right: -15, width: 110, height: 110, backgroundColor: "#2DD4BF0A" }]} />
 
-        {/* magnetic stripe */}
-        <View style={[styles.cardMagStripe, { backgroundColor: "#1A3D33" }]} />
-
-        <Text style={styles.cardBackTitle}>Account Details</Text>
-
-        {([
-          { icon: "user",         label: "Name",   value: user?.name  ?? "—" },
-          { icon: "mail",         label: "Email",  value: user?.email ?? "—" },
-          { icon: "shield",       label: "Role",   value: roleLabel },
-          { icon: "check-circle", label: "Status", value: "Active" },
-        ] as const).map((row) => (
-          <View key={row.label} style={styles.cardInfoRow}>
-            <Feather name={row.icon} size={11} color="#FFFFFF50" />
-            <Text style={styles.cardInfoLabel}>{row.label}</Text>
-            <Text style={styles.cardInfoValue} numberOfLines={1}>{row.value}</Text>
+        {/* top: avatar circle + name */}
+        <View style={styles.cardBackHeader}>
+          <View style={styles.cardBackAvatar}>
+            <Text style={styles.cardBackInitials}>{initials}</Text>
           </View>
-        ))}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardBackName} numberOfLines={1}>{(user?.name ?? "—").toUpperCase()}</Text>
+            {user?.designation ? (
+              <Text style={styles.cardBackDesig} numberOfLines={1}>{user.designation}</Text>
+            ) : null}
+          </View>
+          <View style={[styles.cardRolePill, { backgroundColor: rStyle.bg }]}>
+            <Text style={[styles.cardRoleText, { color: rStyle.text }]}>{roleLabel}</Text>
+          </View>
+        </View>
+
+        {/* contact rows */}
+        <View style={styles.cardContactRows}>
+          {user?.phone ? (
+            <View style={styles.cardContactRow}>
+              <Feather name="phone" size={11} color="#4ADE80" />
+              <Text style={styles.cardContactLabel}>Phone</Text>
+              <Text style={styles.cardContactValue} numberOfLines={1}>{user.phone}</Text>
+            </View>
+          ) : (
+            <View style={styles.cardContactRow}>
+              <Feather name="phone" size={11} color="#FFFFFF30" />
+              <Text style={styles.cardContactLabel}>Phone</Text>
+              <Text style={[styles.cardContactValue, { color: "#FFFFFF35" }]}>Not set — edit profile</Text>
+            </View>
+          )}
+          <View style={styles.cardContactRow}>
+            <Feather name="mail" size={11} color="#FFFFFF50" />
+            <Text style={styles.cardContactLabel}>Email</Text>
+            <Text style={styles.cardContactValue} numberOfLines={1}>{user?.email ?? "—"}</Text>
+          </View>
+        </View>
 
         <View style={styles.cardHintRow}>
           <Feather name="refresh-cw" size={10} color="#FFFFFF35" />
@@ -1643,11 +1664,28 @@ const styles = StyleSheet.create({
   cardRolePill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, flexShrink: 0, backgroundColor: "#FFFFFF20" },
   cardRoleText: { fontSize: 10, fontWeight: "600", color: "#FFFFFF" },
   // back face
-  cardMagStripe: { height: 34, backgroundColor: "#00000060", marginHorizontal: -20, marginTop: -6 },
-  cardBackTitle: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: -0.2, marginTop: 6 },
-  cardInfoRow: { flexDirection: "row", alignItems: "center", gap: 7 },
-  cardInfoLabel: { fontSize: 10, color: "#FFFFFF50", width: 50 },
-  cardInfoValue: { flex: 1, fontSize: 11, color: "#FFFFFFCC", fontWeight: "500" },
+  cardBackHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+  },
+  cardBackAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FFFFFF15",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  cardBackInitials: { fontSize: 14, fontWeight: "700", color: "#FFFFFFDD" },
+  cardBackName: { fontSize: 12, fontWeight: "700", color: "#FFFFFFEE", letterSpacing: 0.3 },
+  cardBackDesig: { fontSize: 10, color: "#FFFFFF70", marginTop: 1 },
+  cardContactRows: { gap: 7, marginTop: 10, flex: 1 },
+  cardContactRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardContactLabel: { fontSize: 10, color: "#FFFFFF50", width: 40 },
+  cardContactValue: { flex: 1, fontSize: 12, color: "#FFFFFFCC", fontWeight: "500" },
   cardHintRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   cardHint: { fontSize: 10, color: "#FFFFFF38" },
 

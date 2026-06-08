@@ -128,7 +128,7 @@ export default function ProfileScreen() {
     currentPassword.trim().length > 0 && passwordsMatch && !changePasswordMutation.isPending;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.scroll}
