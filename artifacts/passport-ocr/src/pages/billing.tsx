@@ -334,6 +334,10 @@ export default function BillingPage() {
           issuerId={issuerId}
           clients={clients}
           onClose={() => setEditId(null)}
+          onDelete={() => {
+            setConfirmDeleteId(editId);
+            setEditId(null);
+          }}
         />
       )}
 
@@ -611,6 +615,7 @@ function DocumentFormDialog({
   clients,
   open,
   onOpenChange,
+  onDelete,
 }: {
   mode: "create" | "edit";
   kind: Kind;
@@ -620,6 +625,7 @@ function DocumentFormDialog({
   clients: Client[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  onDelete?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1090,7 +1096,19 @@ function DocumentFormDialog({
           </div>
         </div>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 flex-row items-center gap-2">
+          {mode === "edit" && onDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mr-auto text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+              onClick={onDelete}
+              disabled={isPending}
+              data-testid="button-delete-document"
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" /> Delete
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancel
           </Button>
@@ -1459,11 +1477,13 @@ function EditDocumentDialog({
   issuerId,
   clients,
   onClose,
+  onDelete,
 }: {
   id: number;
   issuerId: number | null;
   clients: Client[];
   onClose: () => void;
+  onDelete: () => void;
 }) {
   const { data: doc, isLoading } = useGetBillingDocument(id);
   if (isLoading || !doc) {
@@ -1514,6 +1534,7 @@ function EditDocumentDialog({
       clients={clients}
       open
       onOpenChange={(o) => !o && onClose()}
+      onDelete={onDelete}
     />
   );
 }
