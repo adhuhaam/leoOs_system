@@ -340,6 +340,18 @@ export const PassportStatus = {
   employed: "employed",
 } as const;
 
+/**
+ * How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed
+ */
+export type PassportEmployeeType =
+  (typeof PassportEmployeeType)[keyof typeof PassportEmployeeType];
+
+export const PassportEmployeeType = {
+  casual: "casual",
+  recruitment: "recruitment",
+  organization_employed: "organization_employed",
+} as const;
+
 export interface Passport {
   id: number;
   /** @nullable */
@@ -400,6 +412,8 @@ export interface Passport {
    * @nullable
    */
   clientSalary?: string | null;
+  /** How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed */
+  employeeType?: PassportEmployeeType;
   createdAt: string;
   updatedAt: string;
 }
@@ -409,6 +423,15 @@ export interface PassportUpload {
   /** Optional company to assign the passport to on upload. */
   companyId?: number;
 }
+
+export type PassportUpdateEmployeeType =
+  (typeof PassportUpdateEmployeeType)[keyof typeof PassportUpdateEmployeeType];
+
+export const PassportUpdateEmployeeType = {
+  casual: "casual",
+  recruitment: "recruitment",
+  organization_employed: "organization_employed",
+} as const;
 
 export interface PassportUpdate {
   fullName?: string;
@@ -438,6 +461,7 @@ export interface PassportUpdate {
    * @nullable
    */
   clientSalary?: string | null;
+  employeeType?: PassportUpdateEmployeeType;
 }
 
 export interface PassportStats {

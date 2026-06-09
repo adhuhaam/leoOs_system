@@ -949,6 +949,7 @@ export default function DashboardScreen() {
             docs={(billingData ?? []) as BillingDocumentSummary[]}
             expenses={(expensesData ?? []) as Expense[]}
             salaries={(salaryData ?? []) as SalaryRecord[]}
+            passports={passports}
           />
         </View>
       )}
@@ -1217,7 +1218,7 @@ function AnimatedVsBar({
 type ChartTab = "invoices" | "expenses" | "vs";
 type ChartPeriod = 3 | 6 | 12;
 
-function BillingChart({ docs, expenses, salaries }: { docs: BillingDocumentSummary[]; expenses: Expense[]; salaries: SalaryRecord[] }) {
+function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDocumentSummary[]; expenses: Expense[]; salaries: SalaryRecord[]; passports: Passport[] }) {
   const colors = useColors();
   const [tab, setTab] = useState<ChartTab>("invoices");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -1253,14 +1254,23 @@ function BillingChart({ docs, expenses, salaries }: { docs: BillingDocumentSumma
       if (!bucket) continue;
       bucket.expense += Number(exp.amount) || 0;
     }
+    const passportTypeMap = new Map<number, string>();
+    for (const p of passports) {
+      passportTypeMap.set(p.id, (p as unknown as { employeeType?: string }).employeeType ?? "casual");
+    }
     for (const sal of salaries) {
       if (sal.year !== selectedYear) continue;
       const bucket = arr.find((b) => b.monthNum === sal.month);
       if (!bucket) continue;
-      bucket.margin += Number(sal.clientSalary || 0) - Number(sal.netSalary || 0);
+      const empType = passportTypeMap.get(sal.passportId) ?? "casual";
+      if (empType === "casual") {
+        bucket.margin += Number(sal.clientSalary || 0) - Number(sal.netSalary || 0);
+      } else {
+        bucket.margin += Number(sal.clientSalary || 0);
+      }
     }
     return arr;
-  }, [docs, expenses, salaries, selectedYear, period, currentYear, currentMonth]);
+  }, [docs, expenses, salaries, passports, selectedYear, period, currentYear, currentMonth]);
 
   const BAR_MAX_H = 80;
   const totalCount    = months.reduce((s, m) => s + m.count,   0);

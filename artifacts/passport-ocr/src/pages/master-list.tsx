@@ -669,6 +669,7 @@ function EditCandidateDialog({
     workSite: "",
     agencySalary: passport.agencySalary ?? "",
     clientSalary: passport.clientSalary ?? "",
+    employeeType: (passport.employeeType as string) ?? "casual",
   });
 
   useEffect(() => {
@@ -693,7 +694,7 @@ function EditCandidateDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, agencySalary, clientSalary, ...rest } = form;
+    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, agencySalary, clientSalary, employeeType, ...rest } = form;
 
     updateMutation.mutate(
       {
@@ -706,6 +707,7 @@ function EditCandidateDialog({
           agent: agent.trim() || null,
           agencySalary: agencySalary.trim() || null,
           clientSalary: clientSalary.trim() || null,
+          employeeType: employeeType as "casual" | "recruitment" | "organization_employed",
         },
       },
       {
@@ -952,6 +954,35 @@ function EditCandidateDialog({
             {!existingLoa && (
               <p className="text-[11px] text-muted-foreground">No LOA exists for this candidate yet — employment terms are set when the LOA is created.</p>
             )}
+          </div>
+
+          {/* Employee Type */}
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Employee Type</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([ 
+                { value: "casual",                label: "Casual",          detail: "Profit = billing − salary" },
+                { value: "recruitment",            label: "Recruitment",     detail: "Profit = amount billed" },
+                { value: "organization_employed",  label: "Org. Employed",   detail: "Profit = amount billed" },
+              ] as { value: string; label: string; detail: string }[]).map((opt) => {
+                const active = form.employeeType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, employeeType: opt.value })}
+                    className={`flex flex-col items-center rounded-lg border-2 p-2 text-center transition-colors ${
+                      active
+                        ? "border-primary bg-primary/8 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <span className={`text-xs font-semibold ${active ? "text-primary" : "text-foreground"}`}>{opt.label}</span>
+                    <span className="text-[9px] mt-0.5 leading-tight">{opt.detail}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Salary Rates */}

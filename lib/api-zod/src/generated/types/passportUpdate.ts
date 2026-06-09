@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PassportUpdateEmployeeType } from "./passportUpdateEmployeeType";
 
 export interface PassportUpdate {
   fullName?: string;
@@ -34,4 +35,5 @@ export interface PassportUpdate {
    * @nullable
    */
   clientSalary?: string | null;
+  employeeType?: PassportUpdateEmployeeType;
 }

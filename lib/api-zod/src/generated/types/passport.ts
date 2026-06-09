@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PassportEmployeeType } from "./passportEmployeeType";
 import type { PassportStatus } from "./passportStatus";
 
 export interface Passport {
@@ -67,6 +68,8 @@ export interface Passport {
    * @nullable
    */
   clientSalary?: string | null;
+  /** How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed */
+  employeeType?: PassportEmployeeType;
   createdAt: string;
   updatedAt: string;
 }

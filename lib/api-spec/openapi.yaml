@@ -2021,6 +2021,10 @@ components:
         clientSalary:
           type: ["string", "null"]
           description: "Monthly billing rate agreed with the client in MVR (stored as numeric string)"
+        employeeType:
+          type: string
+          enum: [casual, recruitment, organization_employed]
+          description: "How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed"
         createdAt:
           type: string
         updatedAt:
@@ -2072,6 +2076,9 @@ components:
         clientSalary:
           type: ["string", "null"]
           description: "Monthly billing rate agreed with the client in MVR"
+        employeeType:
+          type: string
+          enum: [casual, recruitment, organization_employed]
 
     PassportStats:
       type: object

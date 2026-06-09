@@ -139,6 +139,41 @@ export default function MoreScreen() {
         <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
       </Pressable>
 
+      {/* Employee Types — admin/superuser info */}
+      {isAdmin && (
+        <>
+          <View style={styles.groupHeader}>
+            <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>EMPLOYEE TYPES</Text>
+          </View>
+          <View style={[styles.group, { backgroundColor: colors.card, shadowColor: "#000" }]}>
+            {([
+              { icon: "user-check", label: "Casual",              detail: "Profit = Client billing rate − Net salary paid",    color: "#6366F1" },
+              { icon: "briefcase",  label: "Recruitment",          detail: "Profit = Invoice amount billed to client",           color: "#0EA5E9" },
+              { icon: "layers",     label: "Organization Employed", detail: "Profit = Invoice amount billed to client",           color: "#10B981" },
+            ] as { icon: string; label: string; detail: string; color: string }[]).map((t, idx) => (
+              <View
+                key={t.label}
+                style={[
+                  styles.row,
+                  {
+                    borderTopColor: colors.border,
+                    borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
+                  },
+                ]}
+              >
+                <View style={[styles.iconWrap, { backgroundColor: t.color + "18" }]}>
+                  <Feather name={t.icon as never} size={18} color={t.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, { color: colors.foreground }]}>{t.label}</Text>
+                  <Text style={[styles.rowDetail, { color: colors.mutedForeground }]}>{t.detail}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
       {/* Tools group — superuser + admin only */}
       {isAdmin && (
         <>

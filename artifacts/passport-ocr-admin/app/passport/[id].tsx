@@ -386,7 +386,15 @@ interface FormState {
   agent: string;
   agencySalary: string;
   clientSalary: string;
+  employeeType: string;
 }
+
+type EmployeeTypeOption = { value: string; label: string; detail: string };
+const EMPLOYEE_TYPES: EmployeeTypeOption[] = [
+  { value: "casual",               label: "Casual",         detail: "Profit = billing − salary" },
+  { value: "recruitment",          label: "Recruitment",    detail: "Profit = amount billed" },
+  { value: "organization_employed",label: "Org. Employed",  detail: "Profit = amount billed" },
+];
 
 function toForm(p: Passport): FormState {
   return {
@@ -404,6 +412,7 @@ function toForm(p: Passport): FormState {
     agent:           p.agent ?? "",
     agencySalary:    p.agencySalary ?? "",
     clientSalary:    p.clientSalary ?? "",
+    employeeType:    (p as unknown as { employeeType?: string }).employeeType ?? "casual",
   };
 }
 
@@ -411,6 +420,7 @@ const EMPTY_FORM: FormState = {
   fullName: "", passportNumber: "", dateOfBirth: "", dateOfIssue: "",
   dateOfExpiry: "", nationality: "", address: "", status: "processing",
   companyId: null, clientId: null, workPermitNumber: "", agent: "", agencySalary: "", clientSalary: "",
+  employeeType: "casual",
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -508,6 +518,7 @@ export default function PassportDetailScreen() {
           agent:           form.agent || null,
           agencySalary:    form.agencySalary || null,
           clientSalary:    form.clientSalary || null,
+          employeeType:    (form.employeeType || "casual") as "casual" | "recruitment" | "organization_employed",
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/passports"] });
@@ -773,6 +784,39 @@ export default function PassportDetailScreen() {
               { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
             ]}
           />
+        </View>
+
+        {/* Employee Type */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE TYPE</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {EMPLOYEE_TYPES.map((opt) => {
+              const active = form.employeeType === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => setField("employeeType", opt.value)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 4,
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    alignItems: "center",
+                    backgroundColor: active ? colors.primary + "18" : colors.card,
+                    borderColor: active ? colors.primary : colors.border,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: active ? "700" : "400", color: active ? colors.primary : colors.foreground, textAlign: "center" }}>
+                    {opt.label}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: colors.mutedForeground, textAlign: "center", marginTop: 2 }}>
+                    {opt.detail}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Agency salary */}

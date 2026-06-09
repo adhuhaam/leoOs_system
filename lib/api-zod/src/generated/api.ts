@@ -476,6 +476,12 @@ export const ListPassportsResponseItem = zod.object({
     .describe(
       "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
     ),
+  employeeType: zod
+    .enum(["casual", "recruitment", "organization_employed"])
+    .optional()
+    .describe(
+      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -569,6 +575,12 @@ export const GetPassportStatsResponse = zod.object({
         .describe(
           "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
         ),
+      employeeType: zod
+        .enum(["casual", "recruitment", "organization_employed"])
+        .optional()
+        .describe(
+          "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+        ),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -644,6 +656,12 @@ export const GetPassportResponse = zod.object({
     .describe(
       "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
     ),
+  employeeType: zod
+    .enum(["casual", "recruitment", "organization_employed"])
+    .optional()
+    .describe(
+      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -677,6 +695,9 @@ export const UpdatePassportBody = zod.object({
     .string()
     .nullish()
     .describe("Monthly billing rate agreed with the client in MVR"),
+  employeeType: zod
+    .enum(["casual", "recruitment", "organization_employed"])
+    .optional(),
 });
 
 export const UpdatePassportResponse = zod.object({
@@ -740,6 +761,12 @@ export const UpdatePassportResponse = zod.object({
     .nullish()
     .describe(
       "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
+  employeeType: zod
+    .enum(["casual", "recruitment", "organization_employed"])
+    .optional()
+    .describe(
+      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
     ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
