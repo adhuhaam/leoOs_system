@@ -1736,6 +1736,7 @@ export const ListSalaryRecordsResponseItem = zod.object({
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
   clientSalary: zod.string().optional(),
+  employeeType: zod.string().nullish(),
 });
 export const ListSalaryRecordsResponse = zod.array(
   ListSalaryRecordsResponseItem,
@@ -1808,6 +1809,7 @@ export const UpdateSalaryRecordResponse = zod.object({
   employeeName: zod.string().nullish(),
   passportNumber: zod.string().nullish(),
   clientSalary: zod.string().optional(),
+  employeeType: zod.string().nullish(),
 });
 
 /**

@@ -1010,6 +1010,7 @@ export interface SalaryRecord {
   employeeName?: string | null;
   passportNumber?: string | null;
   clientSalary?: string;
+  employeeType?: string | null;
 }
 
 export interface CreateSalaryRecord {

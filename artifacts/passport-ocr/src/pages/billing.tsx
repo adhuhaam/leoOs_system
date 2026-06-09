@@ -1149,9 +1149,9 @@ function EmployeePickerDialog({
   onAdd: (items: { description: string; detail: string; qty: string; rate: string }[]) => void;
 }) {
   const { data: rawPassports = [], isLoading } = useListPassports({ clientId: String(clientId) });
-  // Only show casual employees — recruitment are billed differently via "Add Recruitment"
+  // Only casual employees are invoiced; recruitment and org_employed are excluded.
   const passports = (rawPassports as Passport[]).filter(
-    (p) => (p as unknown as { employeeType?: string }).employeeType !== "recruitment",
+    (p) => (p as unknown as { employeeType?: string }).employeeType === "casual",
   );
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [description, setDescription] = useState("");
@@ -1320,7 +1320,10 @@ function SalaryPickerDialog({
   const { data: rawRecords = [], isLoading } = useListSalaryRecords({ status: "confirmed" }, {
     query: { queryKey: getListSalaryRecordsQueryKey({ status: "confirmed" }), enabled: open },
   });
-  const records = (rawRecords as SalaryRecord[]).filter((r) => !r.invoiceId);
+  // Only casual employees are invoiced — filter out recruitment and org_employed records.
+  const records = (rawRecords as SalaryRecord[]).filter(
+    (r) => !r.invoiceId && (r as unknown as { employeeType?: string }).employeeType === "casual",
+  );
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const toggle = (id: number) =>

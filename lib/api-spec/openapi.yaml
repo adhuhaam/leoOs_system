@@ -2658,6 +2658,7 @@ components:
         employeeName: { type: string, nullable: true }
         passportNumber: { type: string, nullable: true }
         clientSalary: { type: string }
+        employeeType: { type: string, nullable: true }
 
     CreateSalaryRecord:
       type: object
