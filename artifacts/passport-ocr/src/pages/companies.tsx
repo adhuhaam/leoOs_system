@@ -182,6 +182,10 @@ interface CompanyFormState {
   registrationNumber: string;
   signatoryName: string;
   signatoryDesignation: string;
+  bankName: string;
+  bankAccountHolder: string;
+  bankAccountNumber: string;
+  bankSwiftCode: string;
 }
 
 const EMPTY_FORM: CompanyFormState = {
@@ -193,6 +197,10 @@ const EMPTY_FORM: CompanyFormState = {
   registrationNumber: "",
   signatoryName: "",
   signatoryDesignation: "",
+  bankName: "",
+  bankAccountHolder: "",
+  bankAccountNumber: "",
+  bankSwiftCode: "",
 };
 
 function companyToForm(c: Company): CompanyFormState {
@@ -205,6 +213,10 @@ function companyToForm(c: Company): CompanyFormState {
     registrationNumber: c.registrationNumber ?? "",
     signatoryName: c.signatoryName ?? "",
     signatoryDesignation: c.signatoryDesignation ?? "",
+    bankName: c.bankName ?? "",
+    bankAccountHolder: c.bankAccountHolder ?? "",
+    bankAccountNumber: c.bankAccountNumber ?? "",
+    bankSwiftCode: c.bankSwiftCode ?? "",
   };
 }
 
@@ -504,7 +516,7 @@ function CompanyFormDialog(
 
     if (mode === "create") {
       const payload: Record<string, string> = { name };
-      (["address","email","phone","country","registrationNumber","signatoryName","signatoryDesignation"] as const)
+      (["address","email","phone","country","registrationNumber","signatoryName","signatoryDesignation","bankName","bankAccountHolder","bankAccountNumber","bankSwiftCode"] as const)
         .forEach((k) => { const v = form[k].trim(); if (v) payload[k] = v; });
       createMutation.mutate(
         { data: payload as unknown as Parameters<typeof createMutation.mutate>[0]["data"] },
@@ -515,7 +527,7 @@ function CompanyFormDialog(
       );
     } else {
       const payload: Record<string, string | null> = { name };
-      (["address","email","phone","country","registrationNumber","signatoryName","signatoryDesignation"] as const)
+      (["address","email","phone","country","registrationNumber","signatoryName","signatoryDesignation","bankName","bankAccountHolder","bankAccountNumber","bankSwiftCode"] as const)
         .forEach((k) => { const v = form[k].trim(); payload[k] = v === "" ? null : v; });
       updateMutation.mutate(
         { id: props.company.id, data: payload as Parameters<typeof updateMutation.mutate>[0]["data"] },
@@ -575,6 +587,32 @@ function CompanyFormDialog(
             <div className="space-y-1.5">
               <Label>Signatory designation</Label>
               <Input value={form.signatoryDesignation} onChange={(e) => f("signatoryDesignation")(e.target.value)} data-testid="input-company-signatory-desig" />
+            </div>
+          </div>
+
+          {/* ── Bank details ── */}
+          <div className="space-y-3 pt-2 border-t">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5 pt-1">
+              Bank details
+              <span className="text-[11px] text-muted-foreground font-normal">Shown on invoices &amp; quotes</span>
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label>Bank name</Label>
+                <Input value={form.bankName} onChange={(e) => f("bankName")(e.target.value)} placeholder="e.g. Bank of Maldives" data-testid="input-company-bank-name" />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Account holder</Label>
+                <Input value={form.bankAccountHolder} onChange={(e) => f("bankAccountHolder")(e.target.value)} data-testid="input-company-bank-holder" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Account number</Label>
+                <Input value={form.bankAccountNumber} onChange={(e) => f("bankAccountNumber")(e.target.value)} data-testid="input-company-bank-account" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>SWIFT / BIC</Label>
+                <Input value={form.bankSwiftCode} onChange={(e) => f("bankSwiftCode")(e.target.value)} placeholder="e.g. BMLIMVMV" data-testid="input-company-bank-swift" />
+              </div>
             </div>
           </div>
 

@@ -399,6 +399,41 @@ export default function BillingPrintPage() {
             </div>
           )}
 
+          {/* ===================== BANK DETAILS ===================== */}
+          {(doc.companyBankName || doc.companyBankAccountNumber) && (
+            <div className="mt-8 pt-4 border-t border-slate-200">
+              <p className="text-[11px] text-slate-700 font-semibold mb-2">
+                Payment Details
+              </p>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[11px] text-slate-700">
+                {doc.companyBankName && (
+                  <div className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">Bank</span>
+                    <span className="font-medium text-slate-900">{doc.companyBankName}</span>
+                  </div>
+                )}
+                {doc.companyBankAccountHolder && (
+                  <div className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">Account Name</span>
+                    <span className="font-medium text-slate-900">{doc.companyBankAccountHolder}</span>
+                  </div>
+                )}
+                {doc.companyBankAccountNumber && (
+                  <div className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">Account No.</span>
+                    <span className="font-medium text-slate-900 font-mono">{doc.companyBankAccountNumber}</span>
+                  </div>
+                )}
+                {doc.companyBankSwiftCode && (
+                  <div className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">SWIFT / BIC</span>
+                    <span className="font-medium text-slate-900 font-mono">{doc.companyBankSwiftCode}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ===================== SIGNATORY (quotes only) ===================== */}
           {!isInvoice && doc.signatoryName && (
             <div className="mt-10">
