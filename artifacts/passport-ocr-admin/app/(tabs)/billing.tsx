@@ -43,13 +43,16 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "sent", label: "Sent" },
+  { value: "draft",            label: "Draft" },
+  { value: "sent",             label: "Sent" },
   { value: "payment_received", label: "Payment Received" },
-  { value: "completed", label: "Completed" },
+  { value: "completed",        label: "Completed" },
 ];
 
+const VOID_OPTION = { value: "voided", label: "Void Invoice" };
+
 function statusLabel(s: string): string {
+  if (s === "voided") return "Voided";
   return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? (s || "Draft");
 }
 
@@ -61,6 +64,8 @@ function statusColors(s: string): { bg: string; text: string; border: string } {
       return { bg: "#F0FDF4", text: "#16A34A", border: "#BBF7D0" };
     case "completed":
       return { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" };
+    case "voided":
+      return { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" };
     default:
       return { bg: "#F8FAFC", text: "#64748B", border: "#E2E8F0" };
   }
@@ -485,6 +490,41 @@ export default function BillingScreen() {
                   </Pressable>
                 );
               })}
+
+              {/* ── Void section ── */}
+              <View style={[styles.voidSeparator, { borderColor: colors.border }]} />
+              <Text style={[styles.voidHint, { color: colors.mutedForeground }]}>
+                Voiding keeps the invoice number intact and removes it from finance reports.
+              </Text>
+              {(() => {
+                const isVoided = statusDoc?.status === "voided";
+                const voidSc = statusColors("voided");
+                return (
+                  <Pressable
+                    onPress={() => !isVoided && handleStatusChange("voided")}
+                    disabled={isVoided || updatingStatus}
+                    style={({ pressed }) => [
+                      styles.optionRow,
+                      {
+                        backgroundColor: isVoided
+                          ? voidSc.bg
+                          : pressed
+                            ? "#FFF1F2"
+                            : "transparent",
+                        borderColor: isVoided ? voidSc.border : "#FECDD3",
+                        opacity: updatingStatus && !isVoided ? 0.5 : 1,
+                      },
+                    ]}
+                  >
+                    <Feather name="slash" size={14} color={voidSc.text} />
+                    <Text style={[styles.optionLabel, { color: voidSc.text, fontFamily: isVoided ? "Inter_700Bold" : "Inter_500Medium", flex: 1 }]}>
+                      {VOID_OPTION.label}
+                    </Text>
+                    {isVoided && <Feather name="check" size={16} color={voidSc.text} />}
+                    {updatingStatus && !isVoided && <ActivityIndicator size="small" color={voidSc.text} />}
+                  </Pressable>
+                );
+              })()}
             </View>
             <Pressable
               onPress={() => !updatingStatus && setStatusDoc(null)}
@@ -517,6 +557,8 @@ function DocCard({
   const sc = statusColors(doc.status);
   const sub = Number(doc.subtotal || 0);
 
+  const isVoided = doc.status === "voided";
+
   return (
     <Pressable
       onPress={onPress}
@@ -527,10 +569,16 @@ function DocCard({
         {
           backgroundColor: colors.card,
           shadowColor: "#000",
-          opacity: pressed ? 0.85 : 1,
+          opacity: pressed ? 0.85 : isVoided ? 0.55 : 1,
         },
       ]}
     >
+      {isVoided && (
+        <View style={styles.voidedBanner}>
+          <Feather name="slash" size={10} color="#BE123C" />
+          <Text style={styles.voidedBannerText}>VOIDED — excluded from finance</Text>
+        </View>
+      )}
       <View style={styles.cardHeader}>
         <View style={[styles.kindBadge, { backgroundColor: colors.secondary }]}>
           <Feather
@@ -553,7 +601,7 @@ function DocCard({
           </Text>
         </View>
       </View>
-      <Text style={[styles.docNumber, { color: colors.foreground }]}>
+      <Text style={[styles.docNumber, { color: isVoided ? "#BE123C" : colors.foreground, textDecorationLine: isVoided ? "line-through" : "none" }]}>
         {doc.number}
       </Text>
       <Text
@@ -570,10 +618,10 @@ function DocCard({
           {doc.issueDate}
         </Text>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={[styles.amount, { color: colors.foreground }]}>
+          <Text style={[styles.amount, { color: isVoided ? colors.mutedForeground : colors.foreground, textDecorationLine: isVoided ? "line-through" : "none" }]}>
             {formatMVR(sub)}
           </Text>
-          {Number(doc.employeeCost || 0) > 0 && (() => {
+          {!isVoided && Number(doc.employeeCost || 0) > 0 && (() => {
             const p = Number(doc.profit || 0);
             return (
               <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: p >= 0 ? "#059669" : "#EA580C" }}>
@@ -754,6 +802,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelText: { fontSize: 15, },
+  voidSeparator: { height: 1, borderTopWidth: 1, marginVertical: 8 },
+  voidHint: { fontSize: 11, lineHeight: 15, marginBottom: 2, textAlign: "center" },
+  voidedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FFF1F2",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    marginBottom: 6,
+    alignSelf: "flex-start",
+  },
+  voidedBannerText: { fontSize: 10, color: "#BE123C", fontFamily: "Inter_600SemiBold", letterSpacing: 0.3 },
   // Expense tab styles
   expListContent: { padding: 16, gap: 12 },
   plBanner: {

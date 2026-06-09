@@ -63,6 +63,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -105,6 +106,7 @@ import {
   DollarSign,
   Users,
   Printer,
+  Ban,
 } from "lucide-react";
 
 type Kind = "invoice" | "quotation";
@@ -361,10 +363,10 @@ export default function BillingPage() {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "sent", label: "Sent" },
+  { value: "draft",            label: "Draft" },
+  { value: "sent",             label: "Sent" },
   { value: "payment_received", label: "Payment Received" },
-  { value: "completed", label: "Completed" },
+  { value: "completed",        label: "Completed" },
 ];
 
 function docStatusClass(s: string): string {
@@ -375,6 +377,8 @@ function docStatusClass(s: string): string {
       return "text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950/40";
     case "completed":
       return "text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/40";
+    case "voided":
+      return "text-rose-600 border-rose-200 bg-rose-50 dark:text-rose-400 dark:border-rose-800 dark:bg-rose-950/40";
     default:
       return "text-slate-500 border-slate-200 bg-slate-50 dark:text-slate-400 dark:border-slate-700 dark:bg-slate-900/40";
   }
@@ -413,9 +417,11 @@ function DocumentRow({
   const rate = Number(doc.gstRate || 0);
   const grand = doc.gstInclusive ? sub : sub + (sub * rate) / 100;
   const profit = Number(doc.profit || 0);
+  const isVoided = doc.status === "voided";
+
   return (
     <div
-      className="flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors group"
+      className={`flex flex-col md:flex-row md:items-center gap-3 px-5 py-4 transition-colors group ${isVoided ? "opacity-50 bg-rose-50/40 dark:bg-rose-950/10" : "hover:bg-muted/30"}`}
       data-testid={`row-billing-${doc.id}`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -474,7 +480,7 @@ function DocumentRow({
               <ChevronDown className="h-3 w-3 opacity-60" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel className="text-xs text-muted-foreground">Change status</DropdownMenuLabel>
             {STATUS_OPTIONS.map(({ value, label }) => (
               <DropdownMenuItem
@@ -491,6 +497,22 @@ function DocumentRow({
                 {label}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-[10px] text-muted-foreground leading-tight pb-1">
+              Preserves invoice number · removes from finance
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => changeStatus("voided")}
+              className="text-sm gap-2 text-rose-600 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/40"
+              data-testid={`status-option-voided-${doc.id}`}
+            >
+              {doc.status === "voided" ? (
+                <Check className="h-3.5 w-3.5 flex-shrink-0" />
+              ) : (
+                <Ban className="h-3.5 w-3.5 flex-shrink-0" />
+              )}
+              Void Invoice
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
