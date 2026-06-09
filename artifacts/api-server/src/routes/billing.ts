@@ -15,7 +15,6 @@ import {
   UpdateBillingDocumentBody,
   DeleteBillingDocumentParams,
   GetBillingDocumentParams,
-  ListBillingDocumentsQueryParams,
 } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "./auth";
 
@@ -105,12 +104,16 @@ async function allocateNumber(kind: "invoice" | "quotation", tx: Tx): Promise<st
 }
 
 router.get("/billing/documents", requireAuth, async (req, res): Promise<void> => {
-  const parsed = ListBillingDocumentsQueryParams.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  const { kind, search, clientId } = parsed.data;
+  // Parse query params leniently so stale/null/array values from the client
+  // never cause a 400 — invalid params are silently treated as "no filter".
+  const rq = req.query as Record<string, string | string[] | undefined>;
+  const kindRaw = Array.isArray(rq.kind) ? rq.kind[0] : rq.kind;
+  const kind = kindRaw === "invoice" || kindRaw === "quotation" ? kindRaw : undefined;
+  const searchRaw = Array.isArray(rq.search) ? rq.search[0] : rq.search;
+  const search = typeof searchRaw === "string" && searchRaw ? searchRaw : undefined;
+  const clientIdRaw = Array.isArray(rq.clientId) ? rq.clientId[0] : rq.clientId;
+  const clientIdNum = clientIdRaw != null ? Number(clientIdRaw) : NaN;
+  const clientId = Number.isFinite(clientIdNum) && clientIdNum > 0 ? clientIdNum : undefined;
   const conds: SQL[] = [];
   if (kind) conds.push(eq(billingDocumentsTable.kind, kind));
   if (clientId != null) conds.push(eq(billingDocumentsTable.clientId, clientId));

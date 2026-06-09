@@ -53,16 +53,12 @@ router.get("/companies", async (req, res, next) => {
   res.json(out);
 });
 
-// GET /billing/documents/:id/print — public read for the invoice print page.
-// Authenticated requests fall through to the private billingRouter (which applies
-// ownership checks). Unauthenticated requests (e.g. the in-app browser opened from
-// the mobile app, or a link sent to a client) get the data directly.
-// Financial internals (profit, employeeCost) are intentionally not returned.
-router.get("/billing/documents/:id/print", async (req, res, next) => {
-  if (req.session?.userId) {
-    next("router");
-    return;
-  }
+// GET /billing/documents/:id/print — print/preview for invoices and quotations.
+// Served to everyone (authenticated or not): financial internals (profit,
+// employeeCost) are intentionally omitted so this is safe as a public endpoint.
+// The billing router does NOT have a /print route, so we must NOT call next("router")
+// for authenticated users — they would get a 404 from billing.ts.
+router.get("/billing/documents/:id/print", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id) || id <= 0) {
     res.status(400).json({ error: "Invalid document id" });
