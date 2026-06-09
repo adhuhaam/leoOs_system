@@ -1,13 +1,58 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
-import {
-  useGetBillingDocument,
-  useListCompanies,
-} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useSystemSettings } from "@/hooks/use-system-settings";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface PrintItem {
+  id: number;
+  description: string;
+  detail: string | null;
+  qty: string | number;
+  rate: string | number;
+  amount: string | number;
+  position: number | null;
+}
+
+interface PrintDoc {
+  id: number;
+  kind: string;
+  number: string;
+  companyId: number;
+  companyName: string;
+  companyAddress: string | null;
+  companyEmail: string | null;
+  companyPhone: string | null;
+  companyRegistrationNumber: string | null;
+  companyBankName: string | null;
+  companyBankAccountNumber: string | null;
+  companyBankAccountHolder: string | null;
+  companyBankSwiftCode: string | null;
+  letterheadImage: string | null;
+  signatoryName: string | null;
+  signatoryDesignation: string | null;
+  signatureImage: string | null;
+  customerName: string;
+  customerAddress: string | null;
+  customerTin: string | null;
+  issueDate: string | null;
+  dueDate: string | null;
+  terms: string | null;
+  gstRate: string | number | null;
+  gstInclusive: boolean | null;
+  notes: string | null;
+  status: string;
+  items: PrintItem[];
+  // System-level branding fallbacks
+  systemLogoImage: string | null;
+  systemAddress: string | null;
+  systemPhone: string | null;
+  systemEmail: string | null;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatMVR(amount: string | number | null | undefined): string {
   if (amount == null || amount === "") return "MVR 0.00";
@@ -37,24 +82,46 @@ function formatDate(iso: string | null | undefined): string {
   });
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function BillingPrintPage() {
   const [, params] = useRoute("/billing/:id/print");
   const id = params?.id ? Number(params.id) : 0;
-  const { data: doc, isLoading } = useGetBillingDocument(id);
-  const { data: companies = [] } = useListCompanies({ withBranding: true });
-  const company = companies.find((c) => c.id === doc?.companyId);
-  const {
-    logoImage: systemLogo,
-    companyAddress: systemAddress,
-    companyPhone: systemPhone,
-    companyEmail: systemEmail,
-  } = useSystemSettings();
 
-  // Use per-company values if set, otherwise fall back to system settings.
-  const headerLogo = company?.letterheadImage ?? systemLogo;
-  const headerAddress = company?.address ?? systemAddress;
-  const headerPhone = company?.phone ?? systemPhone;
-  const headerEmail = company?.email ?? systemEmail;
+  const [doc, setDoc] = useState<PrintDoc | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id || id <= 0) {
+      setError("Invalid document ID");
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+    fetch(`/api/billing/documents/${id}/print`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Error ${r.status}: could not load document`);
+        return r.json() as Promise<PrintDoc>;
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setDoc(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load document");
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   // Set the document title so "Save as PDF" suggests a sensible filename.
   useEffect(() => {
@@ -98,7 +165,7 @@ export default function BillingPrintPage() {
     };
   }, []);
 
-  if (isLoading || !doc) {
+  if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto p-6 space-y-3">
         <Skeleton className="h-10" />
@@ -106,6 +173,21 @@ export default function BillingPrintPage() {
       </div>
     );
   }
+
+  if (error || !doc) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 text-center text-slate-600">
+        <p className="text-lg font-medium">Unable to load document</p>
+        <p className="text-sm mt-1">{error ?? "Document not found"}</p>
+      </div>
+    );
+  }
+
+  // Resolved branding: per-company takes priority over system-level fallback
+  const headerLogo = doc.letterheadImage ?? doc.systemLogoImage;
+  const headerAddress = doc.companyAddress ?? doc.systemAddress;
+  const headerPhone = doc.companyPhone ?? doc.systemPhone;
+  const headerEmail = doc.companyEmail ?? doc.systemEmail;
 
   const isInvoice = doc.kind === "invoice";
   const subtotal = doc.items.reduce((s, it) => s + Number(it.amount || 0), 0);
@@ -175,8 +257,8 @@ export default function BillingPrintPage() {
               <p className="font-bold text-[12.5px] text-slate-900 uppercase tracking-wide">
                 {doc.companyName}
               </p>
-              {company?.registrationNumber && (
-                <p className="mt-1.5">{company.registrationNumber}</p>
+              {doc.companyRegistrationNumber && (
+                <p className="mt-1.5">{doc.companyRegistrationNumber}</p>
               )}
               {headerEmail && <p className="mt-0.5">{headerEmail}</p>}
               {headerPhone && <p className="mt-0.5">{headerPhone}</p>}
@@ -318,21 +400,21 @@ export default function BillingPrintPage() {
           )}
 
           {/* ===================== SIGNATORY (quotes only) ===================== */}
-          {!isInvoice && company?.signatoryName && (
+          {!isInvoice && doc.signatoryName && (
             <div className="mt-10">
-              {company.signatureImage && (
+              {doc.signatureImage && (
                 <img
-                  src={company.signatureImage}
+                  src={doc.signatureImage}
                   alt="Signature"
                   className="max-h-16 object-contain mb-1"
                 />
               )}
               <p className="font-semibold text-slate-900 text-[11.5px]">
-                {company.signatoryName}
+                {doc.signatoryName}
               </p>
-              {company.signatoryDesignation && (
+              {doc.signatoryDesignation && (
                 <p className="text-slate-700 text-[10.5px]">
-                  {company.signatoryDesignation}
+                  {doc.signatoryDesignation}
                 </p>
               )}
             </div>
