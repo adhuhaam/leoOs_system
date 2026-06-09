@@ -1691,6 +1691,9 @@ function RecentRow({
     .join("")
     .toUpperCase();
   const sc = statusColor(status);
+  const empType = (passport as unknown as { employeeType?: string }).employeeType ?? "";
+  const empTypeColor = empType === "casual" ? "#F59E0B" : empType === "recruitment" ? "#8B5CF6" : empType === "direct" ? "#06B6D4" : null;
+  const empTypeLabel = empType === "casual" ? "Casual" : empType === "recruitment" ? "Recruit" : empType === "direct" ? "Direct" : empType ? empType.charAt(0).toUpperCase() + empType.slice(1) : null;
 
   function handlePress() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1736,6 +1739,11 @@ function RecentRow({
           {passport.passportNumber || "—"}
         </Text>
       </View>
+      {empTypeLabel && empTypeColor && (
+        <View style={[styles.statusPill, { backgroundColor: empTypeColor + "18" }]}>
+          <Text style={[styles.statusPillText, { color: empTypeColor, fontWeight: "600" }]}>{empTypeLabel}</Text>
+        </View>
+      )}
       <View style={[styles.statusPill, { backgroundColor: sc + "18" }]}>
         <View style={[styles.statusDot, { backgroundColor: sc }]} />
         <Text style={[styles.statusPillText, { color: sc }]}>{statusLabel(status)}</Text>
