@@ -157,6 +157,80 @@ function SalaryCard({ record, colors, onDelete }: {
   );
 }
 
+function SalarySlip({ record, colors }: { record: SalaryRecord; colors: ReturnType<typeof useColors> }) {
+  const rows: { label: string; val: string | null | undefined; deduction?: boolean }[] = [
+    { label: "Basic Salary", val: record.basicSalary },
+    { label: "Food Allowance", val: record.foodAllowance },
+    { label: "Transport Allowance", val: record.transportAllowance },
+    { label: "Other Allowances", val: record.otherAllowances },
+    { label: "Other Expenses", val: record.otherExpenses },
+  ].filter((r) => parseFloat(r.val ?? "0") !== 0);
+
+  const hasDeductions = parseFloat(record.deductions ?? "0") > 0;
+
+  return (
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {/* Slip header */}
+      <View style={{ alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
+        <Text style={{ fontSize: 10, letterSpacing: 2, color: colors.mutedForeground, textTransform: "uppercase", fontWeight: "600" }}>Salary Slip</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground, marginTop: 2 }}>
+          {MONTHS_LONG[(record.month ?? 1) - 1]} {record.year}
+        </Text>
+        {record.daysWorked ? (
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>
+            {record.daysWorked} day{Number(record.daysWorked) !== 1 ? "s" : ""} worked
+          </Text>
+        ) : null}
+        <View style={{ marginTop: 6 }}>
+          <StatusBadge status={record.status} colors={colors} />
+        </View>
+      </View>
+
+      {/* Earnings */}
+      <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
+        <Text style={{ fontSize: 9, letterSpacing: 1.5, color: "#10B981", fontWeight: "700", marginBottom: 6, textTransform: "uppercase" }}>Earnings</Text>
+        {rows.map((r) => (
+          <View key={r.label} style={[styles.breakdownRow, { paddingVertical: 5 }]}>
+            <Text style={[styles.breakdownLabel, { color: colors.mutedForeground, flex: 1 }]}>{r.label}</Text>
+            <Text style={[styles.breakdownValue, { color: colors.foreground }]}>{fmtMVR(r.val)}</Text>
+          </View>
+        ))}
+        {rows.length === 0 && (
+          <View style={styles.breakdownRow}>
+            <Text style={[styles.breakdownLabel, { color: colors.mutedForeground }]}>Basic Salary</Text>
+            <Text style={[styles.breakdownValue, { color: colors.foreground }]}>{fmtMVR(record.basicSalary)}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Deductions */}
+      {hasDeductions && (
+        <View style={{ paddingHorizontal: 4, paddingTop: 8 }}>
+          <Text style={{ fontSize: 9, letterSpacing: 1.5, color: "#EF4444", fontWeight: "700", marginBottom: 6, textTransform: "uppercase" }}>Deductions</Text>
+          <View style={styles.breakdownRow}>
+            <Text style={[styles.breakdownLabel, { color: colors.mutedForeground }]}>Total Deductions</Text>
+            <Text style={[styles.breakdownValue, { color: "#DC2626" }]}>− {fmtMVR(record.deductions)}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Net salary total */}
+      <View style={{ marginTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: 10, paddingHorizontal: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.foreground }}>Net Salary</Text>
+        <Text style={{ fontSize: 20, fontWeight: "800", color: "#10B981", fontVariant: ["tabular-nums"] }}>
+          MVR {parseFloat(record.netSalary || "0").toFixed(2)}
+        </Text>
+      </View>
+
+      {record.notes ? (
+        <Text style={[styles.notes, { color: colors.mutedForeground, marginTop: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
+          Note: {record.notes}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 export default function SalaryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -533,7 +607,7 @@ export default function SalaryScreen() {
               })()}
               <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SALARY HISTORY</Text>
               {sortedRecords.map((r) => (
-                <SalaryCard key={r.id} record={r} colors={colors} />
+                <SalarySlip key={r.id} record={r} colors={colors} />
               ))}
             </>
           )}

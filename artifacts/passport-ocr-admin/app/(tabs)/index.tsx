@@ -5,12 +5,14 @@ import {
   getListCompaniesQueryKey,
   getListExpensesQueryKey,
   getListPassportsQueryKey,
+  getListSalaryRecordsQueryKey,
   getListTasksQueryKey,
   type BillingDocumentSummary,
   type Client,
   type Company,
   type Expense,
   type Passport,
+  type SalaryRecord,
   type Task,
   TaskPriority,
   TaskStatus,
@@ -21,6 +23,7 @@ import {
   useListCompanies,
   useListExpenses,
   useListPassports,
+  useListSalaryRecords,
   useListTasks,
   useUpdateTask,
 } from "@workspace/api-client-react";
@@ -375,6 +378,9 @@ export default function DashboardScreen() {
   });
   const { data: billingData, isLoading: billingLoading } = useListBillingDocuments(undefined, {
     query: { queryKey: getListBillingDocumentsQueryKey(), enabled: isAdmin },
+  });
+  const { data: salaryData } = useListSalaryRecords(undefined, {
+    query: { queryKey: getListSalaryRecordsQueryKey(), enabled: isAdmin, staleTime: 30_000 },
   });
 
   const adminOverviewLoading =
@@ -942,6 +948,7 @@ export default function DashboardScreen() {
           <BillingChart
             docs={(billingData ?? []) as BillingDocumentSummary[]}
             expenses={(expensesData ?? []) as Expense[]}
+            salaries={(salaryData ?? []) as SalaryRecord[]}
           />
         </View>
       )}
@@ -1210,7 +1217,7 @@ function AnimatedVsBar({
 type ChartTab = "invoices" | "expenses" | "vs";
 type ChartPeriod = 3 | 6 | 12;
 
-function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expenses: Expense[] }) {
+function BillingChart({ docs, expenses, salaries }: { docs: BillingDocumentSummary[]; expenses: Expense[]; salaries: SalaryRecord[] }) {
   const colors = useColors();
   const [tab, setTab] = useState<ChartTab>("invoices");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -1225,11 +1232,11 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
   const months = useMemo(() => {
     const endMonth = selectedYear === currentYear ? currentMonth : 12;
     const startMonth = Math.max(1, endMonth - period + 1);
-    const arr: { key: string; label: string; monthNum: number; count: number; revenue: number; expense: number }[] = [];
+    const arr: { key: string; label: string; monthNum: number; count: number; revenue: number; expense: number; margin: number }[] = [];
     for (let m = startMonth; m <= endMonth; m++) {
       const key = `${selectedYear}-${String(m).padStart(2, "0")}`;
       const label = new Date(selectedYear, m - 1, 1).toLocaleString("en", { month: "short" });
-      arr.push({ key, label, monthNum: m, count: 0, revenue: 0, expense: 0 });
+      arr.push({ key, label, monthNum: m, count: 0, revenue: 0, expense: 0, margin: 0 });
     }
     for (const doc of docs) {
       const docKey = (doc.issueDate ?? "").slice(0, 7);
@@ -1246,17 +1253,24 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
       if (!bucket) continue;
       bucket.expense += Number(exp.amount) || 0;
     }
+    for (const sal of salaries) {
+      if (sal.year !== selectedYear) continue;
+      const bucket = arr.find((b) => b.monthNum === sal.month);
+      if (!bucket) continue;
+      bucket.margin += Number(sal.clientSalary || 0) - Number(sal.netSalary || 0);
+    }
     return arr;
-  }, [docs, expenses, selectedYear, period, currentYear, currentMonth]);
+  }, [docs, expenses, salaries, selectedYear, period, currentYear, currentMonth]);
 
   const BAR_MAX_H = 80;
   const totalCount    = months.reduce((s, m) => s + m.count,   0);
   const totalRevenue  = months.reduce((s, m) => s + m.revenue, 0);
+  const totalMargin   = months.reduce((s, m) => s + m.margin,  0);
   const totalExpenses = months.reduce((s, m) => s + m.expense, 0);
-  const netPL = totalRevenue - totalExpenses;
+  const netPL = totalMargin - totalExpenses;
 
-  const singleVals = months.map((m) => tab === "expenses" ? m.expense : m.revenue);
-  const vsMax      = Math.max(...months.map((m) => Math.max(m.revenue, m.expense)), 1);
+  const singleVals = months.map((m) => tab === "expenses" ? m.expense : m.margin);
+  const vsMax      = Math.max(...months.map((m) => Math.max(m.margin, m.expense)), 1);
   const singleMax  = Math.max(...singleVals, 1);
 
   function fmtK(v: number) {
@@ -1327,9 +1341,9 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
         </View>
         <View style={[styles.chartSummaryPill, { backgroundColor: colors.card }]}>
           <Text style={[styles.chartSummaryVal, { color: "#10B981" }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-            {fmtMVR(totalRevenue)}
+            {fmtMVR(totalMargin)}
           </Text>
-          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Payment Received</Text>
+          <Text style={[styles.chartSummaryLbl, { color: colors.mutedForeground }]}>Total Margin</Text>
         </View>
       </View>
       <View style={styles.chartSummaryRow}>
@@ -1386,11 +1400,11 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
           </View>
           <View style={styles.calloutRow}>
             <View style={styles.calloutCell}>
-              <Text style={[styles.calloutCellLabel, { color: colors.mutedForeground }]}>Income</Text>
-              <Text style={[styles.calloutCellVal, { color: "#10B981" }]}>{fmtMVR(sel.revenue)}</Text>
-              {totalRevenue > 0 && (
+              <Text style={[styles.calloutCellLabel, { color: colors.mutedForeground }]}>Margin</Text>
+              <Text style={[styles.calloutCellVal, { color: "#10B981" }]}>{fmtMVR(sel.margin)}</Text>
+              {totalMargin > 0 && (
                 <Text style={[styles.calloutPct, { color: colors.mutedForeground }]}>
-                  {Math.round((sel.revenue / totalRevenue) * 100)}% of period
+                  {Math.round((sel.margin / totalMargin) * 100)}% of period
                 </Text>
               )}
             </View>
@@ -1407,8 +1421,8 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
             <View style={[styles.calloutDivider, { backgroundColor: colors.border }]} />
             <View style={styles.calloutCell}>
               <Text style={[styles.calloutCellLabel, { color: colors.mutedForeground }]}>Net</Text>
-              <Text style={[styles.calloutCellVal, { color: sel.revenue - sel.expense >= 0 ? "#10B981" : "#EF4444" }]}>
-                {sel.revenue - sel.expense >= 0 ? "+" : "−"}{fmtMVR(Math.abs(sel.revenue - sel.expense))}
+              <Text style={[styles.calloutCellVal, { color: sel.margin - sel.expense >= 0 ? "#10B981" : "#EF4444" }]}>
+                {sel.margin - sel.expense >= 0 ? "+" : "−"}{fmtMVR(Math.abs(sel.margin - sel.expense))}
               </Text>
               <Text style={[styles.calloutPct, { color: colors.mutedForeground }]}>
                 {sel.count} invoice{sel.count !== 1 ? "s" : ""}
@@ -1434,7 +1448,7 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
             </View>
             <View style={styles.chartBars}>
               {months.map((m, idx) => {
-                const incH = m.revenue > 0 ? Math.max(4, (m.revenue / vsMax) * BAR_MAX_H) : 0;
+                const incH = m.margin > 0 ? Math.max(4, (m.margin / vsMax) * BAR_MAX_H) : 0;
                 const expH = m.expense > 0 ? Math.max(4, (m.expense / vsMax) * BAR_MAX_H) : 0;
                 const isSel = selectedIdx === idx;
                 return (
@@ -1525,9 +1539,9 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
               {([
                 { label: "Period",     value: `${period} months`,       color: colors.foreground },
                 { label: "Invoices",   value: String(totalCount),        color: "#6366F1"         },
-                { label: "Revenue",    value: fmtMVR(totalRevenue),      color: "#10B981"         },
+                { label: "Margin",     value: fmtMVR(totalMargin),       color: "#10B981"         },
                 { label: "Expenses",   value: fmtMVR(totalExpenses),     color: "#EF4444"         },
-                { label: "Net Profit", value: `${netPL >= 0 ? "+" : "−"}${fmtMVR(Math.abs(netPL))}`, color: netPL >= 0 ? "#10B981" : "#EF4444" },
+                { label: "Net (Margin−Exp)", value: `${netPL >= 0 ? "+" : "−"}${fmtMVR(Math.abs(netPL))}`, color: netPL >= 0 ? "#10B981" : "#EF4444" },
               ] as { label: string; value: string; color: string }[]).map((row, i) => (
                 <View key={row.label} style={[styles.reportSumRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
                   <Text style={[styles.reportSumLabel, { color: colors.mutedForeground }]}>{row.label}</Text>
@@ -1542,17 +1556,17 @@ function BillingChart({ docs, expenses }: { docs: BillingDocumentSummary[]; expe
               <View style={[styles.reportTRow, styles.reportTHead, { borderBottomColor: colors.border }]}>
                 <Text style={[styles.reportTHCell, { color: colors.mutedForeground, flex: 1.6 }]}>Month</Text>
                 <Text style={[styles.reportTHCell, { color: "#6366F1" }]}>Inv</Text>
-                <Text style={[styles.reportTHCell, { color: "#10B981" }]}>Income</Text>
+                <Text style={[styles.reportTHCell, { color: "#10B981" }]}>Margin</Text>
                 <Text style={[styles.reportTHCell, { color: "#EF4444" }]}>Expense</Text>
                 <Text style={[styles.reportTHCell, { color: colors.foreground }]}>Net</Text>
               </View>
               {months.map((m, i) => {
-                const net = m.revenue - m.expense;
+                const net = m.margin - m.expense;
                 return (
                   <View key={m.key} style={[styles.reportTRow, i < months.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
                     <Text style={[styles.reportTDCell, { color: colors.foreground, flex: 1.6 }]}>{m.label} '{String(selectedYear).slice(2)}</Text>
                     <Text style={[styles.reportTDCell, { color: "#6366F1" }]}>{m.count}</Text>
-                    <Text style={[styles.reportTDCell, { color: "#10B981" }]}>{fmtK(m.revenue)}</Text>
+                    <Text style={[styles.reportTDCell, { color: "#10B981" }]}>{fmtK(m.margin)}</Text>
                     <Text style={[styles.reportTDCell, { color: "#EF4444" }]}>{fmtK(m.expense)}</Text>
                     <Text style={[styles.reportTDCell, { color: net >= 0 ? "#10B981" : "#EF4444" }]}>
                       {net >= 0 ? "+" : "−"}{fmtK(Math.abs(net))}
