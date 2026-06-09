@@ -4,12 +4,12 @@
     "slug": "leo-admin",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon.jpeg",
     "scheme": "passport-ocr-admin",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/app-icon.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#0d2e28"
     },
@@ -32,7 +32,7 @@
       "package": "com.leo.admin",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/app-icon.jpeg",
         "backgroundColor": "#0d2e28"
       },
       "permissions": [
@@ -43,7 +43,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/app-icon.jpeg"
     },
     "plugins": [
       [
