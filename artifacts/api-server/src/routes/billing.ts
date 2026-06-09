@@ -7,6 +7,7 @@ import {
   companiesTable,
   clientsTable,
   salaryRecordsTable,
+  passportsTable,
 } from "@workspace/db";
 import {
   CreateBillingDocumentBody,
@@ -197,9 +198,17 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
       db
         .select({
           invoiceId: salaryRecordsTable.invoiceId,
-          employeeCost: sql<string>`COALESCE(SUM(${salaryRecordsTable.netSalary}), 0)::text`,
+          // Casual: cost = agreed employee rate (agencySalary on passport)
+          // Recruitment / Org.Employed: cost = 0 (full billing amount is profit)
+          employeeCost: sql<string>`COALESCE(SUM(
+            CASE WHEN ${passportsTable.employeeType} = 'casual'
+                 THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+                 ELSE 0
+            END
+          ), 0)::text`,
         })
         .from(salaryRecordsTable)
+        .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
         .where(inArray(salaryRecordsTable.invoiceId, docIds))
         .groupBy(salaryRecordsTable.invoiceId),
     ]);
@@ -210,10 +219,14 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
   }
 
   const result = rows.map((r) => {
-    const subtotal = totalsMap.get(r.id) ?? "0";
-    const employeeCost = salaryMap.get(r.id) ?? "0";
-    const profit = (Number(subtotal) - Number(employeeCost)).toFixed(2);
-    return { ...r, subtotal, employeeCost, profit };
+    const subtotal = Number(totalsMap.get(r.id) ?? "0");
+    const gstRate = Number(r.gstRate || 0);
+    // Grand total = what the client actually pays (subtotal + GST if exclusive)
+    const grandTotal = r.gstInclusive ? subtotal : subtotal + (subtotal * gstRate) / 100;
+    const employeeCost = Number(salaryMap.get(r.id) ?? "0");
+    // Profit = total received from client (incl. taxes) minus agreed employee cost
+    const profit = (grandTotal - employeeCost).toFixed(2);
+    return { ...r, subtotal: subtotal.toFixed(2), employeeCost: employeeCost.toFixed(2), profit };
   });
 
   const filtered = search
@@ -309,16 +322,26 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       .orderBy(billingItemsTable.position, billingItemsTable.id),
     db
       .select({
-        employeeCost: sql<string>`COALESCE(SUM(${salaryRecordsTable.netSalary}), 0)::text`,
+        employeeCost: sql<string>`COALESCE(SUM(
+          CASE WHEN ${passportsTable.employeeType} = 'casual'
+               THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+               ELSE 0
+          END
+        ), 0)::text`,
       })
       .from(salaryRecordsTable)
+      .leftJoin(passportsTable, eq(salaryRecordsTable.passportId, passportsTable.id))
       .where(eq(salaryRecordsTable.invoiceId, id)),
   ]);
   const doc = docRows[0]!;
   const subtotal = items.reduce((s, it) => s + Number(it.amount ?? 0), 0);
-  const employeeCost = salaryTotals[0]?.employeeCost ?? "0";
-  const profit = (subtotal - Number(employeeCost)).toFixed(2);
-  res.json({ ...doc, subtotal: subtotal.toFixed(2), employeeCost, profit, items });
+  const gstRate = Number(doc.gstRate || 0);
+  // Grand total = what the client actually pays (subtotal + GST if exclusive)
+  const grandTotal = doc.gstInclusive ? subtotal : subtotal + (subtotal * gstRate) / 100;
+  const employeeCost = Number(salaryTotals[0]?.employeeCost ?? "0");
+  // Profit = total received from client (incl. taxes) minus agreed employee cost
+  const profit = (grandTotal - employeeCost).toFixed(2);
+  res.json({ ...doc, subtotal: subtotal.toFixed(2), employeeCost: employeeCost.toFixed(2), profit, items });
 });
 
 router.post("/billing/documents", requireRole("superuser", "admin"), async (req, res): Promise<void> => {
