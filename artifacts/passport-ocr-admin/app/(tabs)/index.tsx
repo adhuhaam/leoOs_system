@@ -417,7 +417,7 @@ export default function DashboardScreen() {
 
     const allDocs = (billingData ?? []) as BillingDocumentSummary[];
     const paidDocs = allDocs.filter(
-      (d) => d.status === "payment_received" || d.status === "completed",
+      (d) => d.status === "payment_received",
     );
     const totalRevenue = paidDocs.reduce(
       (sum, d) => sum + (Number(d.subtotal) || 0),
@@ -1239,12 +1239,19 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
       const label = new Date(selectedYear, m - 1, 1).toLocaleString("en", { month: "short" });
       arr.push({ key, label, monthNum: m, count: 0, revenue: 0, expense: 0, margin: 0 });
     }
+    // Build set of payment_received invoice IDs for filtering salary records
+    const paidInvoiceIds = new Set(
+      docs
+        .filter((d) => d.status === "payment_received")
+        .map((d) => d.id),
+    );
+
     for (const doc of docs) {
       const docKey = (doc.issueDate ?? "").slice(0, 7);
       const bucket = arr.find((b) => b.key === docKey);
       if (!bucket) continue;
       bucket.count += 1;
-      if (doc.status === "payment_received" || doc.status === "completed") {
+      if (doc.status === "payment_received") {
         bucket.revenue += Number(doc.subtotal) || 0;
       }
     }
@@ -1254,18 +1261,36 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
       if (!bucket) continue;
       bucket.expense += Number(exp.amount) || 0;
     }
-    const passportTypeMap = new Map<number, string>();
+
+    // Build passport map: id → { employeeType, clientSalary (monthly billing rate),
+    //                             agencySalary (monthly cost rate agreed with employee) }
+    const passportRateMap = new Map<number, { empType: string; clientRate: number; agencyRate: number }>();
     for (const p of passports) {
-      passportTypeMap.set(p.id, (p as unknown as { employeeType?: string }).employeeType ?? "casual");
+      const pp = p as unknown as { employeeType?: string; clientSalary?: string | number; agencySalary?: string | number };
+      passportRateMap.set(p.id, {
+        empType:     pp.employeeType ?? "casual",
+        clientRate:  Number(pp.clientSalary  || 0),
+        agencyRate:  Number(pp.agencySalary  || 0),
+      });
     }
+
     for (const sal of salaries) {
       if (sal.year !== selectedYear) continue;
+      // Only include salary records linked to payment_received invoices
+      const invId = (sal as unknown as { invoiceId?: number | null }).invoiceId;
+      if (invId != null && !paidInvoiceIds.has(invId)) continue;
       const bucket = arr.find((b) => b.monthNum === sal.month);
       if (!bucket) continue;
-      const empType = passportTypeMap.get(sal.passportId) ?? "casual";
+      const passport = passportRateMap.get(sal.passportId);
+      const empType  = passport?.empType ?? "casual";
+      const days     = Number((sal as unknown as { daysWorked?: number }).daysWorked || 0);
       if (empType === "casual") {
-        bucket.margin += Number(sal.clientSalary || 0) - Number(sal.netSalary || 0);
+        // profit = (client billing rate − employee agreed rate) × days worked / 30
+        const clientRate = passport?.clientRate ?? 0;
+        const agencyRate = passport?.agencyRate ?? 0;
+        bucket.margin += (clientRate - agencyRate) * days / 30;
       } else {
+        // recruitment / org_employed: employee cost is borne by client company, full billing is profit
         bucket.margin += Number(sal.clientSalary || 0);
       }
     }

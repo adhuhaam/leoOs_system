@@ -198,11 +198,13 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
       db
         .select({
           invoiceId: salaryRecordsTable.invoiceId,
-          // Casual: cost = agreed employee rate (agencySalary on passport)
+          // Casual: cost = agreed employee rate prorated by days worked
+          //   formula: (agencySalary / 30) * daysWorked
           // Recruitment / Org.Employed: cost = 0 (full billing amount is profit)
           employeeCost: sql<string>`COALESCE(SUM(
             CASE WHEN ${passportsTable.employeeType} = 'casual'
                  THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+                      * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric / 30
                  ELSE 0
             END
           ), 0)::text`,
@@ -322,9 +324,12 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       .orderBy(billingItemsTable.position, billingItemsTable.id),
     db
       .select({
+        // Casual: cost = agencySalary prorated by days worked  (agencySalary/30 × daysWorked)
+        // Recruitment / Org.Employed: cost = 0
         employeeCost: sql<string>`COALESCE(SUM(
           CASE WHEN ${passportsTable.employeeType} = 'casual'
                THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+                    * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric / 30
                ELSE 0
           END
         ), 0)::text`,
