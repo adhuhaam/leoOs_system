@@ -6,14 +6,18 @@ import {
   getListBillingDocumentsQueryKey,
   useGetBillingDocument,
   useUpdateBillingDocument,
+  useDeleteBillingDocument,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -69,6 +73,9 @@ export default function BillingDetailScreen() {
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteMutation = useDeleteBillingDocument();
 
   const { data, isLoading, isError, error, refetch } = useGetBillingDocument(
     id,
@@ -98,6 +105,36 @@ export default function BillingDetailScreen() {
     const gst = sub * rate;
     return { sub, gst, total: sub + gst };
   }, [data]);
+
+  const handleDelete = () => {
+    if (!data) return;
+    const doc = data as BillingDocument;
+    Alert.alert(
+      `Delete ${doc.kind === "invoice" ? "Invoice" : "Quote"}`,
+      `Permanently delete ${doc.number}? Any imported salary records will be freed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setDeleting(true);
+            if (Platform.OS !== "web") void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            deleteMutation.mutate(
+              { id },
+              {
+                onSuccess: () => {
+                  queryClient.invalidateQueries({ queryKey: getListBillingDocumentsQueryKey() });
+                  router.back();
+                },
+                onError: () => setDeleting(false),
+              },
+            );
+          },
+        },
+      ],
+    );
+  };
 
   const handleStatusChange = (newStatus: string) => {
     setUpdatingStatus(true);
@@ -167,6 +204,11 @@ export default function BillingDetailScreen() {
                 </Pressable>
                 <Pressable onPress={() => router.push(`/billing/edit/${id}`)} hitSlop={10}>
                   <Feather name="edit-2" size={20} color={colors.primary} />
+                </Pressable>
+                <Pressable onPress={handleDelete} hitSlop={10} disabled={deleting}>
+                  {deleting
+                    ? <ActivityIndicator size="small" color="#DC2626" />
+                    : <Feather name="trash-2" size={20} color="#DC2626" />}
                 </Pressable>
               </View>
             ),
