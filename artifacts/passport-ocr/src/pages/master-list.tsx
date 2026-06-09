@@ -964,7 +964,7 @@ function EditCandidateDialog({
             <div className="grid grid-cols-3 gap-2">
               {([ 
                 { value: "casual",                label: "Casual",          detail: "Profit = billing − salary" },
-                { value: "recruitment",            label: "Recruitment",     detail: "Profit = billing − agent rate" },
+                { value: "recruitment",            label: "Recruitment",     detail: "Profit = agent amt − client rate" },
                 { value: "organization_employed",  label: "Org. Employed",   detail: "Profit = amount billed" },
               ] as { value: string; label: string; detail: string }[]).map((opt) => {
                 const active = form.employeeType === opt.value;
@@ -1004,17 +1004,17 @@ function EditCandidateDialog({
               )}
               {form.employeeType === "recruitment" && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Agent Fee (MVR, one-time)</Label>
+                  <Label className="text-xs">Agent Amount (MVR, one-time)</Label>
                   <Input
                     type="number" min="0" step="0.01" placeholder="0.00"
                     value={form.agentRate}
                     onChange={(e) => setForm({ ...form, agentRate: e.target.value })}
                   />
-                  <p className="text-[10px] text-muted-foreground">One-time fee paid to the recruiting agent</p>
+                  <p className="text-[10px] text-muted-foreground">One-time recruitment fee received from the client</p>
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs">{form.employeeType === "recruitment" ? "Recruitment Charge (MVR, one-time)" : "Client Billing Rate (MVR/day)"}</Label>
+                <Label className="text-xs">{form.employeeType === "recruitment" ? "Client Rate (MVR, one-time)" : "Client Billing Rate (MVR/day)"}</Label>
                 <Input
                   type="number" min="0" step="0.01" placeholder="0.00"
                   value={form.clientSalary}
@@ -1032,8 +1032,21 @@ function EditCandidateDialog({
                 cost = Number(form.agencySalary || 0);
                 label = "Daily margin (billing − salary)";
               } else if (form.employeeType === "recruitment") {
-                cost = Number(form.agentRate || 0);
-                label = "One-time profit (charge − agent fee)";
+                // profit = agentRate (agent amount received) − clientSalary (client rate paid out)
+                const agentAmount = Number(form.agentRate || 0);
+                cost = Number(form.agentRate || 0); // unused below — compute directly
+                label = "One-time profit (agent amount − client rate)";
+                const clientCost = Number(form.clientSalary || 0);
+                const recruitProfit = agentAmount - clientCost;
+                const recruitColor = recruitProfit > 0 ? "text-emerald-600" : recruitProfit < 0 ? "text-destructive" : "text-muted-foreground";
+                return (
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                    <span className="text-xs text-muted-foreground">{label}</span>
+                    <span className={`text-sm font-semibold tabular-nums font-mono ${recruitColor}`}>
+                      {recruitProfit >= 0 ? "+" : ""}{recruitProfit.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}&nbsp;MVR
+                    </span>
+                  </div>
+                );
               } else {
                 return null;
               }

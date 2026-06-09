@@ -199,14 +199,15 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
         .select({
           invoiceId: salaryRecordsTable.invoiceId,
           // Casual:      cost = agencySalary (daily rate) × daysWorked
-          // Recruitment: cost = agentRate (flat one-time fee — NOT multiplied by days)
-          // Org.Employed: cost = 0 (client bears employee cost; full billing is profit)
+          // Recruitment: cost = clientSalary (one-time client rate paid out)
+          //   profit = agentRate (agency fee charged) − clientSalary (one-time)
+          // Org.Employed: cost = 0 (full billing is profit)
           employeeCost: sql<string>`COALESCE(SUM(
             CASE WHEN ${passportsTable.employeeType} = 'casual'
                  THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
                       * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                  WHEN ${passportsTable.employeeType} = 'recruitment'
-                 THEN COALESCE(${passportsTable.agentRate}::numeric, 0)
+                 THEN COALESCE(${passportsTable.clientSalary}::numeric, 0)
                  ELSE 0
             END
           ), 0)::text`,
@@ -327,14 +328,15 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
     db
       .select({
         // Casual:      cost = agencySalary (daily rate) × daysWorked
-        // Recruitment: cost = agentRate (flat one-time fee — NOT multiplied by days)
+        // Recruitment: cost = clientSalary (one-time client rate paid out)
+        //   profit = agentRate (agency fee) − clientSalary
         // Org.Employed: cost = 0 (full billing is profit)
         employeeCost: sql<string>`COALESCE(SUM(
           CASE WHEN ${passportsTable.employeeType} = 'casual'
                THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
                     * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                WHEN ${passportsTable.employeeType} = 'recruitment'
-               THEN COALESCE(${passportsTable.agentRate}::numeric, 0)
+               THEN COALESCE(${passportsTable.clientSalary}::numeric, 0)
                ELSE 0
           END
         ), 0)::text`,

@@ -393,7 +393,7 @@ interface FormState {
 type EmployeeTypeOption = { value: string; label: string; detail: string };
 const EMPLOYEE_TYPES: EmployeeTypeOption[] = [
   { value: "casual",               label: "Casual",         detail: "Profit = billing − salary" },
-  { value: "recruitment",          label: "Recruitment",    detail: "Profit = billing − agent rate" },
+  { value: "recruitment",          label: "Recruitment",    detail: "Profit = agent amt − client rate" },
   { value: "organization_employed",label: "Org. Employed",  detail: "Profit = amount billed" },
 ];
 
@@ -841,10 +841,10 @@ export default function PassportDetailScreen() {
           </View>
         )}
 
-        {/* Recruitment: Agent Fee (one-time) */}
+        {/* Recruitment: Agent Amount (one-time revenue) */}
         {form.employeeType === "recruitment" && (
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENT FEE (MVR, one-time)</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENT AMOUNT (MVR, one-time)</Text>
             <TextInput
               value={form.agentRate}
               onChangeText={(v) => setField("agentRate", v)}
@@ -857,13 +857,13 @@ export default function PassportDetailScreen() {
                 { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
               ]}
             />
-            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>One-time fee paid to the recruiting agent — deducted from recruitment charge to calculate profit</Text>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>One-time recruitment fee received from the client — used as the revenue basis</Text>
           </View>
         )}
 
-        {/* Client billing rate */}
+        {/* Client billing rate / Client Rate (recruitment) */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{form.employeeType === "recruitment" ? "RECRUITMENT CHARGE (MVR, one-time)" : "CLIENT BILLING RATE (MVR / day)"}</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{form.employeeType === "recruitment" ? "CLIENT RATE (MVR, one-time)" : "CLIENT BILLING RATE (MVR / day)"}</Text>
           <TextInput
             value={form.clientSalary}
             onChangeText={(v) => setField("clientSalary", v)}
@@ -889,8 +889,20 @@ export default function PassportDetailScreen() {
             cost = Number(form.agencySalary || 0);
             label = "Daily margin (billing − salary)";
           } else if (form.employeeType === "recruitment") {
-            cost = Number(form.agentRate || 0);
-            label = "One-time profit (charge − agent fee)";
+            cost = Number(form.clientSalary || 0);
+            label = "One-time profit (agent amount − client rate)";
+            // For recruitment: profit = agentRate − clientSalary
+            const agentAmount = Number(form.agentRate || 0);
+            const margin2 = agentAmount - cost;
+            const mc2 = margin2 > 0 ? "#059669" : margin2 < 0 ? "#DC2626" : colors.mutedForeground;
+            return (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.card, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 4 }}>
+                <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{label}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: mc2 }}>
+                  {margin2 >= 0 ? "+" : ""}{margin2.toFixed(2)} MVR
+                </Text>
+              </View>
+            );
           } else {
             return null;
           }
