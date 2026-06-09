@@ -91,23 +91,6 @@ export const LoginResponse = zod.object({
 });
 
 /**
- * @summary Sign in or register with a Google ID token
- */
-
-export const GoogleAuthBody = zod.object({
-  idToken: zod
-    .string()
-    .min(1)
-    .describe(
-      "Google ID token obtained from the client-side Google Sign-In flow.",
-    ),
-});
-
-export const GoogleAuthResponse = zod.object({
-  token: zod.string(),
-});
-
-/**
  * @summary Update the application password
  */
 
@@ -335,22 +318,6 @@ export const UpdateSystemSettingsBody = zod.object({
     .describe(
       "Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.",
     ),
-  googleClientId: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth Web client ID for backend token verification."),
-  googleClientSecret: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth Web client secret."),
-  googleClientIdIos: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth iOS client ID (bundle-specific)."),
-  googleClientIdAndroid: zod
-    .string()
-    .nullish()
-    .describe("Google OAuth Android client ID."),
 });
 
 export const updateSystemSettingsResponseAccentHueMin = 0;
@@ -382,15 +349,6 @@ export const UpdateSystemSettingsResponse = zod.object({
     .describe(
       "True if a user-supplied OpenAI API key is stored in the database.",
     ),
-});
-
-/**
- * @summary Get public Google OAuth client IDs (no auth required — used by mobile login screen)
- */
-export const GetGoogleClientIdsResponse = zod.object({
-  googleClientId: zod.string().nullish().describe("Web client ID."),
-  googleClientIdIos: zod.string().nullish().describe("iOS client ID."),
-  googleClientIdAndroid: zod.string().nullish().describe("Android client ID."),
 });
 
 /**

@@ -180,37 +180,6 @@ paths:
         "204":
           description: Logged out
 
-  /auth/google:
-    post:
-      operationId: googleAuth
-      tags: [auth]
-      summary: Sign in or register with a Google ID token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GoogleAuthInput"
-      responses:
-        "200":
-          description: Signed in — body contains the session token for mobile Bearer auth
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [token]
-                properties:
-                  token:
-                    type: string
-        "202":
-          description: Account created, pending approval
-        "400":
-          description: Google Sign-In not configured
-        "401":
-          description: Invalid Google token
-        "403":
-          description: Account blocked or pending approval
-
   /auth/change-password:
     post:
       operationId: changePassword
@@ -421,19 +390,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SystemSettings"
-
-  /settings/google-client-ids:
-    get:
-      operationId: getGoogleClientIds
-      tags: [system]
-      summary: Get public Google OAuth client IDs (no auth required — used by mobile login screen)
-      responses:
-        "200":
-          description: Google client IDs (null when not configured)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GoogleClientIds"
 
   /passports:
     get:
@@ -1721,48 +1677,6 @@ components:
           type: string
           nullable: true
           description: Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations.
-        googleClientId:
-          type: string
-          nullable: true
-          description: Google OAuth Web client ID for backend token verification.
-        googleClientSecret:
-          type: string
-          nullable: true
-          description: Google OAuth Web client secret.
-        googleClientIdIos:
-          type: string
-          nullable: true
-          description: Google OAuth iOS client ID (bundle-specific).
-        googleClientIdAndroid:
-          type: string
-          nullable: true
-          description: Google OAuth Android client ID.
-
-    GoogleAuthInput:
-      type: object
-      required: [idToken]
-      properties:
-        idToken:
-          type: string
-          minLength: 1
-          description: Google ID token obtained from the client-side Google Sign-In flow.
-
-    GoogleClientIds:
-      type: object
-      properties:
-        googleClientId:
-          type: string
-          nullable: true
-          description: Web client ID.
-        googleClientIdIos:
-          type: string
-          nullable: true
-          description: iOS client ID.
-        googleClientIdAndroid:
-          type: string
-          nullable: true
-          description: Android client ID.
-
     LoaOption:
       type: object
       required: [id, companyId, category, value, createdAt]

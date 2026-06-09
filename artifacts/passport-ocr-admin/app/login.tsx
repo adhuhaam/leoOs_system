@@ -221,12 +221,4 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 14, },
   footerLink: { fontSize: 14, },
 
-  googleWrap: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8, marginBottom: 4 },
-  divider: { flex: 1, height: 1 },
-  dividerText: { fontSize: 12 },
-  googleBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
-    paddingVertical: 14, borderRadius: 14, borderWidth: 1, marginTop: 4,
-  },
-  googleBtnText: { fontSize: 16, fontWeight: "600" },
 });

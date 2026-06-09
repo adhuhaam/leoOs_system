@@ -145,31 +145,6 @@ export interface SystemSettingsInput {
   logoImage?: string | null;
   /** Set to a valid OpenAI API key to use your own account; null to clear and fall back to Replit AI Integrations. */
   openaiApiKey?: string | null;
-  /** Google OAuth Web client ID for backend token verification. */
-  googleClientId?: string | null;
-  /** Google OAuth Web client secret. */
-  googleClientSecret?: string | null;
-  /** Google OAuth iOS client ID (bundle-specific). */
-  googleClientIdIos?: string | null;
-  /** Google OAuth Android client ID. */
-  googleClientIdAndroid?: string | null;
-}
-
-export interface GoogleAuthInput {
-  /**
-   * Google ID token obtained from the client-side Google Sign-In flow.
-   * @minLength 1
-   */
-  idToken: string;
-}
-
-export interface GoogleClientIds {
-  /** Web client ID. */
-  googleClientId?: string | null;
-  /** iOS client ID. */
-  googleClientIdIos?: string | null;
-  /** Android client ID. */
-  googleClientIdAndroid?: string | null;
 }
 
 export type LoaOptionCategory =
@@ -1061,10 +1036,6 @@ export type GetAuthStatus200 = {
 };
 
 export type Login200 = {
-  token: string;
-};
-
-export type GoogleAuth200 = {
   token: string;
 };
 

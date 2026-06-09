@@ -21,7 +21,6 @@ export const usersTable = pgTable("users", {
   isApproved: boolean("is_approved").notNull().default(false),
   isBlocked: boolean("is_blocked").notNull().default(false),
   passwordHash: text("password_hash"),
-  googleId: text("google_id").unique(),
   linkedEntityId: text("linked_entity_id"),
   phone: text("phone"),
   designation: text("designation"),

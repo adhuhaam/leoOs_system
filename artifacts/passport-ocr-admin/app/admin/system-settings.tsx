@@ -33,10 +33,6 @@ type Draft = {
   companyWebsite: string;
   companyRegistrationNumber: string;
   openaiApiKey: string;
-  googleClientId: string;
-  googleClientSecret: string;
-  googleClientIdIos: string;
-  googleClientIdAndroid: string;
 };
 
 const EMPTY: Draft = {
@@ -48,10 +44,6 @@ const EMPTY: Draft = {
   companyWebsite: "",
   companyRegistrationNumber: "",
   openaiApiKey: "",
-  googleClientId: "",
-  googleClientSecret: "",
-  googleClientIdIos: "",
-  googleClientIdAndroid: "",
 };
 
 export default function SystemSettingsScreen() {
@@ -86,12 +78,6 @@ export default function SystemSettingsScreen() {
       companyRegistrationNumber?: string | null;
       hasOpenAiApiKey?: boolean;
     };
-    const gs = data as {
-      googleClientId?: string | null;
-      googleClientSecret?: string | null;
-      googleClientIdIos?: string | null;
-      googleClientIdAndroid?: string | null;
-    };
     setDraft({
       appName: s.appName ?? "",
       companyName: s.companyName ?? "",
@@ -101,10 +87,6 @@ export default function SystemSettingsScreen() {
       companyWebsite: s.companyWebsite ?? "",
       companyRegistrationNumber: s.companyRegistrationNumber ?? "",
       openaiApiKey: "",
-      googleClientId: gs.googleClientId ?? "",
-      googleClientSecret: gs.googleClientSecret ?? "",
-      googleClientIdIos: gs.googleClientIdIos ?? "",
-      googleClientIdAndroid: gs.googleClientIdAndroid ?? "",
     });
     setDirty(false);
   }, [data]);
@@ -131,10 +113,6 @@ export default function SystemSettingsScreen() {
       if (draft.openaiApiKey.trim()) {
         patch.openaiApiKey = draft.openaiApiKey.trim();
       }
-      patch.googleClientId = draft.googleClientId.trim() || null;
-      patch.googleClientSecret = draft.googleClientSecret.trim() || null;
-      patch.googleClientIdIos = draft.googleClientIdIos.trim() || null;
-      patch.googleClientIdAndroid = draft.googleClientIdAndroid.trim() || null;
       await updateMutation.mutateAsync({ data: patch });
       await qc.invalidateQueries({ queryKey: getGetSystemSettingsQueryKey() });
       setDirty(false);
@@ -277,42 +255,6 @@ export default function SystemSettingsScreen() {
                     ? "••••••••••••  (set — enter new key to replace)"
                     : "sk-... (optional, overrides built-in AI)"
                 }
-                autoCapitalize="none"
-                colors={colors}
-                last
-              />
-            </Section>
-
-            <Section label="GOOGLE SIGN-IN" colors={colors}>
-              <Field
-                label="Web Client ID"
-                value={draft.googleClientId}
-                onChangeText={set("googleClientId")}
-                placeholder="xxxxxxxxxx-xxx.apps.googleusercontent.com"
-                autoCapitalize="none"
-                colors={colors}
-              />
-              <Field
-                label="Client Secret"
-                value={draft.googleClientSecret}
-                onChangeText={set("googleClientSecret")}
-                placeholder="GOCSPX-xxxxxxxx"
-                autoCapitalize="none"
-                colors={colors}
-              />
-              <Field
-                label="iOS Client ID"
-                value={draft.googleClientIdIos}
-                onChangeText={set("googleClientIdIos")}
-                placeholder="xxxxxxxxxx-xxx.apps.googleusercontent.com"
-                autoCapitalize="none"
-                colors={colors}
-              />
-              <Field
-                label="Android Client ID"
-                value={draft.googleClientIdAndroid}
-                onChangeText={set("googleClientIdAndroid")}
-                placeholder="xxxxxxxxxx-xxx.apps.googleusercontent.com"
                 autoCapitalize="none"
                 colors={colors}
                 last
