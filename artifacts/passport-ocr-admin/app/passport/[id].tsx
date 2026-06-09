@@ -841,10 +841,10 @@ export default function PassportDetailScreen() {
           </View>
         )}
 
-        {/* Recruitment: Agent Rate */}
+        {/* Recruitment: Agent Fee (one-time) */}
         {form.employeeType === "recruitment" && (
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENT RATE (MVR / day)</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENT FEE (MVR, one-time)</Text>
             <TextInput
               value={form.agentRate}
               onChangeText={(v) => setField("agentRate", v)}
@@ -857,13 +857,13 @@ export default function PassportDetailScreen() {
                 { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
               ]}
             />
-            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>Daily rate paid to the recruiting agent — deducted from billing to calculate profit</Text>
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>One-time fee paid to the recruiting agent — deducted from recruitment charge to calculate profit</Text>
           </View>
         )}
 
         {/* Client billing rate */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR / day)</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{form.employeeType === "recruitment" ? "RECRUITMENT CHARGE (MVR, one-time)" : "CLIENT BILLING RATE (MVR / day)"}</Text>
           <TextInput
             value={form.clientSalary}
             onChangeText={(v) => setField("clientSalary", v)}
@@ -890,7 +890,7 @@ export default function PassportDetailScreen() {
             label = "Daily margin (billing − salary)";
           } else if (form.employeeType === "recruitment") {
             cost = Number(form.agentRate || 0);
-            label = "Daily margin (billing − agent rate)";
+            label = "One-time profit (charge − agent fee)";
           } else {
             return null;
           }

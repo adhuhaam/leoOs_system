@@ -1292,9 +1292,9 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
         const agencyRate = passport?.agencyRate ?? 0;
         bucket.margin += (clientRate - agencyRate) * days;
       } else if (empType === "recruitment") {
-        // profit = billing - agent rate × days
+        // one-time profit = recruitment charge − agent fee (NOT multiplied by days)
         const agentRate = passport?.agentRate ?? 0;
-        bucket.margin += (passport?.clientRate ?? 0) * days - agentRate * days;
+        bucket.margin += (passport?.clientRate ?? 0) - agentRate;
       } else {
         // org_employed: employee cost borne by client company — full billing is profit
         bucket.margin += Number(sal.clientSalary || 0);

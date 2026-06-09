@@ -1004,17 +1004,17 @@ function EditCandidateDialog({
               )}
               {form.employeeType === "recruitment" && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Agent Rate (MVR/day)</Label>
+                  <Label className="text-xs">Agent Fee (MVR, one-time)</Label>
                   <Input
                     type="number" min="0" step="0.01" placeholder="0.00"
                     value={form.agentRate}
                     onChange={(e) => setForm({ ...form, agentRate: e.target.value })}
                   />
-                  <p className="text-[10px] text-muted-foreground">Daily rate paid to the recruiting agent</p>
+                  <p className="text-[10px] text-muted-foreground">One-time fee paid to the recruiting agent</p>
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs">Client Billing Rate (MVR/day)</Label>
+                <Label className="text-xs">{form.employeeType === "recruitment" ? "Recruitment Charge (MVR, one-time)" : "Client Billing Rate (MVR/day)"}</Label>
                 <Input
                   type="number" min="0" step="0.01" placeholder="0.00"
                   value={form.clientSalary}
@@ -1033,7 +1033,7 @@ function EditCandidateDialog({
                 label = "Daily margin (billing − salary)";
               } else if (form.employeeType === "recruitment") {
                 cost = Number(form.agentRate || 0);
-                label = "Daily margin (billing − agent rate)";
+                label = "One-time profit (charge − agent fee)";
               } else {
                 return null;
               }
