@@ -561,6 +561,14 @@ router.patch("/billing/documents/:id", requireRole("superuser", "admin"), async 
           .limit(1);
         if (existing.length === 0) throw new Error("not_found");
       }
+      // When voiding a document, release linked salary records so they can be
+      // added to a new invoice.
+      if (patch.status === "voided") {
+        await tx
+          .update(salaryRecordsTable)
+          .set({ invoiceId: null })
+          .where(eq(salaryRecordsTable.invoiceId, id));
+      }
       if (normalizedItems) {
         await tx.delete(billingItemsTable).where(eq(billingItemsTable.documentId, id));
         await tx
@@ -585,15 +593,29 @@ router.delete("/billing/documents/:id", requireRole("superuser", "admin"), async
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const deleted = await db
-    .delete(billingDocumentsTable)
-    .where(eq(billingDocumentsTable.id, parsed.data.id))
-    .returning({ id: billingDocumentsTable.id });
-  if (deleted.length === 0) {
-    res.status(404).json({ error: "Document not found" });
+  const { id } = parsed.data;
+  await db.transaction(async (tx) => {
+    // Release any salary records that were linked to this invoice so they can
+    // be added to a new invoice.
+    await tx
+      .update(salaryRecordsTable)
+      .set({ invoiceId: null })
+      .where(eq(salaryRecordsTable.invoiceId, id));
+
+    const deleted = await tx
+      .delete(billingDocumentsTable)
+      .where(eq(billingDocumentsTable.id, id))
+      .returning({ id: billingDocumentsTable.id });
+    if (deleted.length === 0) throw new Error("not_found");
+  }).catch((err) => {
+    if ((err as Error).message === "not_found") {
+      res.status(404).json({ error: "Document not found" });
+    } else {
+      throw err;
+    }
     return;
-  }
-  res.status(204).end();
+  });
+  if (!res.headersSent) res.status(204).end();
 });
 
 export default router;
