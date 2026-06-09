@@ -7,7 +7,7 @@
  */
 
 /**
- * How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed
+ * How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing
  */
 export type PassportEmployeeType =
   (typeof PassportEmployeeType)[keyof typeof PassportEmployeeType];

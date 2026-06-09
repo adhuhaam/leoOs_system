@@ -2017,14 +2017,17 @@ components:
           type: ["string", "null"]
         agencySalary:
           type: ["string", "null"]
-          description: "Monthly salary agreed with the employee in MVR (stored as numeric string)"
+          description: "Daily salary agreed with the employee in MVR (stored as numeric string)"
         clientSalary:
           type: ["string", "null"]
-          description: "Monthly billing rate agreed with the client in MVR (stored as numeric string)"
+          description: "Daily billing rate agreed with the client in MVR (stored as numeric string)"
+        agentRate:
+          type: ["string", "null"]
+          description: "Daily rate paid to the recruiting agent (recruitment type only) in MVR"
         employeeType:
           type: string
           enum: [casual, recruitment, organization_employed]
-          description: "How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed"
+          description: "How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing"
         createdAt:
           type: string
         updatedAt:
@@ -2072,10 +2075,13 @@ components:
           type: ["string", "null"]
         agencySalary:
           type: ["string", "null"]
-          description: "Monthly salary agreed with the employee in MVR"
+          description: "Daily salary agreed with the employee in MVR"
         clientSalary:
           type: ["string", "null"]
-          description: "Monthly billing rate agreed with the client in MVR"
+          description: "Daily billing rate agreed with the client in MVR"
+        agentRate:
+          type: ["string", "null"]
+          description: "Daily rate paid to the recruiting agent (recruitment type only) in MVR"
         employeeType:
           type: string
           enum: [casual, recruitment, organization_employed]

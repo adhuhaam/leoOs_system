@@ -1264,13 +1264,14 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
 
     // Build passport map: id → { employeeType, clientSalary (monthly billing rate),
     //                             agencySalary (monthly cost rate agreed with employee) }
-    const passportRateMap = new Map<number, { empType: string; clientRate: number; agencyRate: number }>();
+    const passportRateMap = new Map<number, { empType: string; clientRate: number; agencyRate: number; agentRate: number }>();
     for (const p of passports) {
       const pp = p as unknown as { employeeType?: string; clientSalary?: string | number; agencySalary?: string | number };
       passportRateMap.set(p.id, {
         empType:     pp.employeeType ?? "casual",
         clientRate:  Number(pp.clientSalary  || 0),
         agencyRate:  Number(pp.agencySalary  || 0),
+        agentRate:   Number((pp as unknown as { agentRate?: string }).agentRate || 0),
       });
     }
 
@@ -1290,8 +1291,12 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
         const clientRate = passport?.clientRate ?? 0;
         const agencyRate = passport?.agencyRate ?? 0;
         bucket.margin += (clientRate - agencyRate) * days;
+      } else if (empType === "recruitment") {
+        // profit = billing - agent rate × days
+        const agentRate = passport?.agentRate ?? 0;
+        bucket.margin += (passport?.clientRate ?? 0) * days - agentRate * days;
       } else {
-        // recruitment / org_employed: employee cost is borne by client company, full billing is profit
+        // org_employed: employee cost borne by client company — full billing is profit
         bucket.margin += Number(sal.clientSalary || 0);
       }
     }

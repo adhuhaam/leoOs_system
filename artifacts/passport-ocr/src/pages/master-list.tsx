@@ -669,6 +669,7 @@ function EditCandidateDialog({
     workSite: "",
     agencySalary: passport.agencySalary ?? "",
     clientSalary: passport.clientSalary ?? "",
+    agentRate: (passport as unknown as { agentRate?: string }).agentRate ?? "",
     employeeType: (passport.employeeType as string) ?? "casual",
   });
 
@@ -694,7 +695,7 @@ function EditCandidateDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, agencySalary, clientSalary, employeeType, ...rest } = form;
+    const { companyId, clientId, jobTitle, workType, workSite, workPermitNumber, agent, agencySalary, clientSalary, agentRate, employeeType, ...rest } = form;
 
     updateMutation.mutate(
       {
@@ -707,6 +708,7 @@ function EditCandidateDialog({
           agent: agent.trim() || null,
           agencySalary: agencySalary.trim() || null,
           clientSalary: clientSalary.trim() || null,
+          agentRate: agentRate.trim() || null,
           employeeType: employeeType as "casual" | "recruitment" | "organization_employed",
         },
       },
@@ -962,7 +964,7 @@ function EditCandidateDialog({
             <div className="grid grid-cols-3 gap-2">
               {([ 
                 { value: "casual",                label: "Casual",          detail: "Profit = billing − salary" },
-                { value: "recruitment",            label: "Recruitment",     detail: "Profit = amount billed" },
+                { value: "recruitment",            label: "Recruitment",     detail: "Profit = billing − agent rate" },
                 { value: "organization_employed",  label: "Org. Employed",   detail: "Profit = amount billed" },
               ] as { value: string; label: string; detail: string }[]).map((opt) => {
                 const active = form.employeeType === opt.value;
@@ -989,17 +991,30 @@ function EditCandidateDialog({
           <div className="space-y-3 border-t pt-4">
             <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Salary Rates</p>
             <div className="grid grid-cols-2 gap-4">
+              {form.employeeType !== "recruitment" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Employee Salary (MVR/day)</Label>
+                  <Input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={form.agencySalary}
+                    onChange={(e) => setForm({ ...form, agencySalary: e.target.value })}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Daily rate paid to the employee</p>
+                </div>
+              )}
+              {form.employeeType === "recruitment" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Agent Rate (MVR/day)</Label>
+                  <Input
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={form.agentRate}
+                    onChange={(e) => setForm({ ...form, agentRate: e.target.value })}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Daily rate paid to the recruiting agent</p>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-xs">Employee Salary (MVR/month)</Label>
-                <Input
-                  type="number" min="0" step="0.01" placeholder="0.00"
-                  value={form.agencySalary}
-                  onChange={(e) => setForm({ ...form, agencySalary: e.target.value })}
-                />
-                <p className="text-[10px] text-muted-foreground">What you pay the employee</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Client Billing Rate (MVR/month)</Label>
+                <Label className="text-xs">Client Billing Rate (MVR/day)</Label>
                 <Input
                   type="number" min="0" step="0.01" placeholder="0.00"
                   value={form.clientSalary}
@@ -1008,12 +1023,25 @@ function EditCandidateDialog({
                 <p className="text-[10px] text-muted-foreground">What you charge the client</p>
               </div>
             </div>
-            {(Number(form.agencySalary || 0) > 0 || Number(form.clientSalary || 0) > 0) && (() => {
-              const margin = Number(form.clientSalary || 0) - Number(form.agencySalary || 0);
+            {(() => {
+              const clientRate = Number(form.clientSalary || 0);
+              if (clientRate <= 0) return null;
+              let cost = 0;
+              let label = "";
+              if (form.employeeType === "casual") {
+                cost = Number(form.agencySalary || 0);
+                label = "Daily margin (billing − salary)";
+              } else if (form.employeeType === "recruitment") {
+                cost = Number(form.agentRate || 0);
+                label = "Daily margin (billing − agent rate)";
+              } else {
+                return null;
+              }
+              const margin = clientRate - cost;
               const color = margin > 0 ? "text-emerald-600" : margin < 0 ? "text-destructive" : "text-muted-foreground";
               return (
                 <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
-                  <span className="text-xs text-muted-foreground">Monthly margin (billing − salary)</span>
+                  <span className="text-xs text-muted-foreground">{label}</span>
                   <span className={`text-sm font-semibold tabular-nums font-mono ${color}`}>
                     {margin >= 0 ? "+" : ""}{margin.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}&nbsp;MVR
                   </span>

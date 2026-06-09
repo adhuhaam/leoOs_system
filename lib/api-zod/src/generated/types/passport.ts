@@ -59,16 +59,21 @@ export interface Passport {
   /** @nullable */
   agent?: string | null;
   /**
-   * Monthly salary agreed with the employee in MVR (stored as numeric string)
+   * Daily salary agreed with the employee in MVR (stored as numeric string)
    * @nullable
    */
   agencySalary?: string | null;
   /**
-   * Monthly billing rate agreed with the client in MVR (stored as numeric string)
+   * Daily billing rate agreed with the client in MVR (stored as numeric string)
    * @nullable
    */
   clientSalary?: string | null;
-  /** How this employee's profit is calculated. casual=margin; recruitment/organization_employed=invoice amount billed */
+  /**
+   * Daily rate paid to the recruiting agent (recruitment type only) in MVR
+   * @nullable
+   */
+  agentRate?: string | null;
+  /** How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing */
   employeeType?: PassportEmployeeType;
   createdAt: string;
   updatedAt: string;

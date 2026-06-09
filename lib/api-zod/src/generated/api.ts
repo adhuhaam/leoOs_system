@@ -468,19 +468,25 @@ export const ListPassportsResponseItem = zod.object({
     .string()
     .nullish()
     .describe(
-      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+      "Daily salary agreed with the employee in MVR (stored as numeric string)",
     ),
   clientSalary: zod
     .string()
     .nullish()
     .describe(
-      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+      "Daily billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
+  agentRate: zod
+    .string()
+    .nullish()
+    .describe(
+      "Daily rate paid to the recruiting agent (recruitment type only) in MVR",
     ),
   employeeType: zod
     .enum(["casual", "recruitment", "organization_employed"])
     .optional()
     .describe(
-      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+      "How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing",
     ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -567,19 +573,25 @@ export const GetPassportStatsResponse = zod.object({
         .string()
         .nullish()
         .describe(
-          "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+          "Daily salary agreed with the employee in MVR (stored as numeric string)",
         ),
       clientSalary: zod
         .string()
         .nullish()
         .describe(
-          "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+          "Daily billing rate agreed with the client in MVR (stored as numeric string)",
+        ),
+      agentRate: zod
+        .string()
+        .nullish()
+        .describe(
+          "Daily rate paid to the recruiting agent (recruitment type only) in MVR",
         ),
       employeeType: zod
         .enum(["casual", "recruitment", "organization_employed"])
         .optional()
         .describe(
-          "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+          "How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing",
         ),
       createdAt: zod.string(),
       updatedAt: zod.string(),
@@ -648,19 +660,25 @@ export const GetPassportResponse = zod.object({
     .string()
     .nullish()
     .describe(
-      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+      "Daily salary agreed with the employee in MVR (stored as numeric string)",
     ),
   clientSalary: zod
     .string()
     .nullish()
     .describe(
-      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+      "Daily billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
+  agentRate: zod
+    .string()
+    .nullish()
+    .describe(
+      "Daily rate paid to the recruiting agent (recruitment type only) in MVR",
     ),
   employeeType: zod
     .enum(["casual", "recruitment", "organization_employed"])
     .optional()
     .describe(
-      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+      "How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing",
     ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -690,11 +708,17 @@ export const UpdatePassportBody = zod.object({
   agencySalary: zod
     .string()
     .nullish()
-    .describe("Monthly salary agreed with the employee in MVR"),
+    .describe("Daily salary agreed with the employee in MVR"),
   clientSalary: zod
     .string()
     .nullish()
-    .describe("Monthly billing rate agreed with the client in MVR"),
+    .describe("Daily billing rate agreed with the client in MVR"),
+  agentRate: zod
+    .string()
+    .nullish()
+    .describe(
+      "Daily rate paid to the recruiting agent (recruitment type only) in MVR",
+    ),
   employeeType: zod
     .enum(["casual", "recruitment", "organization_employed"])
     .optional(),
@@ -754,19 +778,25 @@ export const UpdatePassportResponse = zod.object({
     .string()
     .nullish()
     .describe(
-      "Monthly salary agreed with the employee in MVR (stored as numeric string)",
+      "Daily salary agreed with the employee in MVR (stored as numeric string)",
     ),
   clientSalary: zod
     .string()
     .nullish()
     .describe(
-      "Monthly billing rate agreed with the client in MVR (stored as numeric string)",
+      "Daily billing rate agreed with the client in MVR (stored as numeric string)",
+    ),
+  agentRate: zod
+    .string()
+    .nullish()
+    .describe(
+      "Daily rate paid to the recruiting agent (recruitment type only) in MVR",
     ),
   employeeType: zod
     .enum(["casual", "recruitment", "organization_employed"])
     .optional()
     .describe(
-      "How this employee's profit is calculated. casual=margin; recruitment\/organization_employed=invoice amount billed",
+      "How this employee's profit is calculated. casual=billing−salary; recruitment=billing−agentRate; organization_employed=billing",
     ),
   createdAt: zod.string(),
   updatedAt: zod.string(),

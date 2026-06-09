@@ -386,13 +386,14 @@ interface FormState {
   agent: string;
   agencySalary: string;
   clientSalary: string;
+  agentRate: string;
   employeeType: string;
 }
 
 type EmployeeTypeOption = { value: string; label: string; detail: string };
 const EMPLOYEE_TYPES: EmployeeTypeOption[] = [
   { value: "casual",               label: "Casual",         detail: "Profit = billing − salary" },
-  { value: "recruitment",          label: "Recruitment",    detail: "Profit = amount billed" },
+  { value: "recruitment",          label: "Recruitment",    detail: "Profit = billing − agent rate" },
   { value: "organization_employed",label: "Org. Employed",  detail: "Profit = amount billed" },
 ];
 
@@ -412,6 +413,7 @@ function toForm(p: Passport): FormState {
     agent:           p.agent ?? "",
     agencySalary:    p.agencySalary ?? "",
     clientSalary:    p.clientSalary ?? "",
+    agentRate:       (p as unknown as { agentRate?: string }).agentRate ?? "",
     employeeType:    (p as unknown as { employeeType?: string }).employeeType ?? "casual",
   };
 }
@@ -420,7 +422,7 @@ const EMPTY_FORM: FormState = {
   fullName: "", passportNumber: "", dateOfBirth: "", dateOfIssue: "",
   dateOfExpiry: "", nationality: "", address: "", status: "processing",
   companyId: null, clientId: null, workPermitNumber: "", agent: "", agencySalary: "", clientSalary: "",
-  employeeType: "casual",
+  agentRate: "", employeeType: "casual",
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -518,6 +520,7 @@ export default function PassportDetailScreen() {
           agent:           form.agent || null,
           agencySalary:    form.agencySalary || null,
           clientSalary:    form.clientSalary || null,
+          agentRate:       form.agentRate || null,
           employeeType:    (form.employeeType || "casual") as "casual" | "recruitment" | "organization_employed",
         },
       });
@@ -819,26 +822,48 @@ export default function PassportDetailScreen() {
           </View>
         </View>
 
-        {/* Agency salary */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE SALARY (MVR / month)</Text>
-          <TextInput
-            value={form.agencySalary}
-            onChangeText={(v) => setField("agencySalary", v)}
-            placeholder="0.00"
-            placeholderTextColor={colors.mutedForeground}
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            style={[
-              styles.input,
-              { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
-            ]}
-          />
-        </View>
+        {/* Casual: Agency salary */}
+        {form.employeeType !== "recruitment" && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>EMPLOYEE SALARY (MVR / day)</Text>
+            <TextInput
+              value={form.agencySalary}
+              onChangeText={(v) => setField("agencySalary", v)}
+              placeholder="0.00"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              style={[
+                styles.input,
+                { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
+              ]}
+            />
+          </View>
+        )}
+
+        {/* Recruitment: Agent Rate */}
+        {form.employeeType === "recruitment" && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>AGENT RATE (MVR / day)</Text>
+            <TextInput
+              value={form.agentRate}
+              onChangeText={(v) => setField("agentRate", v)}
+              placeholder="0.00"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              style={[
+                styles.input,
+                { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border, minHeight: 48 },
+              ]}
+            />
+            <Text style={{ fontSize: 10, color: colors.mutedForeground, marginTop: 3 }}>Daily rate paid to the recruiting agent — deducted from billing to calculate profit</Text>
+          </View>
+        )}
 
         {/* Client billing rate */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR / month)</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CLIENT BILLING RATE (MVR / day)</Text>
           <TextInput
             value={form.clientSalary}
             onChangeText={(v) => setField("clientSalary", v)}
@@ -855,12 +880,25 @@ export default function PassportDetailScreen() {
         </View>
 
         {/* Margin hint */}
-        {(Number(form.agencySalary || 0) > 0 || Number(form.clientSalary || 0) > 0) && (() => {
-          const margin = Number(form.clientSalary || 0) - Number(form.agencySalary || 0);
+        {(() => {
+          const clientRate = Number(form.clientSalary || 0);
+          if (clientRate <= 0) return null;
+          let cost = 0;
+          let label = "";
+          if (form.employeeType === "casual") {
+            cost = Number(form.agencySalary || 0);
+            label = "Daily margin (billing − salary)";
+          } else if (form.employeeType === "recruitment") {
+            cost = Number(form.agentRate || 0);
+            label = "Daily margin (billing − agent rate)";
+          } else {
+            return null;
+          }
+          const margin = clientRate - cost;
           const mc = margin > 0 ? "#059669" : margin < 0 ? "#DC2626" : colors.mutedForeground;
           return (
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.card, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 4 }}>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>Monthly margin (billing − salary)</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{label}</Text>
               <Text style={{ fontSize: 14, fontWeight: "700", color: mc }}>
                 {margin >= 0 ? "+" : ""}{margin.toFixed(2)} MVR
               </Text>

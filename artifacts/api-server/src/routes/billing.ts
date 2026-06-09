@@ -198,12 +198,15 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
       db
         .select({
           invoiceId: salaryRecordsTable.invoiceId,
-          // Casual: cost = agencySalary (daily rate) × daysWorked
-          //   agencySalary is stored as a per-day rate on the passport
-          // Recruitment / Org.Employed: cost = 0 (full billing is profit)
+          // Casual:      cost = agencySalary (daily rate) × daysWorked
+          // Recruitment: cost = agentRate (daily rate) × daysWorked
+          // Org.Employed: cost = 0 (client bears employee cost; full billing is profit)
           employeeCost: sql<string>`COALESCE(SUM(
             CASE WHEN ${passportsTable.employeeType} = 'casual'
                  THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+                      * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
+                 WHEN ${passportsTable.employeeType} = 'recruitment'
+                 THEN COALESCE(${passportsTable.agentRate}::numeric, 0)
                       * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                  ELSE 0
             END
@@ -324,11 +327,15 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       .orderBy(billingItemsTable.position, billingItemsTable.id),
     db
       .select({
-        // Casual: cost = agencySalary (daily rate) × daysWorked
-        // Recruitment / Org.Employed: cost = 0
+        // Casual:      cost = agencySalary (daily rate) × daysWorked
+        // Recruitment: cost = agentRate (daily rate) × daysWorked
+        // Org.Employed: cost = 0 (full billing is profit)
         employeeCost: sql<string>`COALESCE(SUM(
           CASE WHEN ${passportsTable.employeeType} = 'casual'
                THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
+                    * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
+               WHEN ${passportsTable.employeeType} = 'recruitment'
+               THEN COALESCE(${passportsTable.agentRate}::numeric, 0)
                     * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                ELSE 0
           END
