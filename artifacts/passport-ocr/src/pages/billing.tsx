@@ -20,7 +20,7 @@ import {
   getListBillingDocumentsQueryKey,
   getGetBillingDocumentQueryKey,
   getListSalaryRecordsQueryKey,
-  getListPassportsQueryKey,
+
   getListExpensesQueryKey,
 } from "@workspace/api-client-react";
 import type {
@@ -106,7 +106,7 @@ import {
   TrendingDown,
   DollarSign,
   Users,
-  UserPlus,
+
   Printer,
   Ban,
 } from "lucide-react";
@@ -773,7 +773,6 @@ function DocumentFormDialog({
 
   const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
   const [salaryPickerOpen, setSalaryPickerOpen] = useState(false);
-  const [recruitmentPickerOpen, setRecruitmentPickerOpen] = useState(false);
 
   const addEmployeeItems = (
     newItems: { description: string; detail: string; qty: string; rate: string }[],
@@ -941,16 +940,6 @@ function DocumentFormDialog({
                     <Users className="h-3.5 w-3.5 mr-1" /> Add Casual
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRecruitmentPickerOpen(true)}
-                  data-testid="button-add-recruitment"
-                  className="text-violet-600 border-violet-200 hover:bg-violet-50 hover:text-violet-700"
-                >
-                  <UserPlus className="h-3.5 w-3.5 mr-1" /> Add Recruitment
-                </Button>
                 <Button type="button" size="sm" variant="outline" onClick={addItem} data-testid="button-add-item">
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add line
                 </Button>
@@ -1123,15 +1112,6 @@ function DocumentFormDialog({
           }}
         />
       )}
-
-      <RecruitmentPickerDialog
-        open={recruitmentPickerOpen}
-        onOpenChange={setRecruitmentPickerOpen}
-        onAdd={(items) => {
-          addEmployeeItems(items);
-          setRecruitmentPickerOpen(false);
-        }}
-      />
 
       <SalaryPickerDialog
         open={salaryPickerOpen}
@@ -1312,140 +1292,6 @@ function EmployeePickerDialog({
             data-testid="button-confirm-add-employees"
           >
             Add {selected.size > 0 ? `${selected.size} employee${selected.size > 1 ? "s" : ""}` : "employees"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ============================================================================
-// Recruitment picker dialog (add recruitment employees as one-time line items)
-// ============================================================================
-
-function RecruitmentPickerDialog({
-  open,
-  onOpenChange,
-  onAdd,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  onAdd: (items: { description: string; detail: string; qty: string; rate: string }[]) => void;
-}) {
-  const { data: rawPassports = [], isLoading } = useListPassports({}, {
-    query: { queryKey: getListPassportsQueryKey({}), enabled: open },
-  });
-  // Only show recruitment-type employees
-  const passports = (rawPassports as Passport[]).filter(
-    (p) => (p as unknown as { employeeType?: string }).employeeType === "recruitment",
-  );
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-
-  useEffect(() => { if (!open) setSelected(new Set()); }, [open]);
-
-  const toggle = (id: number) =>
-    setSelected((s) => { const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  const toggleAll = () =>
-    setSelected(selected.size === passports.length ? new Set() : new Set(passports.map((p) => p.id)));
-
-  const handleAdd = () => {
-    const chosen = passports.filter((p) => selected.has(p.id));
-    if (chosen.length === 0) return;
-    const items = chosen.map((p) => {
-      const pp = p as unknown as { agentRate?: string | null; employeeType?: string };
-      return {
-        description: "Recruitment Fee",
-        detail: p.fullName ?? p.passportNumber ?? String(p.id),
-        qty: "1",
-        rate: pp.agentRate && Number(pp.agentRate) > 0 ? pp.agentRate : "0",
-      };
-    });
-    onAdd(items);
-  };
-
-  const allSelected = passports.length > 0 && selected.size === passports.length;
-  const someSelected = selected.size > 0 && !allSelected;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add Recruitment Employee</DialogTitle>
-          <DialogDescription>
-            Select recruitment employees. One line item is added per employee using their agent amount as the rate.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-2">
-          {isLoading ? (
-            <div className="py-8 flex items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : passports.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              No recruitment employees found. Set an employee's type to Recruitment to add them here.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 px-1 pb-1 border-b border-border/60">
-                <Checkbox
-                  id="recruit-select-all"
-                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                  onCheckedChange={toggleAll}
-                />
-                <label
-                  htmlFor="recruit-select-all"
-                  className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none"
-                >
-                  {allSelected ? "Deselect all" : "Select all"} ({passports.length})
-                </label>
-              </div>
-
-              <ScrollArea className="max-h-64 pr-2">
-                <div className="space-y-1">
-                  {passports.map((p) => {
-                    const pp = p as unknown as { agentRate?: string | null };
-                    const agentAmount = Number(pp.agentRate || 0);
-                    return (
-                      <label
-                        key={p.id}
-                        htmlFor={`recruit-${p.id}`}
-                        className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/50 cursor-pointer select-none"
-                      >
-                        <Checkbox
-                          id={`recruit-${p.id}`}
-                          checked={selected.has(p.id)}
-                          onCheckedChange={() => toggle(p.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{p.fullName ?? "—"}</p>
-                          <p className="text-[11px] text-muted-foreground font-mono">
-                            {p.passportNumber ?? "No passport number"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-violet-600 tabular-nums">
-                            {agentAmount > 0 ? formatMVR(agentAmount) : "—"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">agent amt</p>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button
-            onClick={handleAdd}
-            disabled={selected.size === 0}
-            className="bg-violet-600 hover:bg-violet-700"
-          >
-            Add {selected.size > 0 ? `${selected.size} recruitment employee${selected.size > 1 ? "s" : ""}` : "recruitment employees"}
           </Button>
         </DialogFooter>
       </DialogContent>
