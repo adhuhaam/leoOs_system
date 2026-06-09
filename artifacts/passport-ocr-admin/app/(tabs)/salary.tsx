@@ -267,7 +267,9 @@ export default function SalaryScreen() {
   const { data: passportsRaw = [], isLoading: passportsLoading } = useListPassports(undefined, {
     query: { queryKey: ["listPassports"], enabled: isAdmin },
   });
-  const passports = passportsRaw as Passport[];
+  const passports = (passportsRaw as Passport[]).filter(
+    (p) => p.employeeType === "casual",
+  );
 
   const createMutation = useCreateSalaryRecord();
   const updateMutation = useUpdateSalaryRecord();
