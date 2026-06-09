@@ -370,9 +370,10 @@ export default function SalaryPage() {
     const q = search.trim().toLowerCase();
     return (allPassports ?? []).filter(
       (p) =>
-        !q ||
-        (p.fullName ?? "").toLowerCase().includes(q) ||
-        (p.passportNumber ?? "").toLowerCase().includes(q),
+        p.employeeType === "casual" &&
+        (!q ||
+          (p.fullName ?? "").toLowerCase().includes(q) ||
+          (p.passportNumber ?? "").toLowerCase().includes(q)),
     );
   }, [allPassports, search]);
 
