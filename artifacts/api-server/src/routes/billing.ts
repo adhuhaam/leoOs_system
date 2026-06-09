@@ -198,13 +198,13 @@ router.get("/billing/documents", requireAuth, async (req, res): Promise<void> =>
       db
         .select({
           invoiceId: salaryRecordsTable.invoiceId,
-          // Casual: cost = agreed employee rate prorated by days worked
-          //   formula: (agencySalary / 30) * daysWorked
-          // Recruitment / Org.Employed: cost = 0 (full billing amount is profit)
+          // Casual: cost = agencySalary (daily rate) × daysWorked
+          //   agencySalary is stored as a per-day rate on the passport
+          // Recruitment / Org.Employed: cost = 0 (full billing is profit)
           employeeCost: sql<string>`COALESCE(SUM(
             CASE WHEN ${passportsTable.employeeType} = 'casual'
                  THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
-                      * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric / 30
+                      * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                  ELSE 0
             END
           ), 0)::text`,
@@ -324,12 +324,12 @@ router.get("/billing/documents/:id", requireAuth, async (req, res): Promise<void
       .orderBy(billingItemsTable.position, billingItemsTable.id),
     db
       .select({
-        // Casual: cost = agencySalary prorated by days worked  (agencySalary/30 × daysWorked)
+        // Casual: cost = agencySalary (daily rate) × daysWorked
         // Recruitment / Org.Employed: cost = 0
         employeeCost: sql<string>`COALESCE(SUM(
           CASE WHEN ${passportsTable.employeeType} = 'casual'
                THEN COALESCE(${passportsTable.agencySalary}::numeric, 0)
-                    * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric / 30
+                    * COALESCE(${salaryRecordsTable.daysWorked}, 0)::numeric
                ELSE 0
           END
         ), 0)::text`,

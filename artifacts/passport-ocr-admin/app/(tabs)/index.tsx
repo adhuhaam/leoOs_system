@@ -1285,10 +1285,11 @@ function BillingChart({ docs, expenses, salaries, passports }: { docs: BillingDo
       const empType  = passport?.empType ?? "casual";
       const days     = Number((sal as unknown as { daysWorked?: number }).daysWorked || 0);
       if (empType === "casual") {
-        // profit = (client billing rate − employee agreed rate) × days worked / 30
+        // profit = (client billing rate − employee agreed daily rate) × days worked
+        // both clientSalary and agencySalary are stored as daily rates on the passport
         const clientRate = passport?.clientRate ?? 0;
         const agencyRate = passport?.agencyRate ?? 0;
-        bucket.margin += (clientRate - agencyRate) * days / 30;
+        bucket.margin += (clientRate - agencyRate) * days;
       } else {
         // recruitment / org_employed: employee cost is borne by client company, full billing is profit
         bucket.margin += Number(sal.clientSalary || 0);
