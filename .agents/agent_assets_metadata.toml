@@ -16,3 +16,9 @@ id = "gblrzjUl-WcsJrCkRE_9e"
 uri = "file://leo_os_export.sql.gz"
 type = "unspecified"
 title = "LEO OS — Production Database Export (.sql.gz)"
+
+[[outputs]]
+id = "nKn3gXTksJ-IT2lK0LqWS"
+uri = "file://LEO_OS_Developer_Guide.md"
+type = "text"
+title = "LEO OS — Full Developer Guide"
