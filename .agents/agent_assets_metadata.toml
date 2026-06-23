@@ -10,3 +10,9 @@ title = "neon-green-briefcase-icon"
 id = "Mf7VMyMT922dqQmV3Ee0B"
 uri = "file://artifacts/passport-ocr-admin/assets/images/icon.png"
 type = "image"
+
+[[outputs]]
+id = "gblrzjUl-WcsJrCkRE_9e"
+uri = "file://leo_os_export.sql.gz"
+type = "unspecified"
+title = "LEO OS — Production Database Export (.sql.gz)"
